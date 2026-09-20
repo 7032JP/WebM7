@@ -1,0 +1,3950 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 7032 / Naomitsu Tsugiiwa */
+/* ===== Reset & Base ===== */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: #1a1a2e;
+    color: #c8c8d0;
+    font-family: 'Courier New', 'Consolas', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;   /* ページは上詰め（タイトルバーの上に空きを作らない） */
+}
+
+/* ===== Main Layout (horizontal) ===== */
+.main-layout {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px;
+}
+
+/* ===== Left Column: Screen + Toolbar ===== */
+.left-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* ===== Screen Container ===== */
+.screen-container {
+    position: relative;
+    padding: 16px;
+    background: #0a0a14;
+    border: 3px solid #333;
+    border-radius: 12px;
+    box-shadow:
+        0 0 20px rgba(0, 0, 0, 0.8),
+        inset 0 0 40px rgba(0, 0, 0, 0.5);
+}
+
+.screen-container::before {
+    content: '';
+    position: absolute;
+    top: 4px; left: 4px; right: 4px; bottom: 4px;
+    border-radius: 10px;
+    border: 2px solid #222;
+    pointer-events: none;
+    z-index: 1;
+}
+
+canvas#screen {
+    display: block;
+    width: 640px;
+    height: 400px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: #000;
+    border-radius: 4px;
+}
+
+.scanlines {
+    position: absolute;
+    top: 16px; left: 16px;
+    width: 640px;
+    height: 400px;
+    border-radius: 4px;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 1px,
+        rgba(0, 0, 0, 0.15) 1px,
+        rgba(0, 0, 0, 0.15) 2px
+    );
+    mix-blend-mode: multiply;
+    z-index: 2;
+}
+
+/* ===== Toolbar ===== */
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 672px;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: #16213e;
+    border: 1px solid #333;
+    border-radius: 6px;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toolbar-debug {
+    margin-top: 4px;
+    justify-content: flex-start;
+}
+
+.toolbar-debug-label {
+    margin-right: 4px;
+    color: #8899aa;
+    font-weight: bold;
+}
+
+.toolbar button {
+    font-family: inherit;
+    font-size: 0.8em;
+    padding: 4px 10px;
+    border: 1px solid #4a5a7a;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #2a3a5a;
+    color: #c8c8d0;
+    transition: background 0.15s;
+}
+
+.toolbar button:hover { background: #3a4a6a; }
+
+.toolbar button.active {
+    background: #0a4a2a;
+    color: #00ee77;
+    border-color: #00cc66;
+}
+
+.vol-label {
+    font-size: 0.75em;
+    color: #6688aa;
+}
+
+/* Volume button as a speaker icon (minimal chrome) */
+.toolbar button.vol-btn {
+    padding: 2px 6px;
+    font-size: 1em;
+    line-height: 1;
+    background: transparent;
+    border-color: transparent;
+}
+.toolbar button.vol-btn:hover {
+    background: #2a3a5a;
+    border-color: #4a5a7a;
+}
+
+/* ===== Status bar (bottom toolbar) — explicit two-row stack ===== */
+.toolbar-status {
+    flex-direction: column;
+    align-items: flex-start;   /* both rows share the same left edge */
+    gap: 5px;
+}
+/* Each row lays its groups out horizontally, left-aligned so the two rows'
+   left edges line up. LEDs sit at the left and never move; the variable
+   readouts to their right reserve a fixed width so changing values (sector
+   count, key code, fps, display mode) cannot push neighbours left or right.
+   On narrow widths a row may wrap without hiding info. */
+.status-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 16px;
+}
+.status-leds {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;   /* LED group keeps a stable size; never squeezed */
+}
+.status-readout {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+/* Width reservations for the variable-length readouts. Each value is left
+   aligned inside a fixed-min box sized to its longest expected content, with
+   tabular figures so digit-count changes do not alter the rendered width. The
+   box itself does not grow or shrink, so its neighbours stay put. */
+.status-readout .vol-label,
+.fdc-track-info {
+    font-variant-numeric: tabular-nums;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    flex: 0 0 auto;
+    display: inline-block;
+}
+/* T:### S:### STATE  (track/sector up to 3 digits, state up to 4 chars) */
+#fdcTrackInfo { min-width: 108px; }
+/* key code "$XX" (default "--") */
+#tbKeyLabel   { min-width: 28px; }
+/* keyboard mode "ASCII" / "SCAN" */
+#tbKbdMode    { min-width: 38px; }
+/* "60 fps" (default "--") */
+#fpsLabel     { min-width: 44px; }
+/* longest: "640x400 / 262144色" */
+#dispModeLabel { min-width: 132px; }
+.status-led-item {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.status-led-name {
+    font-size: 10px;
+    color: #888;
+}
+/* FDC Track/Sector/state readout sitting next to the drive LEDs */
+.fdc-track-info {
+    font-size: 10px;
+    color: #6688aa;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    margin-left: 2px;
+}
+.status-divider {
+    display: inline-block;
+    width: 0;
+    height: 14px;
+    border-left: 1px solid #3a4660;
+    margin: 0 2px;
+}
+/* Shift / Ctrl / GRPH: subtle text pills (NOT round LEDs) */
+.status-pills {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.mod-pill {
+    font-size: 9px;
+    line-height: 1;
+    letter-spacing: 0.5px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    border: 1px solid #3a4660;
+    color: #5a6680;
+    background: #1a2540;
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.mod-pill.on {
+    color: #0c0f18;
+    background: #00cc66;
+    border-color: #00ee77;
+    font-weight: bold;
+}
+
+input[type="range"]#volumeSlider {
+    width: 80px;
+    height: 4px;
+    accent-color: #00cc66;
+    cursor: pointer;
+}
+
+/* ===== Right Column: Side Panel ===== */
+.side-panel {
+    width: 320px;
+    min-width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    /* max-height is managed by fitMainLayout() (JS) so the panel scrolls
+       within the scaled viewport; this calc is the pre-scale fallback. */
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.side-panel::-webkit-scrollbar {
+    width: 4px;
+}
+
+.side-panel::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 2px;
+}
+
+.sp-section {
+    background: #16213e;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.sp-section h3 {
+    font-size: 0.8em;
+    color: #4ea8de;
+    margin-bottom: 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #2a2a4a;
+}
+
+/* Collapsible section header */
+.sp-section h3.sp-section-toggle {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 16px;
+}
+.sp-section h3.sp-section-toggle::after {
+    content: '▼';
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7em;
+    color: #6a8eb8;
+    transition: transform 0.15s ease;
+}
+.sp-section.collapsed h3.sp-section-toggle::after {
+    transform: translateY(-50%) rotate(-90deg);
+}
+.sp-section.collapsed > *:not(h3) {
+    display: none !important;
+}
+/* Inline help icon next to a section title. Click opens the main help modal
+   and scrolls to the matching section anchor. */
+.sp-section h3 .help-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 50%;
+    background: #2a3a55;
+    color: #aac;
+    font-size: 11px;
+    font-weight: bold;
+    margin-left: 6px;
+    cursor: help;
+    user-select: none;
+    vertical-align: middle;
+}
+.sp-section h3 .help-icon:hover {
+    background: #4a6088;
+    color: #fff;
+}
+.sp-section.collapsed {
+    margin-bottom: 0;
+}
+
+.sp-section label {
+    display: inline-flex;
+    font-size: 0.75em;
+    color: #8899aa;
+    margin-bottom: 3px;
+}
+
+/* File inputs */
+input[type="file"] {
+    font-family: inherit;
+    font-size: 0.7em;
+    color: #c8c8d0;
+    background: #0d1b2a;
+    border: 1px solid #2a3a5a;
+    border-radius: 4px;
+    padding: 2px 4px;
+    cursor: pointer;
+    max-width: 100%;
+}
+
+input[type="file"]::file-selector-button {
+    background: #2a3a5a;
+    color: #c8c8d0;
+    border: 1px solid #4a5a7a;
+    border-radius: 3px;
+    padding: 1px 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9em;
+    margin-right: 4px;
+}
+
+input[type="file"]::file-selector-button:hover {
+    background: #3a4a6a;
+}
+
+/* ROM list
+   各行を同じ固定テンプレートのグリッドにして、ROM 名や札 (必須 / 任意) の
+   長さ、選んだファイル名に関わらず、全リスト (基本 / KANJI / AV / AV40) で
+   列の位置と幅を一致させる。
+   パネル内幅は約 294px しかなく、ROM 名 + 札 (最長 "BOOT_BAS.ROM BASIC時必須"
+   で約 166px)、供給元セレクト (約 108px)、ファイル選択ボタン (約 96px)、状態
+   タグ (最大約 44px) を 1 行に並べると 400px を超えてしまう。そのため 1 項目を
+   2 段に組む:
+     1 段目: ROM 名 + 札 (左、2 列分)   | 状態タグ (右、固定幅)
+     2 段目: 供給元セレクト (固定幅)     | ファイル選択 (残り幅、右端まで)
+   列幅は .rom-list の変数で共有し、狭い画面用の上書きでも同じ変数だけを
+   差し替える。ファイル選択欄はボタンが常に丸ごと見える幅を確保し、その後ろの
+   ファイル名だけが overflow で切れる。 */
+.rom-list {
+    --rom-col-src: 108px;     /* 供給元セレクト列 (「自分の ROM」が切れない幅) */
+    --rom-col-status: 44px;   /* 状態タグ列 ("--" / "OK" / "互換" / "補完" / "Error") */
+    --rom-col-gap: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.rom-item {
+    display: grid;
+    grid-template-columns: var(--rom-col-src) minmax(0, 1fr) var(--rom-col-status);
+    grid-template-areas:
+        "name name status"
+        "src  file file";
+    column-gap: var(--rom-col-gap);
+    row-gap: 2px;
+    align-items: center;
+}
+
+.rom-item .rom-name {
+    grid-area: name;
+    font-size: 0.7em;
+    color: #6688aa;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.rom-item input[type="file"] {
+    grid-area: file;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* ROM 供給元セレクト: 行ごとに「同梱互換 / 自分の ROM」を選ぶ */
+.rom-item .rom-src {
+    grid-area: src;
+    font-size: 0.68em;
+    padding: 0 2px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* 状態タグは列幅いっぱいに広げ、文言 ("OK" / "互換" など) の長さで
+   位置が動かないようにする */
+.rom-item .status-tag {
+    grid-area: status;
+    justify-self: stretch;
+    box-sizing: border-box;
+    white-space: nowrap;
+    overflow: hidden;
+    text-align: center;
+}
+
+/* FM77AV ROM list separator */
+.rom-list-av label {
+    font-size: 0.72em;
+    padding-top: 4px;
+    border-top: 1px solid #2a2a4a;
+}
+
+/* === Machine capability badges (Control panel) === */
+.cap-badge-row {
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 2px;
+}
+.cap-badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    color: #555;
+    background: #1c1c1c;
+    user-select: none;
+}
+.cap-badge.cap-on {
+    color: #ffd54a;
+    border-color: #8a6d1a;
+    background: #33290e;
+}
+.cap-mem {
+    font-size: 0.68rem;
+    color: #9ab;
+    margin-left: 4px;
+    white-space: nowrap;
+}
+.cap-compare-link {
+    font-size: 0.68rem;
+    margin-left: 4px;
+    color: #7fb4e6;
+}
+
+/* === Required / Optional badges for ROM files === */
+.rom-badge {
+    display: inline-block;
+    font-size: 0.62rem;
+    line-height: 1.3;
+    padding: 0 4px;
+    border-radius: 3px;
+    margin-left: 2px;
+    vertical-align: middle;
+    font-weight: bold;
+    white-space: nowrap;
+}
+.rom-badge-req {
+    background: #5a1e1e;
+    color: #ff9c9c;
+    border: 1px solid #8a3a3a;
+}
+.rom-badge-opt {
+    background: #23303f;
+    color: #7fa6c4;
+    border: 1px solid #38506a;
+}
+/* Subtle tint on the whole row so required items stand out at a glance. */
+.rom-item[data-req="required"] .rom-name { color: #c0d4e8; }
+.rom-item[data-req="optional"] .rom-name { color: #5d7790; }
+
+/* === 録音セクションの見出し ===
+   パネル内の説明文は置かず、詳細は各パネル見出しの ? のヘルプに集約する。 */
+.rec-label {
+    font-size: 0.68rem;
+    line-height: 1.4;
+    margin: 8px 0 3px;
+    color: #c8a45a;
+    font-weight: bold;
+}
+/* Library insert buttons: a touch more emphasis. */
+.lib-ins-btn { color: #8fd0a0; }
+
+/* Dimmed (no-content) state for the tape recording buttons. */
+button.rec-empty {
+    opacity: 0.42;
+    filter: grayscale(0.6);
+}
+
+/* Icon + text button structure: on desktop the icon is hidden, text shows. */
+.btn-icon { display: none; }
+.btn-text { display: inline; }
+
+/* Status tag */
+.status-tag {
+    font-size: 0.7em;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: #2a2a4a;
+    color: #666;
+    flex-shrink: 0;
+}
+
+.status-tag.loaded {
+    background: #0a3a1a;
+    color: #00cc66;
+}
+
+/* ROM 互換タグ: 同梱互換 ROM を使用中のスロット。
+   「読み込み済み (loaded)」より控えめな色にして、既定の状態だと分かるようにする。 */
+.status-tag.builtin {
+    background: #1c2436;
+    color: #7f9bbd;
+}
+
+/* File name row (shown below file input) */
+.file-name-row {
+    font-size: 0.75em;
+    color: #666;
+    padding: 2px 4px 4px 4px;
+    margin-top: 2px;
+    word-break: break-all;
+    line-height: 1.2;
+}
+.file-name-row.loaded {
+    color: #00cc66;
+}
+
+/* Inserted-disk geometry summary (2D/2DD + CHRN) under each drive row */
+.disk-geom {
+    font-size: 0.72em;
+    color: #557;
+    padding: 0 4px 2px 4px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    word-break: break-word;
+}
+.disk-geom.loaded {
+    color: #66aacc;
+}
+
+/* FDC access LED */
+.fdc-led {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #333;
+    border: 1px solid #555;
+    transition: background 0.05s, box-shadow 0.05s;
+}
+.fdc-led.active {
+    /* 2D access = yellow (disk-mode colour; DMA adds fast blink) */
+    background: #ffcc22;
+    box-shadow: 0 0 6px 2px rgba(255, 204, 34, 0.6);
+    border-color: #ffdd55;
+}
+/* Drive-LED colour code:
+   yellow=2D read, white=2D DMA, green=2DD read, blue=2DD DMA, red=write */
+.fdc-led.active.led-white {
+    background: #f4f4f4;
+    border-color: #ffffff;
+    box-shadow: 0 0 6px 2px rgba(244, 244, 244, 0.65);
+}
+.fdc-led.active.led-blue {
+    background: #3388ff;
+    border-color: #66aaff;
+    box-shadow: 0 0 6px 2px rgba(51, 136, 255, 0.65);
+}
+.fdc-led.active.led-red {
+    background: #ff3322;
+    border-color: #ff6655;
+    box-shadow: 0 0 6px 2px rgba(255, 51, 34, 0.65);
+}
+/* Green variant: 2DD-mode disk read / high-speed MMR */
+.fdc-led.active.led-green {
+    background: #2ecc55;
+    border-color: #55e57f;
+    box-shadow: 0 0 6px 2px rgba(46, 204, 85, 0.6);
+}
+.fdc-led.motor {
+    background: #884422;
+    border-color: #996633;
+}
+
+/* Keyboard LED indicators */
+.kbd-led {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #333;
+    border: 1px solid #555;
+    transition: background 0.1s, box-shadow 0.1s;
+}
+.kbd-led.on {
+    background: #44dd44;
+    box-shadow: 0 0 5px 1px rgba(68, 221, 68, 0.5);
+    border-color: #66ee66;
+}
+
+/* LIT color for status-bar LEDs (CAPS/カナ/INS + Drv0/Drv1): red on every
+   machine (the status bar is part of the page, not of the front panel, so it
+   does not follow the machine). Off state stays the shared default.
+   Scoped to .toolbar-status so the Disk/Keyboard panels keep their own colors. */
+.toolbar-status .kbd-led.on {
+    background: #ff4422;
+    box-shadow: 0 0 5px 1px rgba(255, 68, 34, 0.55);
+    border-color: #ff6644;
+}
+
+/* Radio buttons */
+.radio-group {
+    display: flex;
+    gap: 10px;
+}
+
+.radio-group label {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    color: #c8c8d0;
+    font-size: 0.8em;
+}
+
+input[type="radio"] { accent-color: #00cc66; }
+/* Locked radio group: visually dimmed label but radio stays native */
+.radio-group.locked label { color: #6688aa; cursor: not-allowed; }
+.radio-group.locked input[type="radio"] { pointer-events: none; }
+
+/* Control rows */
+.ctrl-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+    white-space: nowrap;
+}
+.ctrl-row > label:first-child {
+    margin: 0;
+}
+
+/* Buttons */
+.btn-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    margin-top: 4px;
+    align-items: center;
+}
+
+button {
+    font-family: inherit;
+    font-size: 0.75em;
+    padding: 3px 10px;
+    border: 1px solid #4a5a7a;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+/* Power toggle switch — slide switch with OFF [===O    ] ON style */
+.power-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.power-switch input { display: none; }
+
+/* OFF / ON labels beside the track */
+.power-label-off,
+.power-label-on {
+    font-size: 0.7em;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.power-label-off { color: #cc6666; }
+.power-label-on  { color: #556655; }
+
+.power-switch input:checked ~ .power-label-off { color: #554444; }
+.power-switch input:checked ~ .power-label-on  { color: #00ee77; }
+
+/* Track (groove) */
+.power-track {
+    position: relative;
+    display: block;
+    width: 40px;
+    height: 20px;
+    background: linear-gradient(180deg, #111 0%, #222 40%, #1a1a1a 100%);
+    border: 2px solid #444;
+    border-radius: 4px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8),
+                inset 0 -1px 1px rgba(255, 255, 255, 0.05);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Knob */
+.power-knob {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #bbb 0%, #888 40%, #999 100%);
+    border: 1px solid #aaa;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    transition: left 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Knob grip lines */
+.power-knob::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 5px;
+    width: 6px;
+    height: 8px;
+    background: repeating-linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.25) 0px,
+        rgba(0, 0, 0, 0.25) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+}
+
+/* Hover */
+.power-switch:hover .power-track {
+    border-color: #666;
+}
+
+/* === ON state === */
+.power-switch input:checked ~ .power-track {
+    border-color: #00aa55;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6),
+                0 0 6px rgba(0, 204, 102, 0.3);
+}
+
+.power-switch input:checked ~ .power-track .power-knob {
+    left: 21px;
+    background: linear-gradient(180deg, #55ffaa 0%, #00bb66 40%, #00dd77 100%);
+    border-color: #00ee77;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5),
+                0 0 8px rgba(0, 238, 119, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.power-switch input:checked ~ .power-track .power-knob::after {
+    background: repeating-linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.2) 0px,
+        rgba(0, 0, 0, 0.2) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+}
+
+/* Not-ready: required ROMs missing. Dim the switch to nudge ROM loading first.
+   Still clickable — the ROM-missing modal fires on click as a backup. */
+.power-switch.not-ready {
+    opacity: 0.45;
+    filter: grayscale(0.6);
+}
+
+/* Hint line shown under the Power switch while required ROMs are missing */
+.power-hint {
+    margin-top: 4px;
+    font-size: 0.7em;
+    color: #e8a848;
+    line-height: 1.3;
+}
+
+button.btn-stop {
+    background: #4a1a1a;
+    color: #ff6666;
+    border-color: #cc3333;
+}
+
+button.btn-stop:hover {
+    background: #5a2222;
+}
+
+button.btn-reset {
+    background: #3a3a1a;
+    color: #cccc66;
+    border-color: #aaaa44;
+}
+
+button.btn-screenshot {
+    background: #111;
+    border-color: #aaa;
+    font-size: 0.85em;
+    padding: 2px 6px;
+}
+button.btn-screenshot:hover {
+    background: #222;
+    border-color: #ccc;
+}
+
+button.btn-reset:hover {
+    background: #4a4a22;
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ===== Side-panel action buttons & rows =====
+   All side-panel buttons share a readable, comfortably clickable size on
+   desktop, and grow to a 44px touch target on mobile (see media query).
+   Inline font-size/padding overrides were removed from the markup so these
+   rules apply uniformly. */
+.side-panel button {
+    font-size: 0.78em;
+    padding: 5px 12px;
+    min-height: 30px;
+    line-height: 1.2;
+}
+
+/* Rows holding a file input plus action buttons. flex-wrap ensures the
+   buttons (e.g. Save / Eject) wrap onto the next line instead of being
+   pushed off the edge and clipped when the row is narrow. */
+.sp-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.sp-row > input[type="file"] {
+    flex: 1 1 12em;
+    min-width: 0;
+}
+.sp-row > button { flex: 0 0 auto; }
+
+/* Right-aligned maintenance buttons (Clear cache / Clear saved) */
+.sp-row.sp-row-end { justify-content: flex-end; }
+
+/* ===== Debug section ===== */
+.debug-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 8px;
+    font-size: 0.7em;
+}
+
+.debug-grid .d-label { color: #6688aa; }
+.debug-grid .d-val { color: #aaccee; }
+
+/* Palette swatches */
+.palette-row {
+    display: flex;
+    gap: 2px;
+    margin-top: 4px;
+}
+
+.pal-swatch {
+    width: 20px;
+    height: 14px;
+    border: 1px solid #444;
+    border-radius: 2px;
+}
+
+/* PSG registers */
+.psg-regs {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    margin-top: 4px;
+    font-size: 0.65em;
+    text-align: center;
+}
+
+.psg-regs .pr-hdr { color: #556; }
+.psg-regs .pr-val { color: #8ab; background: #0d1b2a; border-radius: 2px; padding: 1px 0; }
+
+/* OPN (FM sound source) FM register matrix — 行見出し + 16 列。
+   配色・角丸は .psg-regs と揃え、欠番のレジスタだけ落とした色にする。 */
+.snd-regs-fm {
+    display: grid;
+    grid-template-columns: auto repeat(16, 1fr);
+    gap: 2px;
+    margin-top: 4px;
+    font-size: 0.6em;
+    text-align: center;
+}
+
+.snd-regs-fm .pr-hdr { color: #556; }
+.snd-regs-fm .pr-row { color: #556; text-align: right; padding-right: 3px; }
+.snd-regs-fm .pr-val { color: #8ab; background: #0d1b2a; border-radius: 2px; padding: 1px 0; }
+.psg-regs .pr-na,
+.snd-regs-fm .pr-na { color: #3a4450; background: #121c28; }
+
+/* Per-channel volume meters (PSG A/B/C, OPN SSG A/B/C, FM 1-3) */
+.snd-meters {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 4px;
+    font-size: 0.65em;
+}
+
+.snd-meter-row { display: flex; align-items: center; gap: 6px; }
+.snd-meters .sm-label { flex: 0 0 3.4em; color: #6688aa; }
+.snd-meters .sm-bar {
+    position: relative;
+    flex: 1 1 auto;
+    height: 8px;
+    background: #0d1b2a;
+    border-radius: 2px;
+    overflow: hidden;
+}
+.snd-meters .sm-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 0;
+    background: linear-gradient(90deg, #2f7f5f, #7fd8a0);
+    border-radius: 2px;
+}
+.snd-meters .sm-val { flex: 0 0 3.2em; color: #8ab; text-align: right; }
+
+/* Keyboard display */
+.key-display {
+    font-size: 0.75em;
+    color: #aaccee;
+    background: #0d1b2a;
+    border-radius: 3px;
+    padding: 3px 6px;
+    min-height: 1.6em;
+    margin-top: 3px;
+}
+
+/* FM-7 Keyboard Layout */
+.fm7-kbd { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; }
+.fm7-kbd-row { display: flex; gap: 1px; }
+.fm7-key {
+    background: #1a2a3a; color: #8899aa; border: 1px solid #2a3a4a;
+    border-radius: 3px; font-size: 9px; width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; flex-grow: 0; cursor: default; user-select: none;
+    box-sizing: border-box;
+    padding: 0;
+    overflow: hidden;
+}
+.fm7-key.enter-wide { width: 49px; }
+.fm7-spacer { width: 24px; height: 24px; flex-shrink: 0; flex-grow: 0; }
+/* SPACE: 8 cells wide (8 * 24 + 7 * 1 = 199px) so the following カナ key
+   lands at column 10 — aligned with the `/` key in the row above. */
+.fm7-key.space { width: 199px; }
+
+.fm7-key img.fm7-key-glyph {
+    width: 22px; height: 22px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    pointer-events: none;
+    display: block;
+}
+.fm7-key.active { background: #2a5a8a; color: #fff; border-color: #4ea8de; }
+.fm7-key.ctrl.active, .fm7-key.shift.active { background: #3a6a3a; border-color: #5c5; }
+.fm7-key.led { border-bottom: 2px solid #522; }
+.fm7-key.led.active { border-bottom-color: #e44; }
+.fm7-key.break-key { border-color: #c44; color: #c88; }
+.fm7-key.break-key.active { background: #8a2a2a; border-color: #f66; color: #fff; }
+
+/* Clickable as a software keyboard */
+.fm7-key[data-code], .fm7-key.break-key { cursor: pointer; }
+
+/* Key customization */
+.fm7-kbd.customizing .fm7-key[data-code] { cursor: pointer; }
+.fm7-kbd.customizing .fm7-key[data-code]:hover { border-color: #4ea8de; }
+.fm7-key.assign-target { background: #7a5a1a; border-color: #e0a93a; color: #fff; }
+.fm7-key.remapped { border-color: #5c5; box-shadow: inset 0 0 0 1px #5c5; }
+.fm7-key.needs-remap { border-style: dashed; border-color: #c4842a; }
+
+/* ===== Site Title ===== */
+.site-title {
+    font-size: 1.3em;
+    color: #4ea8de;
+    text-align: center;
+    margin-top: 12px;
+    margin-bottom: 0;
+    letter-spacing: 0.05em;
+}
+
+/* ===== Footer ===== */
+.footer {
+    font-size: 0.85em;
+    color: #c0c0c0;
+    margin-top: 8px;
+    text-align: center;
+}
+
+.footer a {
+    color: #c0c0c0;
+    text-decoration: underline;
+}
+
+.footer a:hover {
+    color: #ffffff;
+}
+
+.footer-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.footer-links a {
+    color: #6688aa;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s;
+}
+
+.footer-links a:hover {
+    color: #ffffff;
+}
+
+.footer-repo {
+    font-size: 0.85em;
+    margin-left: 4px;
+}
+
+/* ===== Floating Panels (Input Monitor & Debug) ===== */
+.input-panel {
+    display: none;
+    position: fixed;
+    /* Top-left anchored so fitMainLayout()'s transform: scale(...) (with
+       transform-origin: top left) magnifies them cleanly without pushing
+       them off the right/bottom edge. */
+    top: 56px;
+    left: 16px;
+    transform-origin: top left;
+    width: 240px;
+    background: #16213e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    font-size: 0.75em;
+}
+
+.input-panel.open { display: block; }
+
+#debugPanel,
+#keyPanel,
+#palPanel,
+#sndPanel {
+    right: auto;
+    width: 336px;
+}
+/* Stagger via `top` only. Setting both top (from .input-panel) and bottom
+   stretches a fixed element to full height on first show; dragging clears
+   bottom (style.bottom='auto') which is why moving "fixed" the size. */
+#debugPanel { left: 16px;  width: 200px; }
+#keyPanel   { left: 48px;  top: 88px;  width: 528px; }
+#palPanel   { left: 80px;  top: 120px; width: 176px; }
+/* Sound パネルは OPN のレジスタマトリクス (16 列) を載せるので幅を広げ、
+   高さが伸びたときは本体だけスクロールさせる */
+#sndPanel   { left: 112px; top: 152px; width: 420px; }
+#sndPanel .ip-body { max-height: 70vh; overflow-y: auto; }
+
+.draggable-header {
+    cursor: grab;
+    user-select: none;
+}
+
+.draggable-header:active {
+    cursor: grabbing;
+}
+
+/* Analog Palette canvas */
+#analogPaletteCanvas {
+    display: block;
+    margin-top: 4px;
+}
+
+.ip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    border-bottom: 1px solid #2a2a4a;
+    color: #4ea8de;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.ip-close {
+    background: none;
+    border: none;
+    color: #6688aa;
+    font-size: 1.3em;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.ip-close:hover { color: #fff; }
+
+.ip-body { padding: 8px 10px; }
+
+.ip-section { margin-bottom: 8px; }
+.ip-section:last-child { margin-bottom: 0; }
+
+.ip-label {
+    color: #6688aa;
+    font-size: 0.85em;
+    margin-bottom: 3px;
+}
+
+.ip-sublabel {
+    color: #556;
+    font-size: 0.85em;
+    margin-left: 6px;
+}
+
+.ip-held-keys {
+    color: #aaccee;
+    background: #0d1b2a;
+    border-radius: 3px;
+    padding: 3px 6px;
+    min-height: 1.6em;
+    word-break: break-all;
+    line-height: 1.5;
+}
+
+.ip-fm7key {
+    display: flex;
+    align-items: center;
+}
+
+.ip-fm7key span:first-child {
+    color: #00cc66;
+    background: #0d1b2a;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-family: inherit;
+}
+
+/* Joystick D-pad */
+.ip-joy-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ip-joy-dpad {
+    display: grid;
+    grid-template-columns: 16px 16px 16px;
+    grid-template-rows: 16px 16px 16px;
+    gap: 1px;
+}
+
+.ip-joy-dpad span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+}
+
+.jp-u { grid-column: 2; grid-row: 1; }
+.jp-l { grid-column: 1; grid-row: 2; }
+.jp-c { grid-column: 2; grid-row: 2; background: #0d1b2a; border-radius: 2px; }
+.jp-r { grid-column: 3; grid-row: 2; }
+.jp-d { grid-column: 2; grid-row: 3; }
+
+.jp-u, .jp-d, .jp-l, .jp-r {
+    background: #2a2a4a;
+    border: 1px solid #333;
+}
+
+.jp-u.active, .jp-d.active, .jp-l.active, .jp-r.active {
+    background: #00cc66;
+    border-color: #00ee77;
+}
+
+/* Joystick buttons */
+.ip-joy-btns {
+    display: flex;
+    gap: 4px;
+}
+
+.jp-btn {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2a2a4a;
+    border: 1px solid #333;
+    border-radius: 50%;
+    color: #6688aa;
+    font-size: 0.8em;
+}
+
+.jp-btn.active {
+    background: #cc4444;
+    border-color: #ee5555;
+    color: #fff;
+}
+
+/* ===== Help Modal ===== */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-overlay.open {
+    display: flex;
+}
+
+.modal-content {
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 28px 32px;
+    max-width: 720px;
+    width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    line-height: 1.7;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+}
+
+.modal-content::-webkit-scrollbar { width: 6px; }
+.modal-content::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    background: none;
+    border: none;
+    color: #6688aa;
+    font-size: 1.6em;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.modal-close:hover { color: #ffffff; }
+
+.modal-content h1 { color: #4ea8de; font-size: 1.4em; margin-bottom: 8px; }
+.modal-content h2 { color: #4ea8de; font-size: 1.1em; margin-top: 24px; border-bottom: 1px solid #2a2a4a; padding-bottom: 4px; }
+.modal-content h3 { color: #6cb8e6; font-size: 0.95em; margin-top: 16px; }
+.modal-content p { margin: 8px 0; }
+.modal-content a { color: #4ea8de; }
+.modal-content a:hover { color: #ffffff; }
+
+.modal-content code {
+    background: #0d1b2a;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+.modal-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 10px 0;
+    font-size: 0.85em;
+}
+
+.modal-content th,
+.modal-content td {
+    border: 1px solid #2a3a5a;
+    padding: 5px 10px;
+    text-align: left;
+}
+
+.modal-content th { background: #16213e; color: #4ea8de; }
+.modal-content td { background: #0d1b2a; }
+.modal-content ul, .modal-content ol { padding-left: 22px; margin: 8px 0; }
+.modal-content li { margin: 4px 0; }
+
+/* ===== Fullscreen ===== */
+/* Each vendor prefix MUST be a separate rule — an unrecognised selector
+   in a comma list invalidates the entire rule in CSS. */
+
+/* Container: black background + flex centering */
+.screen-container:fullscreen {
+    background: #000; border: none; border-radius: 0;
+    padding: 0; margin: 0; box-shadow: none;
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 100%;
+}
+.screen-container:-webkit-full-screen {
+    background: #000; border: none; border-radius: 0;
+    padding: 0; margin: 0; box-shadow: none;
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 100%;
+}
+.screen-container:-moz-full-screen {
+    background: #000; border: none; border-radius: 0;
+    padding: 0; margin: 0; box-shadow: none;
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 100%;
+}
+
+.screen-container:fullscreen::before { display: none; }
+.screen-container:-webkit-full-screen::before { display: none; }
+.screen-container:-moz-full-screen::before { display: none; }
+
+/* Canvas + scanlines: sized by JS (fullscreenchange handler) */
+.screen-container:fullscreen canvas#screen { border-radius: 0; }
+.screen-container:-webkit-full-screen canvas#screen { border-radius: 0; }
+.screen-container:-moz-full-screen canvas#screen { border-radius: 0; }
+
+.screen-container:fullscreen .scanlines { border-radius: 0; }
+.screen-container:-webkit-full-screen .scanlines { border-radius: 0; }
+.screen-container:-moz-full-screen .scanlines { border-radius: 0; }
+
+/* ===== Mobile / Tablet Layout ===== */
+
+/* Mobile action bar — hidden on desktop */
+#mobileBar { display: none; }
+
+/* Drawer overlay — hidden by default */
+.drawer-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 900;
+}
+.drawer-overlay.open { display: block; }
+
+@media (max-width: 1023px), (any-pointer: coarse) {
+    body {
+        min-height: 100dvh;
+        justify-content: flex-start;
+        overscroll-behavior: contain;
+        padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    .site-title {
+        font-size: 1em;
+        margin: 4px 0;
+    }
+
+    .main-layout {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 4px;
+        gap: 4px;
+    }
+
+    .left-col {
+        width: 100%;
+        flex-shrink: 1;
+    }
+
+    .screen-container {
+        padding: 4px;
+        border-width: 2px;
+        border-radius: 6px;
+    }
+    .screen-container::before {
+        top: 2px; left: 2px; right: 2px; bottom: 2px;
+        border-radius: 5px;
+        border-width: 1px;
+    }
+
+    canvas#screen {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 10;
+    }
+
+    .scanlines {
+        top: 4px; left: 4px;
+        width: calc(100% - 8px);
+        height: calc(100% - 8px);
+    }
+
+    /* Toolbar: compact */
+    .toolbar {
+        width: 100%;
+        padding: 4px 6px;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .toolbar-group { gap: 4px; }
+    .toolbar button { font-size: 0.7em; padding: 3px 6px; }
+    .vol-label { font-size: 0.65em; }
+    input[type="range"]#volumeSlider { width: 60px; }
+
+    /* Status bar on narrow screens: keep the two-row stack but let each row
+       wrap and align left so nothing gets pushed off / hidden. */
+    .toolbar-status {
+        align-items: stretch;
+        width: 100%;
+        gap: 4px;
+    }
+    .status-row {
+        justify-content: flex-start;
+        gap: 6px;
+    }
+
+    /* Debug toolbar: hidden on mobile */
+    .toolbar-debug { display: none; }
+
+    /* Side Panel: off-screen drawer */
+    .side-panel {
+        position: fixed;
+        top: 0; left: 0;
+        width: min(320px, 85vw);
+        min-width: 0;
+        height: 100dvh;
+        max-height: 100dvh;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        background: #16213e;
+        border-right: 1px solid #446;
+        padding-top: env(safe-area-inset-top, 0);
+    }
+    .side-panel.drawer-open {
+        transform: translateX(0);
+    }
+
+    /* Mobile action bar */
+    #mobileBar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 4px 8px;
+        background: #16213e;
+        border: 1px solid #333;
+        border-radius: 6px;
+        margin-top: 4px;
+    }
+    #mobileBar button {
+        font-family: inherit;
+        font-size: 1.1em;
+        padding: 6px 14px;
+        border: 1px solid #4a5a7a;
+        border-radius: 6px;
+        cursor: pointer;
+        background: #2a3a5a;
+        color: #c8c8d0;
+        touch-action: manipulation;
+        min-width: 44px;
+        min-height: 44px;
+    }
+    #mobileBar button:active { background: #3a4a6a; }
+    #mobileBar button.active {
+        background: #0a4a2a;
+        color: #00ee77;
+        border-color: #00cc66;
+    }
+
+    /* Mobile power switch (compact replica of .power-switch) */
+    .mobile-power-switch {
+        display: inline-flex; align-items: center; gap: 3px;
+        cursor: pointer; user-select: none; flex-shrink: 0;
+    }
+    .mobile-power-switch input { display: none; }
+    .mps-label { font-size: 0.65em; font-weight: bold; line-height: 1; }
+    .mps-label:first-of-type { color: #c66; }
+    .mps-label:last-of-type { color: #565; }
+    .mobile-power-switch input:checked ~ .mps-label:first-of-type { color: #544; }
+    .mobile-power-switch input:checked ~ .mps-label:last-of-type { color: #0e7; }
+    .mps-track {
+        position: relative; display: block;
+        width: 36px; height: 18px;
+        background: linear-gradient(180deg, #111, #222 40%, #1a1a1a);
+        border: 2px solid #444; border-radius: 4px;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+        transition: border-color 0.2s;
+    }
+    .mps-knob {
+        position: absolute; top: 1px; left: 1px;
+        width: 14px; height: 14px; border-radius: 3px;
+        background: linear-gradient(180deg, #bbb, #888 40%, #999);
+        border: 1px solid #aaa;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.6);
+        transition: left 0.2s, background 0.2s;
+    }
+    .mobile-power-switch input:checked ~ .mps-track {
+        border-color: #0a5;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), 0 0 6px rgba(0,204,102,0.3);
+    }
+    .mobile-power-switch input:checked ~ .mps-track .mps-knob {
+        left: 19px;
+        background: linear-gradient(180deg, #5fa, #0b6 40%, #0d7);
+        border-color: #0e7;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(0,238,119,0.5);
+    }
+
+    /* Footer: relocated into drawer via JS — shrink for panel width */
+    .footer {
+        font-size: 0.7em;
+        padding: 8px;
+        margin-top: auto;
+        border-top: 1px solid #334;
+    }
+    .footer-links { flex-wrap: wrap; gap: 4px; }
+
+    /* === Side-panel: touch-friendly buttons ===
+       Apple HIG calls for a 44pt minimum tappable area, so keep min-height at
+       44px but use a modest font/padding so buttons are not visually bulky. */
+    .side-panel button {
+        min-height: 44px;
+        font-size: 0.8em;
+        padding: 4px 12px;
+        touch-action: manipulation;
+    }
+
+    /* File-input rows: input takes a full line, buttons sit on the next row at
+       their natural width (44px tall) — nothing gets clipped. */
+    .sp-row { gap: 8px; }
+    .sp-row > input[type="file"] { flex-basis: 100%; }
+    .sp-row > button { flex: 0 0 auto; }
+
+    /* Control button row wraps so Pause / Reset / 📷 never overflow. */
+    .side-panel .btn-row { flex-wrap: wrap; gap: 8px; }
+
+    /* Larger, easier-to-tap file pickers in the panel. */
+    .side-panel input[type="file"] {
+        font-size: 0.9em;
+        padding: 6px 6px;
+    }
+    .side-panel input[type="file"]::file-selector-button {
+        padding: 6px 10px;
+        font-size: 0.95em;
+    }
+
+    /* Roomier collapsible section headers (easier to tap to expand/collapse) */
+    .side-panel .sp-section h3.sp-section-toggle {
+        font-size: 0.95em;
+        padding: 6px 16px 6px 0;
+    }
+
+    /* ROM 行: 段組みは共通のグリッドのまま、セレクトとファイル選択が
+       大きくなる分だけ列幅の変数を広げる。ボタンが丸ごと見える幅は保つ。 */
+    .rom-list {
+        --rom-col-src: 128px;
+        --rom-col-status: 44px;
+    }
+    /* ドロワーが 85vw まで縮む幅では 2 段目にセレクトとファイル選択ボタンが
+       並びきらないため、ファイル選択を 3 段目へ落としてボタンを欠けさせない */
+    @media (max-width: 340px) {
+        .rom-item {
+            grid-template-areas:
+                "name name status"
+                "src  src  src"
+                "file file file";
+        }
+    }
+
+    /* === Side-panel form controls: touch-friendly === */
+
+    /* Dropdowns: full 44px touch height and readable text.
+       !important overrides the inline font-size on individual <select>s. */
+    .side-panel select {
+        min-height: 44px;
+        font-size: 0.95em !important;
+        padding: 4px 8px;
+        touch-action: manipulation;
+    }
+
+    /* Checkboxes & radios: larger hit target. */
+    .side-panel input[type="checkbox"],
+    .side-panel input[type="radio"] {
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
+        touch-action: manipulation;
+    }
+
+    /* Give the label wrapping each radio/checkbox a generous tap area and
+       spacing so adjacent options are not easy to mis-tap. */
+    .side-panel .ctrl-row {
+        gap: 10px;
+        min-height: 40px;
+        white-space: normal;
+    }
+    .side-panel .ctrl-row > label:first-child,
+    .side-panel .sp-section > label {
+        font-size: 0.9em;
+    }
+    .side-panel .radio-group {
+        flex-wrap: wrap;
+        gap: 8px 16px;
+    }
+    .side-panel .radio-group label {
+        font-size: 0.95em;
+        gap: 6px;
+        padding: 6px 4px;
+        min-height: 40px;
+    }
+
+    /* Range sliders (volume): taller track / thumb for easier dragging. */
+    .side-panel input[type="range"] {
+        height: 28px;
+        touch-action: manipulation;
+    }
+
+    /* Generous spacing between buttons across all panel rows so taps don't
+       land on the wrong control. */
+    .side-panel .sp-row { gap: 10px; row-gap: 10px; flex-wrap: wrap; }
+    .side-panel .sp-row > button,
+    .side-panel .btn-row > button { flex: 0 0 auto; }
+
+    /* Larger, easier-to-tap help (?) icon and required/optional badges. */
+    .side-panel .sp-section h3 .help-icon {
+        width: 24px; height: 24px; line-height: 24px; font-size: 14px;
+    }
+    .rom-badge { font-size: 0.72rem; padding: 1px 6px; }
+
+    /* Slightly larger guidance text for legibility on small screens. */
+    .rec-label { font-size: 0.78rem; }
+
+    /* Library list: roomier rows and bigger per-item action buttons so the
+       tiny ▶0 / Exp / Del controls become tappable (44px target). */
+    #libList { max-height: 40vh; font-size: 0.85em; }
+    #libList .lib-row { gap: 6px; padding: 6px 2px; flex-wrap: wrap; }
+    #libList .lib-row button {
+        min-height: 40px;
+        min-width: 40px;
+        font-size: 0.9em !important;
+        padding: 4px 8px !important;
+        touch-action: manipulation;
+    }
+
+    /* ROM Info copy button stays tappable. */
+    #romInfoCopyBtn { min-height: 36px; padding: 2px 10px; }
+}
+
+/* ===== Narrow phone width: icon-forward, low-text buttons =====
+   On small phones, primary media buttons (record / play / rewind / save /
+   eject / paste-stop) collapse to their glyph to save space and grow the tap
+   target. Every such button keeps title + aria-label so meaning is preserved.
+   Desktop and tablet keep the text labels untouched. */
+@media (max-width: 560px) {
+    .side-panel button .btn-icon {
+        display: inline;
+        font-size: 1.35em;
+        line-height: 1;
+    }
+    .side-panel button .btn-text { display: none; }
+
+    /* Icon-only buttons become square-ish, large tap targets. */
+    .side-panel .sp-row > button:has(.btn-icon),
+    .side-panel .btn-row > button:has(.btn-icon) {
+        min-width: 52px;
+        min-height: 48px;
+        padding: 4px 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Recording row: keep the small Japanese caption above the icon buttons
+       so the user still knows these act on the recording. */
+    .rec-label { font-size: 0.82rem; }
+}
+
+/* =========================================================================
+   Modern UI
+   配色は 3 層構成。
+     1. アプリヘッダー（タイトルバー）: 黒地のダーク配色。全スキン共通。
+     2. ページ（背景・右パネル・ツールバー・モーダル・画面のベゼル）:
+        クリームホワイト基調のライト配色。全スキン共通。
+     3. 前面パネル（#hwBar / #hwTower / #hwTowerBand）: 機種ごとの雰囲気に合わせるため、
+        body のスキンクラス（ui-skin-*）ごとに配色・質感を変える。
+   スキンで切り替わるのは 3. の前面パネル専用の変数（--hw-* / --hwbar-* /
+   --hwlip-*）と body.ui-skin-* .hw-* の規則だけで、ページ全体に効く
+   --ui-* はスキンによらず同じ値を使う。フォントは IBM Plex 系が端末にあれば
+   使用し、無ければ system-ui / monospace へフォールバック（外部 CDN 依存なし）。
+   ========================================================================= */
+
+:root {
+    --font-sans: 'IBM Plex Sans JP', 'IBM Plex Sans', 'Hiragino Sans',
+                 'Yu Gothic UI', 'Meiryo', system-ui, -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Cascadia Mono', 'Consolas',
+                 'Courier New', monospace;
+
+    /* --- ページ配色（全スキン共通）: クリームホワイト基調・濃茶文字・赤アクセント --- */
+    --ui-bg: #ece6d4;
+    --ui-text: #3a352c;
+    --ui-muted: #736b58;
+    --ui-faint: #8a8371;
+    --ui-panel: #ece6d3;
+    --ui-panel2: #e2dbc4;
+    --ui-input: #f4efe0;
+    --ui-border: #c9c0a3;
+    --ui-border-soft: #d4cbb0;
+    --ui-accent: #c23a2e;
+    --ui-accent-text: #fdf6ec;
+    --ui-bezel: #ddd5bf;
+
+    /* --- ヘッダー配色（全スキン共通）: 黒地・明色文字。ページの --ui-* から
+       派生させず、ヘッダー専用の値として持つ --- */
+    --ui-header-bg: #131316;
+    --ui-header-border: #26262b;
+    --ui-header-text: #e8eaee;
+    --ui-header-muted: #9aa1ab;
+    --ui-header-panel: #1c1c21;
+    --ui-header-panel-border: #2c2c33;
+    --ui-brand: #ffffff;
+    --ui-tab-bg: #c8ccd4;
+    --ui-tab-text: #131316;
+}
+
+/* --- 前面パネル専用の変数（スキンごと）: 電源ランプ・ディスク挿入 LED の色 --- */
+body {
+    --hw-power-lamp: #f5a623;   /* FM77AV / AV20 / AV40（黒筐体）: 琥珀色 */
+    --hw-loaded-led: #ff5a76;
+}
+body.ui-skin-fm7, body.ui-skin-new7, body.ui-skin-fm77 {
+    --hw-power-lamp: #e0392b;   /* FM-7 / FM-new7 / FM-77: 赤 */
+    --hw-loaded-led: #e0392b;
+}
+body.ui-skin-avex, body.ui-skin-avsx {
+    --hw-power-lamp: #3ecf6a;   /* AV40EX / AV40SX: 緑の電源・赤の LED */
+    --hw-loaded-led: #ff3b3b;
+}
+
+/* --- テーマ適用（既存ルールより後方に置くことで上書きする） --- */
+body {
+    background: var(--ui-bg);
+    color: var(--ui-text);
+    font-family: var(--font-sans);
+    /* 縦は上詰め（内容が窓より短くてもタイトルバーの上に空きを作らない）。
+       横は中央寄せだが、固定倍率（x2 等）で内容が窓より広い時も左端が切れないように */
+    justify-content: flex-start;
+    align-items: safe center;
+}
+
+.toolbar,
+.sp-section {
+    background: var(--ui-panel);
+    border-color: var(--ui-border);
+}
+.toolbar button {
+    background: var(--ui-panel2);
+    border-color: var(--ui-border);
+    color: var(--ui-text);
+}
+.toolbar button:hover { background: var(--ui-border); }
+.toolbar button.vol-btn { background: transparent; border-color: transparent; }
+.toolbar button.vol-btn:hover { background: var(--ui-panel2); border-color: var(--ui-border); }
+.sp-section h3 { color: var(--ui-muted); border-bottom-color: var(--ui-border-soft); }
+.sp-section h3 .help-icon { background: var(--ui-panel2); color: var(--ui-muted); }
+.sp-section h3 .help-icon:hover { background: var(--ui-border); color: var(--ui-text); }
+.sp-section label { color: var(--ui-muted); }
+.radio-group label { color: var(--ui-text); }
+input[type="radio"], input[type="checkbox"] { accent-color: var(--ui-accent); }
+input[type="range"]#volumeSlider { accent-color: var(--ui-accent); }
+.status-divider { border-left-color: var(--ui-border); }
+.side-panel::-webkit-scrollbar-thumb { background: var(--ui-border); }
+input[type="file"] {
+    background: var(--ui-input);
+    border-color: var(--ui-border);
+    color: var(--ui-text);
+}
+input[type="file"]::file-selector-button {
+    background: var(--ui-panel2);
+    border-color: var(--ui-border);
+    color: var(--ui-text);
+}
+input[type="file"]::file-selector-button:hover { background: var(--ui-border); }
+button {
+    background: var(--ui-panel2);
+    border-color: var(--ui-border);
+    color: var(--ui-text);
+}
+button:hover:not(:disabled) { border-color: var(--ui-muted); }
+select, textarea, input[type="text"] {
+    background: var(--ui-input);
+    border: 1px solid var(--ui-border);
+    color: var(--ui-text);
+    border-radius: 4px;
+    font-family: inherit;
+}
+.status-tag { background: var(--ui-panel2); color: var(--ui-faint); }
+.status-tag.loaded { background: #0a3a1a; color: #00cc66; }
+/* ROM 補完タグ: 利用者 ROM の足りない分を同梱互換 ROM で補ったスロット。
+   「読み込み済み (loaded)」とは別物と一目で分かるよう、テーマのアクセント色で
+   縁取りする (固定色は使わず、すべてテーマ変数から取る)。 */
+.status-tag.filled {
+    background: var(--ui-panel2);
+    color: var(--ui-accent);
+    border: 1px solid var(--ui-accent);
+    padding: 0 4px;
+}
+/* ROM 互換タグ: 同梱互換 ROM を使用中のスロット。既定の状態なので、
+   テーマの控えめな文字色をそのまま使い、主張しすぎないようにする。 */
+.status-tag.builtin {
+    background: var(--ui-panel2);
+    color: var(--ui-muted);
+}
+.vol-label, .fdc-track-info, .status-tag, .disk-geom, .cap-mem, .key-display {
+    font-family: var(--font-mono);
+}
+/* デバッグ用フローティングパネルは中身の配色（#cde 等）が濃色前提のため、
+   ライトテーマでも常に固定のダーク配色を維持する（テーマ非連動）。 */
+.screen-container { background: var(--ui-bezel); border-color: var(--ui-border); }
+.footer { color: var(--ui-faint); }
+.footer a { color: var(--ui-muted); }
+.footer a:hover { color: var(--ui-text); }
+.mod-pill { border-color: var(--ui-border); background: var(--ui-panel2); color: var(--ui-faint); }
+.mod-pill.on { color: var(--ui-accent-text); background: var(--ui-accent); border-color: var(--ui-accent); }
+
+/* --- アプリヘッダー（ブランド・機種タブ・スキンチップ） ---
+   黒地のダーク配色（--ui-header-*）。スキンによらず同じ。ライトなページとの
+   境目が唐突にならないよう、下縁に 1px の罫線と薄い影を置く */
+.app-header {
+    width: 100%;
+    background: var(--ui-header-bg);
+    border-bottom: 1px solid var(--ui-header-border);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+    position: relative;
+    z-index: 1;
+}
+/* ヘッダーのレイアウト寸法は全機種で同一。1 行に収まる幅では高さ 56px 固定で、
+   タブの高さ・縦位置が機種切替で動かない。幅が足りない時は末尾のスキン切替
+   （.skin-chips-wrap）から順に次の行へ回り込み（上下の余白を固定しているので
+   1 行目のタブの位置は変わらない）、それでも収まらない要素は横スクロールで
+   縮退する。 */
+.app-header-inner {
+    display: flex;
+    align-items: center;
+    align-content: center;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    padding: 10px 20px;
+    min-height: 56px;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+.app-header-inner > * { flex-shrink: 0; }
+/* 機能ラベル（タブ横へ移設）: ヘッダー内では 1 行固定 */
+.app-header .cap-badge-row {
+    margin: 0;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+.app-header .cap-mem,
+.app-header .cap-compare-link {
+    color: var(--ui-header-muted);
+}
+.app-brand {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: 2px;
+    color: var(--ui-brand);
+    user-select: none;
+}
+/* 正式タイトル（機種名付き）はスクリーンリーダー向けに残し視覚上は隠す */
+.site-title {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+.machine-tabs {
+    display: flex;
+    background: var(--ui-header-panel);
+    border: 1px solid var(--ui-header-panel-border);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+}
+.machine-tab {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: inherit;
+    color: var(--ui-header-muted);
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.machine-tab:hover:not(:disabled) { color: var(--ui-header-text); border-color: transparent; }
+.machine-tab.active {
+    font-weight: 700;
+    color: var(--ui-tab-text);
+    background: var(--ui-tab-bg);
+}
+.machine-tabs.locked { opacity: 0.55; }
+.machine-tabs.locked .machine-tab { cursor: not-allowed; }
+/* スキン切替チップはタイトルバーの右端（.app-header-inner の最後の要素。余白が
+   あれば margin-left: auto で右端へ寄り、足りない時は能力バッジ行の右に続く） */
+.skin-chips-wrap { display: flex; align-items: center; gap: 7px; margin-left: auto; }
+.skin-chips-label { font-size: 10px; color: var(--ui-header-muted); }
+.skin-chips {
+    display: flex;
+    background: var(--ui-header-panel);
+    border: 1px solid var(--ui-header-panel-border);
+    border-radius: 7px;
+    padding: 2px;
+    gap: 2px;
+}
+.skin-chip {
+    padding: 4px 9px;
+    border: none;
+    border-radius: 5px;
+    font-size: 10px;
+    font-family: inherit;
+    color: var(--ui-header-muted);
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.skin-chip:hover { color: var(--ui-header-text); border-color: transparent; }
+.skin-chip.active {
+    font-weight: 700;
+    color: var(--ui-tab-text);
+    background: var(--ui-tab-bg);
+}
+
+/* --- 表示倍率トグル（Web標準 / x2 / x1）＋右端のフルスクリーン FULL ---
+   .scale-btn は倍率の選択肢（選択中は .active）。.scale-fs はフルスクリーン切替で、
+   同じ枠に同じ見た目で並ぶが選択状態は持たない */
+.scale-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    gap: 10px;
+}
+.scale-left { display: flex; align-items: center; gap: 10px; }
+.scale-label { font-size: 12px; color: var(--ui-muted); }
+.scale-toggle {
+    display: flex;
+    background: var(--ui-panel2);
+    border: 1px solid var(--ui-border);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+}
+.scale-btn,
+.scale-fs {
+    padding: 5px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--ui-muted);
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.scale-btn:hover,
+.scale-fs:hover { color: var(--ui-text); border-color: transparent; }
+.scale-btn.active {
+    font-weight: 700;
+    color: var(--ui-accent-text);
+    background: var(--ui-accent);
+}
+/* FULL: 倍率の 3 択と細い仕切りで区切る。フルスクリーン非対応時は減光 */
+.scale-fs {
+    margin-left: 4px;
+    border-left: 1px solid var(--ui-border);
+    border-radius: 0 6px 6px 0;
+    padding-left: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+.scale-fs:disabled { opacity: 0.45; cursor: default; }
+.scale-fs:disabled:hover { color: var(--ui-muted); }
+.scale-info {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ui-faint);
+    white-space: nowrap;
+}
+
+/* --- ステージレイアウト（画面列＋ハードウェアパネル） ---
+   画面列 .stage-main はステージの幅いっぱいに伸ばす（画面はその中で中央寄せ）。
+   横型バーの内容幅がステージより広い機種でも、表示倍率トグル・ツールバーの幅が
+   バーと揃う */
+.stage {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+}
+.stage-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.stage-main .toolbar { width: 100%; }
+/* FM-7 / FM-new7 スキン: 画面列の下に上面帯 (#hwTowerBand)、右列に外付けユニット
+   (#hwTower) を置く 2 列 2 行のグリッド。#hwTower は 2 行にまたがり、下端を
+   #hwTowerBand の下端と揃える（縦に伸ばす）。
+   .hw-panel は display: contents で箱を消し、中の #hwTowerBand / #hwTower を
+   .stage のグリッド項目にする（#hwBar は非表示） */
+body.hw-right .stage {
+    display: grid;
+    grid-template-columns: minmax(0, auto) 300px;
+    grid-template-rows: auto auto;
+    align-items: stretch;
+    justify-content: center;
+}
+body.hw-right .stage-main { grid-column: 1; grid-row: 1; }
+body.hw-right .hw-panel { display: contents; }
+body.hw-right #hwTowerBand { grid-column: 1; grid-row: 2; }
+body.hw-right #hwTower { grid-column: 2; grid-row: 1 / 3; align-self: stretch; }
+body:not(.hw-right) .hw-panel { width: 100%; }
+
+/* --- ハードウェアパネル共通 ---
+   画面下のパネル (#hwBar / #hwTowerBand) の高さは機種を切り替えても変わらないよう
+   共通の値に固定する。--hw-bottom-h は外枠（上下の 1px 枠線込み）の総高さ、
+   --hw-bottom-lip-h は下段（.hw-bar-lip。FM-7 の .hw-tower-rear は残り全部）の高さ。上段
+   （.hw-bar-main / .hw-tower-cover）は残り全部（= 総高さ − 枠線 2px − 帯 − 下段）。
+   総高さは、内容が最も詰まる組み合わせ（上段: 3.5 インチ フルハイトのベイ、下段:
+   ラベルを部品の上に置く AV40EX / SX）が収まる最小の値 */
+.hw-panel {
+    min-width: 0;
+    --hw-bottom-h: 216px;
+    --hw-bottom-lip-h: 64px;
+}
+#hwTower, #hwTowerBand { display: none; }
+body.hw-right #hwTower, body.hw-right #hwTowerBand { display: flex; }
+body.hw-right #hwBar { display: none; }
+.hw-tiny-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: inherit;
+    opacity: 0.75;
+}
+.hw-lamp {
+    display: inline-block;
+    width: 12px;
+    height: 6px;
+    border-radius: 2px;
+    background: #3a3a41;
+    transition: background 0.08s, box-shadow 0.08s;
+    flex-shrink: 0;
+}
+.hw-power-lamp.on {
+    background: var(--hw-power-lamp);
+    box-shadow: 0 0 8px var(--hw-power-lamp);
+}
+/* ドライブのアクセス LED（実機のアクセスランプ）: .on（アクセス中）で明るく点灯、
+   .motor（モーター回転中）で暗めの点灯、それ以外は消灯。ディスクの挿入の有無は
+   LED では示さない（ディスク名表示・スロットのディスク縁で分かる）。
+   色分けは既存の Disk パネルの LED をそのまま反映: 黄=2D / 白=2D DMA /
+   緑=2DD / 青=2DD DMA / 赤=書き込み */
+.hw-drive-lamp.on { background: #ffcc22; box-shadow: 0 0 8px rgba(255, 204, 34, 0.8); }
+.hw-drive-lamp.on.led-white { background: #f4f4f4; box-shadow: 0 0 8px rgba(244, 244, 244, 0.8); }
+.hw-drive-lamp.on.led-blue  { background: #3388ff; box-shadow: 0 0 8px rgba(51, 136, 255, 0.8); }
+.hw-drive-lamp.on.led-red   { background: #ff3322; box-shadow: 0 0 8px rgba(255, 51, 34, 0.8); }
+.hw-drive-lamp.on.led-green { background: #2ecc55; box-shadow: 0 0 8px rgba(46, 204, 85, 0.8); }
+.hw-drive-lamp.motor { background: #884422; }
+/* 空のベイ（ディスク未挿入）はクリックでディスク選択ダイアログが開く */
+.hw-bay:not(.loaded),
+.hw-vbay:not(.loaded) { cursor: pointer; }
+
+/* --- FM-7 / FM-new7: 上面帯（画面下・横型）と縦型タワー（右列） --- */
+.hw-tower,
+.hw-tower-top {
+    flex-direction: column;
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid #b3a98d;
+    background: linear-gradient(180deg, #f4efe0 0%, #e3dbc5 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 4px 12px rgba(58, 53, 44, 0.2);
+    color: #3a352c;
+    overflow: hidden;
+}
+/* 上面帯 (#hwTowerBand): 横型バー #hwBar と同じ総高さ（--hw-bottom-h）の 2 段構成。
+   上段 .hw-tower-cover は黄色のカバー（左に機種名、右端に電源ロッカー）で 75px、
+   下段 .hw-tower-rear はクリーム色の背面パネル（左端に RESET、右端に BOOT の DIP
+   スイッチ、その間に実機の背面と同じ並びのダミー部品。表記は各部品の上）で残り全部の
+   高さ。部品の列は段の中で縦中央 */
+.hw-tower-top {
+    height: var(--hw-bottom-h);
+    flex-shrink: 0;
+}
+.hw-tower-cover {
+    height: 75px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #e8c754 0%, #dcb63e 60%, #d2ab35 100%);
+    border-bottom: 1px solid #b08f27;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 22px;
+}
+.hw-tower-model {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: #2a2620;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+    white-space: nowrap;
+    line-height: 1.2;
+}
+.hw-tower-rear {
+    flex: 1;
+    min-height: 0;
+    background: linear-gradient(180deg, #ece5d0 0%, #e2dac3 100%);
+    display: flex;
+    align-items: center;            /* 部品の列（表記行＋部品行）を段の縦中央に */
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 22px;
+}
+/* 背面パネルの各部品: 表記（上）＋部品（下）の縦積み。全部同じ高さにして下辺で揃え、
+   部品の下辺が一直線に並ぶ。表記は 10px の等幅、#736b58 系 */
+.hw-rear-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 62px;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.hw-rear-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.15;
+    letter-spacing: 0.5px;
+    color: #736b58;
+    text-align: center;
+    white-space: nowrap;
+}
+/* 左端の RESET: 表記は下（ボタンの下辺を他の部品と揃え、表記はその下にはみ出す） */
+.hw-rear-reset { margin-bottom: -16px; }
+/* AC インレット: 黒い角型（上の角を落とす）に 3 つの穴 */
+.hw-ac-inlet {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    width: 34px;
+    height: 24px;
+    background: #1c1915;
+    clip-path: polygon(0 30%, 18% 0, 82% 0, 100% 30%, 100% 100%, 0 100%);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.hw-ac-inlet i {
+    display: block;
+    width: 3px;
+    height: 7px;
+    background: #4a423a;
+    border-radius: 1px;
+}
+.hw-ac-inlet i:nth-child(2) { align-self: flex-start; margin-top: 4px; }
+/* DIN 端子: 黒い丸に金属色の縁、小さな点 */
+.hw-din {
+    display: block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #8d877a;
+    background: #16130f radial-gradient(circle, #6a6258 1px, transparent 1.4px) 3px 3px / 6px 6px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+/* RCA ジャック: 小さな丸 */
+.hw-rca {
+    display: block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid #9a948a;
+    background: radial-gradient(circle, #16130f 0 35%, #55504a 36% 55%, #16130f 56%);
+    box-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+/* 調整穴: 極小の丸 2 個 */
+.hw-trim-pair { display: flex; gap: 12px; padding-bottom: 3px; }
+.hw-trim-pair i {
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #3a5a8a 0 30%, #16130f 31%);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+/* エッジコネクタ: 黒い横長の枠に細い縦線の繰り返し（EXPANSION PORT は長く、PRINTER はやや短い） */
+.hw-rear-edge-long  { flex: 3 1 0; min-width: 0; }
+.hw-rear-edge-short { flex: 2 1 0; min-width: 0; }
+.hw-edge {
+    display: block;
+    width: 100%;
+    max-width: 170px;
+    height: 20px;
+    border-radius: 3px;
+    border: 2px solid #26221c;
+    background: #0e0c0a repeating-linear-gradient(90deg, #4a423a 0px, #4a423a 1px, transparent 1px, transparent 4px);
+    background-clip: content-box;
+    padding: 3px 4px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8), 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+.hw-rear-edge-short .hw-edge { max-width: 120px; }
+/* 右端の DIP: 4 連スイッチの下に 1 2 3 4、右横に BOOT/CLOCK（下辺で揃える） */
+.hw-rear-dip {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 6px;
+}
+.hw-dip-nums {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 5px;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    line-height: 1;
+    color: #736b58;
+}
+.hw-dip-nums i { font-style: normal; }
+.hw-dip-caption { text-align: left; }
+.hw-rocker-well {
+    width: 80px;
+    height: 36px;
+    border: none;
+    border-radius: 4px;
+    background: #26221c;
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 0;
+}
+.hw-rocker-well .hw-lamp {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #4a423a;
+}
+.hw-rocker-well .hw-power-lamp.on {
+    background: var(--hw-power-lamp);
+    box-shadow: 0 0 6px var(--hw-power-lamp);
+}
+.hw-rocker {
+    width: 32px;
+    height: 20px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #3d3831 0%, #16130f 100%);
+    box-shadow: inset 0 6px 4px rgba(255, 255, 255, 0.08);
+    transition: background 0.15s;
+}
+body.hw-power-on .hw-rocker {
+    background: linear-gradient(0deg, #3d3831 0%, #16130f 100%);
+    box-shadow: inset 0 -6px 4px rgba(255, 255, 255, 0.08);
+}
+.hw-round-reset {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    padding: 0;
+    background: radial-gradient(circle at 40% 35%, #454039 0%, #16130f 70%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+}
+.hw-round-reset:active { box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8); }
+/* 外付けユニットの中身: 見出しとドライブの箱を上に置き、余った高さは無地のクリーム面。
+   .hw-tower-foot（PERSONAL COMPUTER）はユニットの下端 */
+.hw-tower-drives {
+    flex: 1;
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 10px;
+    min-height: 0;
+}
+.hw-tower-drives-title { color: #736b58; opacity: 1; font-size: 12px; }
+.hw-tower-drive-box {
+    flex: 0 0 auto;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #f0ead9 0%, #ddd5bf 100%);
+    border: 1px solid #c4bba1;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    padding: 16px;
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    min-height: 170px;
+}
+.hw-vbay {
+    flex: 1;
+    max-width: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.hw-vbay .hw-drive-lamp {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+/* 消灯時の地色（.on / .motor の点灯色を上書きしないよう消灯時に限る） */
+.hw-vbay .hw-drive-lamp:not(.on):not(.motor) { background: #a89f8a; }
+.hw-vslot {
+    flex: 1;
+    width: 100%;
+    min-height: 110px;
+    border-radius: 4px;
+    background: #1c1915;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8);
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 14px;
+}
+.hw-vslit {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    margin-left: -2px;
+    width: 4px;
+    height: 46%;
+    background: #33302a;
+    border-radius: 2px;
+}
+.hw-vbay.loaded .hw-vslit { background: #57524a; }
+.hw-lever {
+    width: 34px;
+    height: 52px;
+    border: none;
+    border-radius: 4px;
+    padding: 0;
+    background: linear-gradient(180deg, #3d3831 0%, #16130f 100%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    transform: rotate(90deg);           /* レバー横 = 空（開） */
+    transition: transform 0.25s ease;
+}
+.hw-vbay.loaded .hw-lever { transform: none; }   /* レバー縦 = 挿入（閉） */
+.hw-vbay .hw-drive-num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: #565043;
+}
+.hw-tower-names {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #565043;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.hw-tower-foot {
+    height: 30px;
+    flex-shrink: 0;
+    background: repeating-linear-gradient(90deg, #dcd3b9 0px, #dcd3b9 6px, #d1c7ab 6px, #d1c7ab 8px);
+    border-top: 1px solid #c4bba1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #736b58;
+}
+/* FM-new7 スキン: FM-7 スキンと同じ構成で、電源スイッチの埋め込み枠の中全体が白。
+   スイッチのボタンそのものは FM-7 と同じ黒（枠内黒＋ボタン黒の FM-7 との対比） */
+body.ui-skin-new7 .hw-rocker-well {
+    background: #f6f2e7;
+    border: 1px solid #c9c2aa;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.22);
+}
+body.ui-skin-new7 .hw-rocker {
+    box-shadow: inset 0 6px 4px rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+body.ui-skin-new7 .hw-rocker-well .hw-lamp {
+    background: #cfc8b6;   /* 消灯時も白枠内で見えるやや濃い地色 */
+}
+body.ui-skin-new7 .hw-rocker-well .hw-power-lamp.on {
+    background: var(--hw-power-lamp);
+    box-shadow: 0 0 6px var(--hw-power-lamp);
+}
+
+/* --- FM-77 / FM77AV 系 / AV40EX 系: 横型バー ---
+   総高さは --hw-bottom-h に固定（上段 .hw-bar-main が残り全部、下段 .hw-bar-lip は
+   --hw-bottom-lip-h。EX / SX の色帯 .hw-bar-stripe の 3px も上段から差し引かれる） */
+.hw-bar {
+    display: flex;
+    flex-direction: column;
+    height: var(--hw-bottom-h);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--hwbar-border, #303036);
+    background: var(--hwbar-bg, linear-gradient(180deg, #232327 0%, #17171a 100%));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 18px rgba(0, 0, 0, 0.55);
+    color: var(--hwbar-text, #e8eaee);
+}
+.hw-bar-stripe { display: none; height: 3px; flex-shrink: 0; }
+.hw-bar-main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: stretch;
+    padding: 16px 20px;
+    gap: 22px;
+}
+.hw-bar-left {
+    width: 180px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+.hw-nameplate span {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-style: normal;
+    font-size: 20px;
+    letter-spacing: 1px;
+    background: linear-gradient(180deg, #f0f1f3 0%, #9ea3ac 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.hw-vent {
+    width: 60px;
+    height: 24px;
+    background: repeating-linear-gradient(90deg, #2a2a2e 0px, #2a2a2e 3px, #1c1c1f 3px, #1c1c1f 6px);
+    border-radius: 3px;
+}
+.hw-left-power { display: none; align-items: center; gap: 9px; }
+.hw-power-btn {
+    width: 44px;
+    height: 26px;
+    border-radius: 3px;
+    border: 1px solid #3a3a40;
+    padding: 0;
+    background: linear-gradient(180deg, #2c2c31 0%, #101012 100%);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.14), 0 2px 5px rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+}
+.hw-power-btn:active { box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7); }
+.hw-vent-divider { display: none; }
+.hw-bar-drives {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+    min-width: 0;
+}
+.hw-bay {
+    flex: 1;
+    min-width: 0;
+    border-radius: 6px;
+    background: var(--hwbay-bg, linear-gradient(180deg, #202024 0%, #141416 100%));
+    border: 1px solid var(--hwbay-border, #2e2e34);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 3px 8px rgba(0, 0, 0, 0.45);
+    padding: 12px 16px;
+    display: grid;
+    grid-template-areas: "slot" "eject" "info";
+    align-content: center;
+    gap: 0;
+}
+.hw-slot {
+    grid-area: slot;
+    height: 12px;
+    border-radius: 2px;
+    background: var(--hwslot-bg, #0a0a0c);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+}
+.hw-disk-edge {
+    width: 55%;
+    height: 5px;
+    border-radius: 1px;
+    background: var(--hwslot-empty, #2a2a2f);
+}
+.hw-bay.loaded .hw-disk-edge {
+    width: 62%;
+    height: 6px;
+    background: var(--hwslot-disk, #babcc4);
+}
+.hw-eject {
+    grid-area: eject;
+    justify-self: center;
+    width: 82px;
+    height: 30px;
+    border: none;
+    padding: 0;
+    border-radius: 0 0 3px 3px;
+    background: linear-gradient(180deg, #2e2e33 0%, #131315 100%);
+    box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+}
+.hw-eject:active { transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7); }
+.hw-bay-info {
+    grid-area: info;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 10px;
+    min-width: 0;
+}
+.hw-disk-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--hwbar-faint, #6f7078);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.hw-bay.loaded .hw-disk-name { color: var(--hwbar-text, #e8eaee); }
+.hw-drive-num {
+    width: 19px;
+    height: 19px;
+    border-radius: 2px;
+    background: var(--hwnum-bg, #0c0c0e);
+    color: var(--hwnum-text, #e8eaee);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.hw-bar-right {
+    width: 150px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 12px;
+}
+.hw-right-power { display: flex; align-items: center; gap: 8px; }
+.hw-right-power .hw-tiny-label { font-size: 12px; letter-spacing: 0; }
+.hw-right-power .hw-lamp { width: 22px; height: 5px; }
+.hw-power-btn-right {
+    width: 46px;
+    height: 34px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #2e2e33 0%, #121214 100%);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.14), inset 0 -2px 3px rgba(0, 0, 0, 0.6), 0 3px 6px rgba(0, 0, 0, 0.6);
+    border: 1px solid #3a3a41;
+}
+.hw-kbd-leds { display: flex; gap: 10px; }
+.hw-kbd-led-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+.hw-kbd-led-item .hw-lamp {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+.hw-kbd-led-item .hw-lamp.on {
+    background: var(--hw-loaded-led);
+    box-shadow: 0 0 6px var(--hw-loaded-led);
+}
+.hw-kbd-led-item span:last-child { font-size: 10px; color: var(--hwbar-muted, #8f939c); }
+.hw-right-reset { display: none; align-items: center; gap: 7px; }
+.hw-right-reset .hw-tiny-label { font-size: 11px; letter-spacing: 0; }
+.hw-reset-btn {
+    width: 16px;
+    height: 10px;
+    border-radius: 2px;
+    border: 1px solid #2c2c30;
+    padding: 0;
+    background: #08080a;
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.07);
+    cursor: pointer;
+}
+.hw-right-note {
+    font-size: 10px;
+    color: var(--hwbar-faint, #55565c);
+    text-align: right;
+    display: none;
+}
+.hw-bar-lip {
+    height: var(--hw-bottom-lip-h);
+    flex-shrink: 0;
+    background: var(--hwlip-bg, #111113);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    gap: 10px;
+}
+.hw-lip-caption {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--hwbar-faint, #6f7078);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* FM-77 前面のボタン列: 右寄りのくぼんだ台座に MODE / BOOT1 / BOOT2 /
+   BASIC / RESET の角型キャップ。ラベルはキャップの上 */
+.hw-lip-trio {
+    display: none;
+    align-items: flex-end;
+    gap: 9px;
+    padding: 3px 10px 4px;
+    border-radius: 3px;
+    background: #cdc4aa;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.hw-lip-btn-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.hw-lip-btn {
+    display: block;
+    width: 13px;
+    height: 13px;
+    border-radius: 2px;
+    border: 1px solid #b3a98d;
+    padding: 0;
+    background: linear-gradient(180deg, #f4efe0 0%, #cfc6ad 100%);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 2px 3px rgba(0, 0, 0, 0.3);
+}
+button.hw-lip-reset { cursor: pointer; }
+button.hw-lip-reset:active { box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35); }
+.hw-lip-btn-item span:first-child {
+    font-size: 8px;
+    line-height: 1;
+    letter-spacing: 0.5px;
+    color: #736b58;
+    white-space: nowrap;
+}
+.hw-lip-item-boot span:first-child,
+.hw-lip-item-reset span:first-child { color: #3a352c; font-weight: 700; }
+.hw-lip-item-reset { margin-left: 8px; }
+.hw-lip-round { display: none; align-items: center; gap: 7px; }
+.hw-lip-round .hw-tiny-label { font-size: 11px; letter-spacing: 1px; }
+.hw-round-reset-small {
+    width: 14px;
+    height: 14px;
+    background: #0a0a0c;
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.08);
+    border: 1px solid #2e2e34;
+}
+
+/* --- FM77AV 系黒筐体（av = 初代、av2040 = FM77AV20 / FM77AV40）:
+       既定の hw-bar 見た目 = 上記の黒基調 --- */
+body.ui-skin-av .hw-left-power { display: none; }
+/* FM77AV の左ブロック: スピーカーの下に機種名を表示する。 */
+.hw-speaker { display: none; }
+body.ui-skin-av .hw-bar-left {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) 16px;
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-bottom: -16px;          /* 銘板の行を下余白に入れ、グリルをベイと同じ高さにする */
+}
+body.ui-skin-av .hw-speaker {
+    display: block;
+    grid-area: 1 / 1;
+    min-height: 0;
+    border-radius: 6px;
+    border: 1px solid #2c2c31;
+    background: #0e0e11 repeating-linear-gradient(180deg, #2b2b31 0px, #2b2b31 2px, transparent 2px, transparent 6px);
+    background-clip: content-box;
+    padding: 6px 8px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+body.ui-skin-av .hw-nameplate { grid-area: 2 / 1; align-self: end; line-height: 1; }
+body.ui-skin-av .hw-nameplate span { font-size: 14px; line-height: 1; }
+body.ui-skin-av .hw-vent { display: none; }
+/* FM77AV(初代) の右列: 右上に「電源」＋短い横線、その下に角型の電源スイッチ。
+   スイッチの左に かな / INS / CAP の LED を上から縦一列（表記が上、LED がその下）。
+   電源ランプは無く、「電源」表記の横線がその代わり */
+body.ui-skin-av .hw-bar-right {
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-areas: "leds power" "leds btn";
+    justify-content: end;
+    align-content: center;
+    column-gap: 16px;
+    row-gap: 8px;
+}
+body.ui-skin-av .hw-kbd-leds {
+    grid-area: leds;
+    flex-direction: column;
+    align-items: center;
+    align-self: start;
+    gap: 5px;
+}
+body.ui-skin-av .hw-kbd-led-item { flex-direction: column-reverse; gap: 2px; }
+body.ui-skin-av .hw-right-power { grid-area: power; justify-self: end; }
+body.ui-skin-av .hw-power-btn-right { grid-area: btn; justify-self: end; }
+/* FM77AV(初代) のみフルハイト 3.5 インチ 2D: 背の高いベイ＋スロット直下の
+   大型イジェクト。av2040 / EX 系は後述の body.machine-av20up 規則が
+   ハーフハイト（薄型）へ上書きする。 */
+body.ui-skin-av .hw-slot { height: 14px; }
+body.ui-skin-av .hw-eject { width: 88px; height: 34px; }
+
+/* --- FM-77（機種）: 白系横型 --- */
+body.ui-skin-fm77 .hw-bar {
+    --hwbar-border: #4c463a;
+    --hwbar-bg: linear-gradient(180deg, #ece6d4 0%, #ddd5bf 100%);
+    --hwbar-text: #3a352c;
+    --hwbar-muted: #736b58;
+    --hwbar-faint: #736b58;
+    --hwbay-bg: linear-gradient(180deg, #f0ead9 0%, #ddd5bf 100%);
+    --hwbay-border: #c4bba1;
+    --hwslot-bg: #24211b;
+    --hwslot-empty: #3d3831;
+    --hwslot-disk: #f5f2e8;
+    --hwnum-bg: #26221c;
+    --hwnum-text: #ece9e1;
+    --hwlip-bg: repeating-linear-gradient(180deg, #d3cab1 0px, #d3cab1 3px, #c4bba1 3px, #c4bba1 5px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+body.ui-skin-fm77 .hw-nameplate {
+    background: #26221c;
+    border-radius: 3px;
+    padding: 6px 12px;
+    align-self: flex-start;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+body.ui-skin-fm77 .hw-nameplate span { font-style: normal; font-size: 14px; }
+body.ui-skin-fm77 .hw-vent { display: none; }
+body.ui-skin-fm77 .hw-left-power {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+body.ui-skin-fm77 .hw-left-power .hw-power-caption { color: #736b58; opacity: 1; }
+body.ui-skin-fm77 .hw-left-power .hw-power-caption-jp { display: none; }
+body.ui-skin-fm77 .hw-left-power .hw-power-btn {
+    width: 26px;
+    height: 26px;
+    background: linear-gradient(180deg, #f4efe0 0%, #cfc6ad 100%);
+    border: 1px solid #b3a98d;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+body.ui-skin-fm77 .hw-left-power .hw-lamp { width: 12px; height: 5px; }
+body.ui-skin-fm77 .hw-vent-divider {
+    display: block;
+    width: 46px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    background: repeating-linear-gradient(180deg, #d3cab1 0px, #d3cab1 4px, #c4bba1 4px, #c4bba1 7px);
+}
+body.ui-skin-fm77 .hw-bar-right { display: none; }
+body.ui-skin-fm77 .hw-eject {
+    background: linear-gradient(180deg, #e6dfcb 0%, #bfb59a 100%);
+    border: 1px solid #b3a98d;
+    box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+body.ui-skin-fm77 .hw-bay {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+body.ui-skin-fm77 .hw-bar-lip {
+    border-top: 1px solid #c4bba1;
+    padding: 4px 20px;
+}
+/* FM-77 の下段: 横溝（--hwlip-bg の横縞）が全幅に走り、右側にボタン列。注記は出さない */
+body.ui-skin-fm77 .hw-lip-left { display: none; }
+body.ui-skin-fm77 .hw-lip-trio { display: flex; margin-left: auto; }
+
+/* --- AV40EX / AV40SX スキン: 薄型スリムバー --- */
+body.ui-skin-avex .hw-bar,
+body.ui-skin-avsx .hw-bar {
+    --hwbar-border: #2c2c30;
+    --hwbar-bg: linear-gradient(180deg, #1d1d20 0%, #121214 100%);
+    --hwbar-muted: #8c8d93;
+    --hwbar-faint: #6d6e74;
+    --hwbay-bg: linear-gradient(180deg, #1a1a1d 0%, #101012 100%);
+    --hwbay-border: #2c2c30;
+    --hwslot-bg: #08080a;
+    --hwslot-empty: transparent;
+    --hwslot-disk: #9a9ca4;
+}
+body.ui-skin-avex .hw-bar-stripe {
+    display: block;
+    background: linear-gradient(90deg, #e03131 0%, #7a1c1c 100%);
+}
+body.ui-skin-avsx .hw-bar-stripe {
+    display: block;
+    background: linear-gradient(90deg, #2fbf71 0%, #157a44 100%);
+}
+
+/* --- 筐体の黒の色味（機種ごと）: FM77AV はダークブラウン／ダークカッパーがほんのり混じったガンメタブラック、AV20 / AV40 はほんのりチャコールグレーが入った
+   ダークチャコールグレーブラック、AV20EX / AV40EX は紺の入った黒 --- */
+body.ui-skin-av2040 .hw-bar {
+    --hwbar-border: #38383b;
+    --hwbar-bg: linear-gradient(180deg, #2b2b2d 0%, #1b1b1d 100%);
+    --hwlip-bg: transparent;   /* 上段と同じ筐体色（バーの背景）を通す */
+}
+body.ui-skin-av .hw-bar {
+    --hwbar-border: #47423f;
+    --hwbar-bg: linear-gradient(180deg, #35322f 0%, #232120 100%);
+    --hwlip-bg: transparent;   /* 上段と同じ筐体色（バーの背景）を通す */
+}
+body.ui-skin-avex .hw-bar {
+    --hwbar-border: #272c40;
+    --hwbar-bg: linear-gradient(180deg, #1a1f30 0%, #0e1220 100%);
+    --hwbay-bg: linear-gradient(180deg, #171b2a 0%, #0c101c 100%);
+    --hwbay-border: #272c40;
+    --hwlip-bg: transparent;   /* 上段と同じ筐体色（バーの背景）を通す */
+}
+body.ui-skin-avex .hw-bar-main,
+body.ui-skin-avsx .hw-bar-main {
+    padding: 12px 20px;
+}
+body.ui-skin-avex .hw-nameplate span,
+body.ui-skin-avsx .hw-nameplate span { font-size: 18px; }
+/* EX / SX の左列は機種名が収まる幅にする。 */
+body.ui-skin-avex .hw-bar-left,
+body.ui-skin-avsx .hw-bar-left { width: 180px; }
+body.ui-skin-avex .hw-vent,
+body.ui-skin-avsx .hw-vent { display: none; }
+body.ui-skin-avex .hw-left-power,
+body.ui-skin-avsx .hw-left-power { display: flex; }
+body.ui-skin-avex .hw-left-power .hw-power-caption,
+body.ui-skin-avsx .hw-left-power .hw-power-caption { display: none; }
+body.ui-skin-avex .hw-left-power .hw-power-caption-jp,
+body.ui-skin-avsx .hw-left-power .hw-power-caption-jp {
+    font-size: 12px;
+    letter-spacing: 0;
+    color: var(--hwbar-muted, #8c8d93);
+    opacity: 1;
+}
+body.ui-skin-avex .hw-left-power .hw-lamp,
+body.ui-skin-avsx .hw-left-power .hw-lamp { width: 16px; height: 4px; }
+/* --- ハーフハイト 3.5 インチ 2DD ドライブ ---
+   FM77AV20 / 77AV40 / AV20EX / AV40EX / AV40SX（body.machine-av20up）は
+   すべてハーフハイトの薄型ベイ＋小型イジェクト。フルハイトは
+   FM77AV(初代) のみ。ベイ高 46px・イジェクト 18x9（モックアップ準拠）。
+   ここは AV 系フルハイト規則より後方に置いて上書きする。 */
+body.machine-av20up .hw-bar-drives { gap: 14px; align-items: center; }
+body.machine-av20up .hw-bay {
+    height: 46px;
+    border-radius: 4px;
+    padding: 6px 14px;
+    grid-template-areas: "slot slot" "info eject";
+    grid-template-columns: 1fr auto;
+    align-content: center;
+    column-gap: 9px;
+}
+body.machine-av20up .hw-slot { height: 5px; padding: 0 8px; }
+body.machine-av20up .hw-disk-edge { height: 3px; }
+body.machine-av20up .hw-bay.loaded .hw-disk-edge { width: 58%; height: 3px; }
+body.machine-av20up .hw-eject {
+    justify-self: end;
+    align-self: center;
+    width: 18px;
+    height: 9px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #2c2c31 0%, #131316 100%);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 1px 3px rgba(0, 0, 0, 0.6);
+    margin-top: 6px;
+}
+body.machine-av20up .hw-bay-info { margin-top: 6px; }
+body.machine-av20up .hw-bay-info .hw-drive-num {
+    order: -1;
+    width: auto;
+    height: auto;
+    background: transparent;
+    color: var(--hwbar-muted, #8c8d93);
+    font-size: 12px;
+}
+body.machine-av20up .hw-bay .hw-drive-lamp { width: 12px; height: 5px; border-radius: 1px; }
+body.machine-av20up .hw-disk-name { text-align: left; font-size: 12px; }
+/* 右列の注記 .hw-right-note はどのスキンも出さない（実機に無い文言。既定の display: none のまま） */
+body.ui-skin-avex .hw-bar-right,
+body.ui-skin-avsx .hw-bar-right { width: 120px; gap: 8px; }
+body.ui-skin-avex .hw-power-btn-right,
+body.ui-skin-avsx .hw-power-btn-right { display: none; }
+
+/* AV40SX: 前面パネルだけ御影石テクスチャ（自前生成の assets/granite.png・
+   シームレスタイル）。ページの背景・ヘッダー・右パネルには敷かない。
+   外側の文字は濃色、ベイ内は暗色のまま */
+body.ui-skin-avsx .hw-bar {
+    --hwbar-text: #2f302b;
+    --hwbar-muted: #3f4038;
+    --hwbar-faint: #4a4b45;
+    border-color: #6f6f68;
+    background-color: #b8b7b2;   /* テクスチャ読込前のフォールバック */
+    /* 御影石テクスチャの上に暗めのオーバーレイを重ね、バーを僅かに沈ませる */
+    background-image: linear-gradient(rgba(0, 0, 0, 0.07), rgba(0, 0, 0, 0.07)),
+                      url('../assets/granite.png');
+    background-repeat: repeat;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 18px rgba(0, 0, 0, 0.55);
+}
+body.ui-skin-avsx .hw-bay {
+    --hwbar-text: #9c9da3;
+    --hwbar-muted: #8c8d93;
+    --hwbar-faint: #6d6e74;
+}
+body.ui-skin-avsx .hw-nameplate {
+    background: #1c1d1a;
+    border-radius: 3px;
+    padding: 4px 10px;
+    align-self: flex-start;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+body.ui-skin-avsx .hw-bar-left { align-items: flex-start; }
+/* 石目テクスチャの上に直接載る濃色文字の可読性確保: 太字化＋やや濃い文字色
+   ＋明確な白アウトライン（4 方向 + 弱いグロー）。ベイ内（暗色地に明色文字）
+   には掛からないよう、石目に接する前面パネル内の領域のみ対象 */
+body.ui-skin-avsx .hw-bar-left,
+body.ui-skin-avsx .hw-bar-right,
+body.ui-skin-avsx .hw-boot-chip {
+    font-weight: 700;
+    text-shadow: 1px 0 0 rgba(255, 255, 255, 0.85),
+                 -1px 0 0 rgba(255, 255, 255, 0.85),
+                 0 1px 0 rgba(255, 255, 255, 0.85),
+                 0 -1px 0 rgba(255, 255, 255, 0.85),
+                 0 0 3px rgba(255, 255, 255, 0.7);
+}
+/* 暗色地に載る文字（選択中チップ・暗色プレート上の銘板）は白輪郭を打ち消す */
+body.ui-skin-avsx .hw-boot-chip.active,
+body.ui-skin-avsx .hw-nameplate span { text-shadow: none; }
+/* 右側の注記 */
+body.ui-skin-avsx .hw-right-note { color: #33342f; }
+/* 電源・モード・リセットの各ラベルと かな / INS / CAP。tiny-label の
+   減光 (opacity 0.75) も解除して薄さを取り除く */
+body.ui-skin-avsx .hw-bar .hw-tiny-label,
+body.ui-skin-avsx .hw-kbd-led-item span:last-child {
+    color: #3f4038;
+    opacity: 1;
+}
+/* BASIC / DOS ボタンはボタン自身を太字に（フォーム要素は継承しないため明示） */
+body.ui-skin-avsx .hw-boot-chip { font-weight: 700; }
+/* 電源はグリーンの丸みを帯びたボタン */
+body.ui-skin-avsx .hw-left-power .hw-power-btn {
+    width: 48px;
+    height: 24px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #4fd68e 0%, #22a45f 100%);
+    border: 1px solid #1c8a4e;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* --- FM77AV 系の前面下段 ---
+   スキンごとの操作パネル。部品はすべて CSS 描画。
+     av     (FM77AV)        : キーボード端子 → 音量バランス → 高速/低速 → BASIC/DOS
+                              → 赤外線受光口 → リセット → ジョイスティック 1/2
+     av2040 (AV20 / AV40)   : キーボード端子 → 音量・バランス → 赤外線受光口
+                              → 高速/低速 + BASIC/DOS → ジョイスティック 1/2
+                              （リセットは右列: 電源ランプ・CAP・かな・INS の並びの右端）
+     avex   (AV20EX/AV40EX) : av2040 と同じ並び・同じ位置（キーボード端子は丸型）。
+                              赤外線受光口は無く、その位置を含む部品の間は横スリット
+                              （.hw-lip-fins）で埋める。ラベルは部品の上。リセットは
+                              av2040 と同じく右列
+     avsx   (AV40SX)        : avex と同じ並び・位置に 200/400 ライン押しボタンをモードの
+                              左端に追加。帯は平ら（横スリット無し）で、ジョイスティック
+                              端子は横長の四角いカバーで覆われている（ラベル無し）
+   機能するのは BASIC / DOS（押し込み = DOS）とリセットのみ。高速 / 低速（押し込み =
+   低速）と 200 / 400 ラインは表示のみ。 */
+.hw-lip-av {
+    display: none;
+    flex: 1;
+    min-width: 0;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+}
+body.ui-skin-av .hw-lip-av,
+body.ui-skin-av2040 .hw-lip-av,
+body.ui-skin-avex .hw-lip-av,
+body.ui-skin-avsx .hw-lip-av { display: flex; }
+body.ui-skin-av .hw-bar-lip,
+body.ui-skin-av2040 .hw-bar-lip,
+body.ui-skin-avex .hw-bar-lip,
+body.ui-skin-avsx .hw-bar-lip {
+    display: flex;
+    padding: 5px 22px 6px;
+}
+body.ui-skin-av .hw-lip-left,
+body.ui-skin-av2040 .hw-lip-left,
+body.ui-skin-avex .hw-lip-left,
+body.ui-skin-avsx .hw-lip-left,
+body.ui-skin-av .hw-lip-round,
+body.ui-skin-av2040 .hw-lip-round { display: none; }
+.hw-lip-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+}
+.hw-lip-label {
+    font-size: 9px;
+    line-height: 1;
+    letter-spacing: 0.5px;
+    color: var(--hwbar-muted, #8f939c);
+    white-space: nowrap;
+}
+/* 並び順（既定 = av。av2040 / EX 系は後方で並べ替え） */
+.hw-lip-kbd { order: 1; }
+.hw-lip-vol { order: 2; }
+.hw-lip-mode { order: 3; }
+.hw-lip-ir { order: 4; }
+.hw-lip-reset-sq { order: 5; }
+.hw-lip-joy { order: 6; }
+/* 横スリット（EX / SX のみ。後方で表示・幅の比を指定） */
+.hw-lip-fins { display: none; }
+
+/* キーボード端子（角型） */
+.hw-kbd-jack {
+    display: block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    border: 1px solid #3a3a41;
+    background: #0a0a0c radial-gradient(circle, #34343a 0.8px, transparent 1.2px) 2px 2px / 3px 3px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+/* 音量バランス（溝＋つまみ。装飾のみ） */
+.hw-vol-slot {
+    display: block;
+    position: relative;
+    width: 46px;
+    height: 8px;
+    border-radius: 2px;
+    border: 1px solid #2e2e34;
+    background: #08080a;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.hw-vol-knob {
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    width: 8px;
+    height: 12px;
+    margin-left: -4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #3c3c42 0%, #6a6b73 50%, #3c3c42 100%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+/* 角型押しボタン共通（浮き = 通常、沈み = 押し込み） */
+.hw-push {
+    display: block;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border-radius: 2px;
+    border: 1px solid #3a3a41;
+    background: linear-gradient(180deg, #34343a 0%, #1a1a1e 100%);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.14), 0 2px 3px rgba(0, 0, 0, 0.65);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.hw-push.pressed,
+body.boot-dos .hw-push-boot {
+    background: #101013;
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+    transform: translateY(1px);
+}
+.hw-push:active { box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.9); }
+.hw-push-speed, .hw-push-lines { cursor: default; }
+/* モード（高速/低速・BASIC/DOS）: av / av2040 はボタン左右に上下二段の表記 */
+.hw-mode-bezel {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 5px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.35);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.hw-mode-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 19px;
+    font-size: 8px;
+    line-height: 1;
+    color: var(--hwbar-muted, #8f939c);
+    white-space: nowrap;
+}
+.hw-mode-text-speed { text-align: right; }
+.hw-mode-text-boot { text-align: left; }
+/* ラベル上置き（EX / SX）の「モード」＋凡例。av / av2040 では出さない */
+.hw-mode-head { display: none; }
+/* 赤外線受光口（暗い角窓） */
+.hw-ir-window {
+    display: block;
+    width: 18px;
+    height: 12px;
+    border-radius: 2px;
+    border: 1px solid #2a2a30;
+    background: linear-gradient(135deg, #2a1e24 0%, #0b0709 45%, #06060a 100%);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+/* ジョイスティック端子（台形 9 ピン × 2） */
+.hw-joy-ports { display: flex; gap: 6px; }
+.hw-dsub {
+    position: relative;
+    display: block;
+    width: 24px;
+    height: 11px;
+    background: #5a5b63;
+    clip-path: polygon(0 0, 100% 0, 86% 100%, 14% 100%);
+}
+.hw-dsub::before {
+    content: '';
+    position: absolute;
+    inset: 1.5px 2px;
+    background: #0d0d10 radial-gradient(circle, #5c5d66 0.7px, transparent 1px) 1px 1px / 3px 3.5px;
+    clip-path: polygon(0 0, 100% 0, 86% 100%, 14% 100%);
+}
+.hw-joy-label {
+    display: flex;
+    justify-content: space-between;
+    align-self: stretch;
+    gap: 6px;
+}
+/* 右列を「電源ランプ・CAP・かな・INS（・リセット）」の一列にする共通形
+   （av2040 / avex / avsx）。電源スイッチは左列へ。この一列は右列の下端に寄せる。
+   リセットボタンは電源ボタンと同寸（高さ 26px）なので、一列の中心は左列の電源ボタン
+   （列の中央、下端から 13px）と同じ高さになる。
+   ドライブ構成の注記は列の右上に絶対配置し、この一列の高さに影響させない */
+body.ui-skin-av2040 .hw-bar-right,
+body.ui-skin-avex .hw-bar-right,
+body.ui-skin-avsx .hw-bar-right {
+    position: relative;
+    width: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    align-content: flex-end;
+    gap: 6px 10px;
+}
+body.ui-skin-av2040 .hw-right-power,
+body.ui-skin-avex .hw-right-power,
+body.ui-skin-avsx .hw-right-power {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+body.ui-skin-av2040 .hw-right-power .hw-lamp,
+body.ui-skin-avex .hw-right-power .hw-lamp,
+body.ui-skin-avsx .hw-right-power .hw-lamp {
+    order: -1;
+    width: 12px;
+    height: 5px;
+    border-radius: 1px;
+}
+body.ui-skin-av2040 .hw-right-power .hw-tiny-label,
+body.ui-skin-avex .hw-right-power .hw-tiny-label,
+body.ui-skin-avsx .hw-right-power .hw-tiny-label {
+    font-size: 10px;
+    letter-spacing: 0;
+    opacity: 1;
+    color: var(--hwbar-muted, #8f939c);
+}
+/* CAP を先頭に（かな / INS / CAP の並びを CAP / かな / INS へ） */
+body.ui-skin-av2040 .hw-kbd-led-item:nth-child(3),
+body.ui-skin-avex .hw-kbd-led-item:nth-child(3),
+body.ui-skin-avsx .hw-kbd-led-item:nth-child(3) { order: -1; }
+body.ui-skin-av2040 .hw-power-btn-right,
+body.ui-skin-av2040 .hw-right-boot,
+body.ui-skin-avex .hw-right-boot,
+body.ui-skin-avsx .hw-right-boot { display: none; }
+body.ui-skin-av2040 .hw-right-note,
+body.ui-skin-avex .hw-right-note,
+body.ui-skin-avsx .hw-right-note {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+body.ui-skin-av2040 .hw-left-power {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+body.ui-skin-av2040 .hw-left-power .hw-power-caption,
+body.ui-skin-av2040 .hw-left-power .hw-lamp,
+body.ui-skin-avex .hw-left-power .hw-lamp,
+body.ui-skin-avsx .hw-left-power .hw-lamp { display: none; }
+body.ui-skin-av2040 .hw-left-power .hw-power-caption-jp {
+    font-size: 12px;
+    letter-spacing: 0;
+    opacity: 1;
+    color: var(--hwbar-muted, #8c8d93);
+}
+/* av2040 / EX / SX: リセットは右列の右端（ボタンの右に「リセット」）で、
+   電源ランプ・CAP・かな・INS と同じ列に横並び */
+body.ui-skin-av2040 .hw-right-reset,
+body.ui-skin-avex .hw-right-reset,
+body.ui-skin-avsx .hw-right-reset {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 5px;
+}
+/* リセットボタンは電源ボタン（.hw-power-btn）と同じ寸法・同系の描画 */
+body.ui-skin-av2040 .hw-reset-btn,
+body.ui-skin-avex .hw-reset-btn,
+body.ui-skin-avsx .hw-reset-btn {
+    width: 44px;
+    height: 26px;
+    border-radius: 3px;
+    border: 1px solid #3a3a40;
+    background: linear-gradient(180deg, #2c2c31 0%, #101012 100%);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.14), 0 2px 5px rgba(0, 0, 0, 0.6);
+}
+body.ui-skin-av2040 .hw-reset-btn:active,
+body.ui-skin-avex .hw-reset-btn:active,
+body.ui-skin-avsx .hw-reset-btn:active { box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7); }
+/* av2040 / EX / SX の下段: 受光口をモードの左へ、リセットは下段に無し */
+body.ui-skin-av2040 .hw-lip-ir { order: 3; }
+body.ui-skin-av2040 .hw-lip-mode { order: 4; }
+body.ui-skin-av2040 .hw-lip-reset-sq,
+body.ui-skin-avex .hw-lip-reset-sq,
+body.ui-skin-avsx .hw-lip-reset-sq { display: none; }
+
+/* EX / SX: 左列は電源ボタン＋「電源」のみ（端子類は無い）。EX の電源ボタンは
+   av2040 と同じ既定の角型（44 × 26px）。SX は緑の丸みボタンで「電源」を左に置く */
+body.ui-skin-avex .hw-left-power,
+body.ui-skin-avsx .hw-left-power { gap: 8px; }
+/* EX / SX: 電源ボタンの行を左列の下端に揃える（右列の LED＋リセットの行も下端寄せなので
+   同じ高さになる。左列の縦中央寄せに頼ると副題の行数で電源の高さがずれる）。
+   SX の丸みボタン（24px）はリセット（26px）との差 2px を下余白 1px で補正 */
+body.ui-skin-avex .hw-bar-left,
+body.ui-skin-avsx .hw-bar-left { justify-content: flex-end; }
+body.ui-skin-avsx .hw-left-power { padding-bottom: 1px; }
+body.ui-skin-avsx .hw-left-power .hw-power-caption-jp { order: -1; }
+/* EX / SX の下段: 部品の並びと位置は av2040 と同じ（キーボード端子 → 音量・バランス
+   → [受光口の位置] → モード → ジョイスティック 1/2）。キーボード端子は丸型。
+   受光口は無く、受光口の位置を含む部品の間は横スリット（横方向の細い溝の繰り返し）で
+   埋める。スリットの幅の比は av2040 の space-between による等間隔（4 区間）と同じに
+   なるよう 1 : 2 : 1 にし、部品の位置を av2040 と揃える。
+   ラベルは部品の上に置く（キーボード端子・音量・バランス・ジョイスティックは
+   column-reverse、モードは「モード」＋凡例の .hw-mode-head をボタンの上に出し、
+   av2040 のボタン横表記 .hw-mode-text と下の .hw-mode-foot は隠す） */
+body.ui-skin-avex .hw-lip-ir,
+body.ui-skin-avsx .hw-lip-ir,
+body.ui-skin-avex .hw-mode-text,
+body.ui-skin-avsx .hw-mode-text,
+body.ui-skin-avex .hw-mode-foot,
+body.ui-skin-avsx .hw-mode-foot { display: none; }
+body.ui-skin-avex .hw-lip-kbd,
+body.ui-skin-avsx .hw-lip-kbd,
+body.ui-skin-avex .hw-lip-vol,
+body.ui-skin-avsx .hw-lip-vol,
+body.ui-skin-avex .hw-lip-joy,
+body.ui-skin-avsx .hw-lip-joy { flex-direction: column-reverse; }
+body.ui-skin-avex .hw-lip-kbd,    body.ui-skin-avsx .hw-lip-kbd    { order: 1; }
+body.ui-skin-avex .hw-lip-fins-a, body.ui-skin-avsx .hw-lip-fins-a { order: 2; flex-grow: 1; }
+body.ui-skin-avex .hw-lip-vol,    body.ui-skin-avsx .hw-lip-vol    { order: 3; }
+body.ui-skin-avex .hw-lip-fins-b, body.ui-skin-avsx .hw-lip-fins-b { order: 4; flex-grow: 2; }
+body.ui-skin-avex .hw-lip-mode,   body.ui-skin-avsx .hw-lip-mode   { order: 5; }
+body.ui-skin-avex .hw-lip-fins-c, body.ui-skin-avsx .hw-lip-fins-c { order: 6; flex-grow: 1; }
+body.ui-skin-avex .hw-lip-joy,    body.ui-skin-avsx .hw-lip-joy    { order: 7; }
+body.ui-skin-avex .hw-lip-fins,
+body.ui-skin-avsx .hw-lip-fins {
+    display: flex;
+    flex-basis: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    /* 帯の高さいっぱい（ラベル行を含む）に溝を敷き、部品の間を埋める */
+    align-self: stretch;
+}
+/* スリットの描画: 2px の暗い溝と 3px の地色を縦に繰り返す横溝 */
+.hw-lip-fins-strip {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(180deg, #08080a 0px, #08080a 2px, #1c1c20 2px, #1c1c20 5px);
+}
+/* EX / SX のキーボード端子は丸型（角型の既定描画を上書き） */
+body.ui-skin-avex .hw-kbd-jack,
+body.ui-skin-avsx .hw-kbd-jack {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    border: 2px solid #55565e;
+    background: #0a0a0c radial-gradient(circle, #34343a 0.8px, transparent 1.2px) 2px 2px / 3.5px 3.5px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.08);
+}
+body.ui-skin-avex .hw-mode-head,
+body.ui-skin-avsx .hw-mode-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+/* 凡例: 各列 36px（ボタンの真上に来るよう .hw-mode-bezel の間隔と合わせる）。
+   列の間の目印 ■ は上段・下段の 2 個 */
+.hw-mode-lines { display: flex; align-items: stretch; gap: 3px; }
+.hw-mode-line {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    width: 36px;
+    font-size: 8px;
+    line-height: 1;
+    color: var(--hwbar-muted, #8f939c);
+    white-space: nowrap;
+}
+.hw-mode-mark {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 3px;
+    padding: 1px 0;
+}
+.hw-mode-mark::before,
+.hw-mode-mark::after {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 3px;
+    background: #5a5b63;
+}
+/* 200 / 400 ライン系の部品は SX 以外では出さない */
+.hw-push-lines, .hw-mode-line-lines, .hw-mode-mark-lines { display: none; }
+body.ui-skin-avex .hw-mode-bezel,
+body.ui-skin-avsx .hw-mode-bezel { gap: 22px; padding: 3px 13px; }
+/* SX のみ: 200 / 400 ライン押しボタン（モードの左端・表示のみ） */
+body.ui-skin-avsx .hw-push-lines,
+body.ui-skin-avsx .hw-mode-mark-lines { display: flex; }
+body.ui-skin-avsx .hw-mode-line-lines { display: flex; width: 44px; }
+/* SX: 下段は平らな無地の灰色帯。モードのキャップは金色系、リセットは明るい灰ベージュ */
+body.ui-skin-avsx .hw-bar-lip {
+    background: #9d9c97;
+    border-top: 1px solid #86857f;
+}
+body.ui-skin-avsx .hw-lip-label,
+body.ui-skin-avsx .hw-mode-line { color: #2f302b; font-weight: 700; }
+body.ui-skin-avsx .hw-mode-mark::before,
+body.ui-skin-avsx .hw-mode-mark::after { background: #3f4038; }
+/* SX の帯は平ら: スリットは描かず、幅配分（1 : 2 : 1）だけ残して部品の位置を EX と揃える */
+body.ui-skin-avsx .hw-lip-fins-strip { display: none; }
+/* SX のジョイスティック端子は横長の四角いカバーで覆われている（端子・ラベルは見えない）。
+   地色よりやや明るい灰ベージュの面に薄い縁、下辺に指掛かりの細い溝 */
+body.ui-skin-avsx .hw-dsub,
+body.ui-skin-avsx .hw-joy-label { display: none; }
+body.ui-skin-avsx .hw-joy-ports::before {
+    content: '';
+    display: block;
+    width: 66px;
+    height: 14px;
+    border-radius: 2px;
+    border: 1px solid #86857f;
+    background: linear-gradient(180deg, #cfcdc4 0%, #bab8af 100%);
+    box-shadow: inset 0 -2px 0 #9a988f, inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+body.ui-skin-avsx .hw-reset-btn {
+    border-color: #7f7d74;
+    background: linear-gradient(180deg, #eceadf 0%, #c9c6ba 100%);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 2px 3px rgba(0, 0, 0, 0.35);
+}
+body.ui-skin-avsx .hw-reset-btn:active { box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.45); }
+/* SX のモード押しボタンは金色がかった明るいキャップ */
+body.ui-skin-avsx .hw-push {
+    border-color: #9a8a58;
+    background: linear-gradient(180deg, #e6d6a6 0%, #c9b57a 100%);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55), 0 2px 3px rgba(0, 0, 0, 0.35);
+}
+body.ui-skin-avsx .hw-push.pressed,
+body.ui-skin-avsx.boot-dos .hw-push-boot {
+    background: #b3a06a;
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+body.ui-skin-avsx .hw-push:active { box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.45); }
+body.ui-skin-avsx .hw-mode-bezel {
+    background: rgba(0, 0, 0, 0.12);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+body.ui-skin-avsx .hw-vol-slot { border-color: #6b6a65; background: #35352f; }
+body.ui-skin-avsx .hw-vol-knob { background: linear-gradient(90deg, #b9b6ab 0%, #ecebe3 50%, #b9b6ab 100%); }
+body.ui-skin-avsx .hw-dsub { background: #7c7b76; }
+body.ui-skin-avsx .hw-kbd-jack { border-color: #7c7b76; }
+
+/* --- 狭幅 / モバイル: ハードウェアバーは縮退（簡易表示） --- */
+@media (max-width: 1023px), (any-pointer: coarse) {
+    .app-header-inner {
+        padding: 0 8px;
+        gap: 8px;
+        height: 48px;
+        min-height: 0;
+        flex-wrap: nowrap;   /* モバイルは 1 行固定・横スクロールで縮退 */
+    }
+    .app-brand { font-size: 15px; }
+    .machine-tabs, .skin-chips { flex-shrink: 0; }
+    /* 狭幅の縮退表示: 容量表示と比較リンクは隠す（機能バッジは残す） */
+    .app-header .cap-mem,
+    .app-header .cap-compare-link { display: none; }
+    /* 表示倍率はモバイルでは常に Web標準（レスポンシブ優先）なので倍率の 3 択と
+       状態表示は隠し、同じ枠にあるフルスクリーンの FULL だけを残す */
+    .scale-row { margin-top: 4px; justify-content: flex-end; }
+    .scale-row .scale-label,
+    .scale-row .scale-btn,
+    .scale-row .scale-info { display: none; }
+    .scale-toggle { padding: 2px; }
+    .scale-fs { margin-left: 0; border-left: none; border-radius: 6px; padding: 3px 10px; font-size: 11px; }
+    .stage { gap: 6px; }
+    /* FM-7 / FM-new7: グリッドをやめて縦積み（画面 → 上面帯 → 外付けユニット） */
+    body.hw-right .stage { display: flex; flex-direction: column; align-items: stretch; }
+    body.hw-right .hw-panel { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+    /* 画面下のパネルは固定の高さをやめ、内容に合わせて縮める */
+    .hw-bar, .hw-tower-top { height: auto; }
+    .hw-bar-lip { height: auto; }
+    .hw-tower-cover { height: 44px; padding: 0 12px; }
+    .hw-tower-model { font-size: 16px; letter-spacing: 2px; }
+    .hw-rocker-well { width: 76px; height: 34px; }
+    .hw-rocker { width: 30px; height: 20px; }
+    /* 背面パネルはダミー部品を隠し、RESET と BOOT の DIP だけ残す */
+    .hw-tower-rear { flex: 0 0 auto; padding: 8px 12px; gap: 12px; }
+    .hw-rear-item { height: auto; }
+    .hw-rear-reset { margin-bottom: 0; }
+    .hw-rear-dummy { display: none; }
+    /* 縮退表示: 銘板・通気孔・注記などの装飾を隠し、ドライブと電源・
+       リセットだけのシンプルな列にする */
+    .hw-bar-left, .hw-vent-divider, .hw-right-note, .hw-lip-caption { display: none !important; }
+    /* AV 系の前面下段: 端子・音量・受光口・スリット・ジョイスティックの装飾は隠し、
+       モード（BASIC / DOS）とリセットだけ残す。左列ごと隠れる電源スイッチは
+       右列のボタンで代替する */
+    .hw-lip-kbd, .hw-lip-vol, .hw-lip-ir, .hw-lip-fins, .hw-lip-joy { display: none !important; }
+    .hw-lip-av { justify-content: flex-start !important; gap: 16px; }
+    body.ui-skin-av2040 .hw-power-btn-right,
+    body.ui-skin-avex .hw-power-btn-right,
+    body.ui-skin-avsx .hw-power-btn-right { display: block; }
+    .hw-bar-main {
+        padding: 8px 10px;
+        gap: 10px;
+        min-height: 0;
+        flex-wrap: wrap;
+    }
+    .hw-bar-right {
+        width: auto;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+    }
+    body.ui-skin-fm77 .hw-bar-right { display: flex; }   /* 電源列が left ごと隠れるため */
+    body.ui-skin-fm77 .hw-right-power { display: flex; }
+    body.ui-skin-fm77 .hw-power-btn-right { display: block; }
+    .hw-bay { padding: 8px 10px; }
+    .hw-eject { height: 22px; width: 64px; }
+    /* 上面帯 (#hwTowerBand) は電源・BOOT DIP・リセットを含むためモバイルでも表示する。
+       外付けユニットの足元の飾り行だけ隠す */
+    .hw-tower-foot { display: none; }
+    .hw-tower-drive-box { min-height: 90px; padding: 10px; }
+    .hw-vslot { min-height: 70px; }
+    .hw-lever { width: 24px; height: 36px; }
+    /* ドロワー・モバイルバーもテーマ色へ */
+    .side-panel {
+        background: var(--ui-panel);
+        border-right-color: var(--ui-border);
+    }
+    #mobileBar {
+        background: var(--ui-panel);
+        border-color: var(--ui-border);
+    }
+    #mobileBar button {
+        background: var(--ui-panel2);
+        border-color: var(--ui-border);
+        color: var(--ui-text);
+    }
+}
+
+/* =========================================================================
+   追加仕様（続き）
+   ========================================================================= */
+
+/* コントロールパネルの電源・リセットは撤去（ハードウェアパネルへ一本化）。
+   powerToggle / resetBtn は委譲先として DOM に残るため表示だけ隠す。 */
+.ctl-retired { display: none !important; }
+
+/* ROM 未読込で電源投入できない間は、ハードウェアパネルの電源も
+   従来の Power スイッチと同じく減光して知らせる。 */
+body.rom-not-ready .hw-rocker-well,
+body.rom-not-ready .hw-power-btn {
+    opacity: 0.45;
+    filter: grayscale(0.6);
+}
+
+/* --- キーボードパレット: 無変換 / 変換 キー ---
+   FM77AV 以降のみ表示。FM-7 系では隠して SPACE を 8 セル幅に戻し、
+   カナ キーの位置（10 列目）を機種によらず揃える。 */
+.fm7-key.av-key {
+    font-size: 7px;
+    letter-spacing: -0.5px;
+}
+body.machine-fm7 .fm7-key.av-key { display: none; }
+/* 6 セル幅 (6 * 24 + 5 * 1 = 149px) — 無変換 / 変換 が入るぶん狭く */
+body.machine-av .fm7-kbd .fm7-key.space { width: 149px; }
+
+/* --- BREAK キーの配色 ---
+   FM-7 系と FM77AV では他キーと同じグレー。FM77AV20 以降のみ朱色。 */
+.fm7-key.break-key { border-color: #2a3a4a; color: #8899aa; }
+.fm7-key.break-key.active { background: #2a5a8a; border-color: #4ea8de; color: #fff; }
+body.machine-av20up .fm7-key.break-key { border-color: #c44; color: #c88; }
+body.machine-av20up .fm7-key.break-key.active { background: #8a2a2a; border-color: #f66; color: #fff; }
+
+/* --- ライトテーマ対応: 固定色だった補助テキストをテーマ変数へ --- */
+.vol-label { color: var(--ui-muted); }
+.fdc-track-info { color: var(--ui-muted); }
+.toolbar-debug-label { color: var(--ui-muted); }
+.disk-geom { color: var(--ui-faint); }
+.file-name-row { color: var(--ui-faint); }
+
+/* --- 起動モード (Boot Mode) の表示 ---
+   状態源は Options パネルの非表示 bootMode ラジオ。現在の選択は
+   body.boot-dos と .hw-boot-chip.active で表示する。 */
+
+/* FM-7 / FM-new7: 上面帯下段（背面パネル）右端の 4 連 DIP スイッチ（左端レバーが BOOT 相当） */
+.hw-dip-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.hw-dip {
+    height: 20px;
+    border: none;
+    border-radius: 2px;
+    padding: 0 5px;
+    background: #26221c;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+}
+.hw-dip-lever {
+    width: 5px;
+    height: 12px;
+    border-radius: 1px;
+}
+.hw-dip-lever.dip-up,
+.hw-dip-lever.hw-dip-boot {
+    background: linear-gradient(180deg, #f2efe6 0%, #f2efe6 50%, #55504a 50%, #55504a 100%);
+}
+.hw-dip-lever.dip-down,
+body.boot-dos .hw-dip-lever.hw-dip-boot {
+    background: linear-gradient(180deg, #55504a 0%, #55504a 50%, #f2efe6 50%, #f2efe6 100%);
+}
+
+/* FM-77: 前面ボタン列の BASIC ボタン。押し込み = BASIC 起動、浮き = DOS 起動
+   （AV 系の BASIC / DOS ボタンとは押し込みの向きが逆） */
+button.hw-lip-boot { cursor: pointer; }
+body:not(.boot-dos) button.hw-lip-boot {
+    background: linear-gradient(180deg, #d8d1bb 0%, #b8ae93 100%);
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    transform: translateY(1px);
+}
+button.hw-lip-boot:active { box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4); }
+
+/* FM77AV 系: 下部帯 / EX 系右列の BASIC / DOS ボタン */
+.hw-lip-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+.hw-boot-chips { display: none; align-items: center; gap: 5px; }
+.hw-boot-chips .hw-tiny-label {
+    font-size: 9px;
+    letter-spacing: 1px;
+    opacity: 1;
+    color: var(--hwbar-muted, #8f939c);
+}
+.hw-boot-chip {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-family: inherit;
+    border: 1px solid #2e2e34;
+    background: #1c1c21;
+    color: #8f939c;
+    cursor: pointer;
+}
+.hw-boot-chip.active {
+    font-weight: 700;
+    color: #131316;
+    background: #c8ccd4;
+    border-color: transparent;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+body.ui-skin-avex .hw-boot-chip,
+body.ui-skin-avsx .hw-boot-chip {
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 8px;
+    background: transparent;
+}
+body.ui-skin-avex .hw-boot-chip { border-color: #3a3a40; color: #8c8d93; }
+body.ui-skin-avex .hw-boot-chip.active {
+    background: #c9cad0;
+    color: #101012;
+    border-color: transparent;
+}
+body.ui-skin-avsx .hw-boot-chip { border-color: #6f6f68; color: #3f4038; }
+body.ui-skin-avsx .hw-boot-chip.active {
+    background: #1c1d1a;
+    color: #e8e9e5;
+    border-color: transparent;
+}
+body.ui-skin-avex .hw-boot-chips .hw-tiny-label,
+body.ui-skin-avsx .hw-boot-chips .hw-tiny-label { font-size: 8px; }
+
+/* 実行中（電源 ON）は既存 bootMode と同じくロック — 見た目も減光 */
+body.hw-power-on .hw-dip,
+body.hw-power-on button.hw-lip-boot,
+body.hw-power-on .hw-boot-chip,
+body.hw-power-on .hw-push-boot {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* --- モーダル / ポップアップの配色 ---
+   ページと同じクリームホワイト基調（明るい紙面＋濃茶文字・赤系見出し）。
+   スキンによらず同じ。デバッグ系フローティングパネル (.input-panel) と
+   State Dump はダーク固定。 */
+body {
+    --md-overlay: rgba(43, 40, 35, 0.55);
+    --md-bg: #f6f2e4;
+    --md-border: #c9c0a3;
+    --md-head: #a03428;
+    --md-head2: #8a5a3a;
+    --md-link: #a03428;
+    --md-link-hover: #6d1f16;
+    --md-code-bg: #ece5d0;
+    --md-th-bg: #e2dbc4;
+    --md-td-bg: #f4efe0;
+    --md-cell-border: #c9c0a3;
+    --md-close: #736b58;
+    --md-close-hover: #3a352c;
+    --md-note: #6d6252;
+    --md-fine: #7a7060;
+    --md-warn: #9a5a10;
+}
+.modal-overlay { background: var(--md-overlay); }
+.modal-content {
+    background: var(--md-bg);
+    border-color: var(--md-border);
+    color: var(--ui-text);
+}
+.modal-content h1, .modal-content h2 { color: var(--md-head); }
+.modal-content h2 { border-bottom-color: var(--md-cell-border); }
+.modal-content h3 { color: var(--md-head2); }
+.modal-content a { color: var(--md-link); }
+.modal-content a:hover { color: var(--md-link-hover); }
+.modal-content code { background: var(--md-code-bg); }
+.modal-content th { background: var(--md-th-bg); color: var(--md-head); }
+.modal-content td { background: var(--md-td-bg); }
+.modal-content th, .modal-content td { border-color: var(--md-cell-border); }
+.modal-close { color: var(--md-close); }
+.modal-close:hover { color: var(--md-close-hover); }
+/* モーダル内の補足・細字・注意テキスト（旧インライン色のクラス化） */
+.modal-content .md-note { color: var(--md-note); }
+.modal-content .md-fine { color: var(--md-fine); }
+.modal-content .md-warn { color: var(--md-warn); }
+/* ダーク固定のデバッグパネルがライトな背景に溶けないよう枠と影を僅かに強める */
+.input-panel {
+    border-color: #6d6552;
+    box-shadow: 0 4px 20px rgba(58, 53, 44, 0.45);
+}
+
+/* --- パネル内テキストの配色 ---
+   ページのクリームホワイト地に合わせた濃茶系の暗色文字。スキンによらず同じ。
+   減光行 (opacity) は仕組みそのままにベース色だけ暗色にし「薄いが読める」
+   状態を保つ。 */
+body {
+    --ui-note: #6d6252;        /* 補足・ヒント */
+    --ui-dim: #7a7060;         /* 動作情報 (CMT / 録音 / 自動入力) */
+    --ui-ok: #1a7a3a;          /* 読込済みファイル名 */
+    --ui-geom: #2f6f9e;        /* ディスクジオメトリ (読込済) */
+    --ui-warn2: #9a5a10;       /* パネル内の注意・必須見出し */
+    --ui-panel-head: #4a4436;  /* パネル見出し */
+    --ui-name: #5c5340;        /* ROM ファイル名 */
+    --ui-name-req: #2b2823;    /* 必須 ROM 名 */
+    --ui-name-opt: #8a8371;    /* 任意 ROM 名 */
+    --ui-rec: #8a6a20;         /* 録音セクション見出し */
+    --ui-lib-ins: #1a7a3a;     /* Library 挿入ボタン */
+    --ui-slot-clean: #1a7a3a;  /* Library 挿入中マーク */
+    --ui-slot-dirty: #9a5a10;  /* Library 挿入中 (未反映変更あり) */
+    --ui-empty: #8a8371;       /* (空) 表示 */
+    --ui-info-link: #a03428;   /* ROM Info 展開リンク */
+    --ui-info-text: #5c5340;   /* ROM Info 本文 */
+}
+/* 変数の適用（従来の固定色ルールを上書き） */
+.sp-section h3 { color: var(--ui-panel-head); }
+.toolbar-debug-label { color: var(--ui-panel-head); }
+.status-led-name { color: var(--ui-muted); }
+.rom-item .rom-name { color: var(--ui-name); }
+.rom-item[data-req="required"] .rom-name { color: var(--ui-name-req); }
+.rom-item[data-req="optional"] .rom-name { color: var(--ui-name-opt); }
+.file-name-row.loaded { color: var(--ui-ok); }
+.disk-geom.loaded { color: var(--ui-geom); }
+.power-hint { color: var(--ui-warn2); }
+.rec-label { color: var(--ui-rec); }
+.lib-ins-btn { color: var(--ui-lib-ins); }
+.ui-note { color: var(--ui-note); }
+.ui-dim { color: var(--ui-dim); }
+/* label 要素に付く場合は .sp-section label より後勝ちになるよう特異度を上げる */
+.ui-warn, .sp-section label.ui-warn { color: var(--ui-warn2); }
+.ui-empty { color: var(--ui-empty); }
+.ui-info { color: var(--ui-info-text); }
+.ui-info-link { color: var(--ui-info-link); }
+/* バッジ類は背景付きのため基本は現状配色のまま。ROM Set チップ等の
+   status-tag（未設定 "--" 表示）だけライト地で淡すぎるため文字を一段濃くする */
+.status-tag:not(.loaded) { color: var(--ui-note); }
+
+/* =========================================================================
+   更新案内の帯
+   新しいバージョンが用意できたことを画面下部の細い帯で知らせる。position: fixed で
+   通常のレイアウトから外れるため main-layout の採寸には関与しない。重なり順は
+   ヘルプモーダル (z-index:100) やモバイルドロワー (900/1000) より下に置き、
+   それらの操作を遮らない。配色はページの CSS 変数をそのまま流用する。
+   ========================================================================= */
+.update-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: min(560px, calc(100vw - 24px));
+    padding: 7px 12px;
+    border: 1px solid var(--ui-border);
+    border-radius: 8px;
+    background: var(--ui-panel);
+    color: var(--ui-text);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    line-height: 1.4;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+    opacity: 0.96;
+}
+/* display:flex が UA の [hidden] を打ち消してしまうため明示的に隠す */
+.update-bar[hidden] { display: none; }
+.update-bar-dot {
+    flex: 0 0 auto;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ui-accent);
+}
+.update-bar-text { flex: 0 1 auto; min-width: 0; }
+.update-bar-note { flex: 0 1 auto; min-width: 0; color: var(--ui-muted); }
+.update-bar-note[hidden] { display: none; }
+.update-bar-btn {
+    flex: 0 0 auto;
+    padding: 3px 10px;
+    border: 1px solid var(--ui-border);
+    border-radius: 5px;
+    background: var(--ui-input);
+    color: var(--ui-text);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.4;
+    cursor: pointer;
+}
+.update-bar-btn:hover { border-color: var(--ui-accent); }
+.update-bar-btn-primary {
+    background: var(--ui-accent);
+    border-color: var(--ui-accent);
+    color: var(--ui-accent-text);
+}
+
+/* 狭い画面では左右いっぱいの帯に切り替え、文言とボタンを折り返す */
+@media (max-width: 1023px), (any-pointer: coarse) {
+    .update-bar {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        transform: none;
+        max-width: none;
+        flex-wrap: wrap;
+        row-gap: 6px;
+        padding-bottom: calc(7px + env(safe-area-inset-bottom, 0px));
+    }
+    .update-bar-text { flex: 1 1 auto; }
+    .update-bar-note { flex: 1 1 100%; }
+}
+
+/* =========================================================================
+   操作の案内（バルーン）
+   電源や初回操作の対象のそばに小さな吹き出しを出す。position: fixed で
+   通常のレイアウトから外れるため main-layout の採寸には関与しない。重なり順は
+   ハードウェアパネルや更新案内の帯より上、ヘルプモーダル (z-index:100) や
+   モバイルドロワー (900/1000) より下に置く。位置と矢印の向き (data-side) は
+   guide_balloons.js が対象の矩形から決める。
+   ========================================================================= */
+.guide-balloon {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    padding: 5px 6px 5px 10px;
+    border: 1px solid var(--ui-accent);
+    border-radius: 7px;
+    background: var(--ui-input);
+    color: var(--ui-text);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    line-height: 1.4;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+/* display:flex が UA の [hidden] を打ち消してしまうため明示的に隠す */
+.guide-balloon[hidden] { display: none; }
+/* 矢印: 枠線と同じ色の正方形を 45 度回して、対象側の辺から半分だけ覗かせる */
+.guide-balloon::after {
+    content: "";
+    position: absolute;
+    left: var(--guide-arrow-x, 50%);
+    width: 9px;
+    height: 9px;
+    margin-left: -5px;
+    background: var(--ui-input);
+    border: solid var(--ui-accent);
+    transform: rotate(45deg);
+}
+.guide-balloon[data-side="above"]::after {
+    bottom: -6px;
+    border-width: 0 1px 1px 0;
+}
+.guide-balloon[data-side="below"]::after {
+    top: -6px;
+    border-width: 1px 0 0 1px;
+}
+.guide-balloon-close {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--ui-muted);
+    font-size: 15px;
+    line-height: 20px;
+    cursor: pointer;
+}
+.guide-balloon-close:hover,
+.guide-balloon-close:focus-visible {
+    background: var(--ui-accent);
+    color: var(--ui-accent-text);
+}
+
+/* ヘルプ内の説明図: 幅いっぱい (最大 800px)。図の背景は透明なので、
+   暗い配色のモーダルでも線と文字が読めるよう明るい下地を敷く。 */
+.modal-content img.help-figure {
+    display: block;
+    width: 100%;
+    max-width: 800px;
+    height: auto;
+    margin: 8px 0;
+    padding: 6px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    background: #ffffff;
+}

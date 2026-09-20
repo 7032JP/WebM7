@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 612" width="830" height="612">
+  <title>機種別の必要 ROM マトリクス。必須・任意・対象外を色分けで表示</title>
+  <rect x="0" y="0" width="830" height="612" fill="#ffffff"/>
+  <text x="415" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">機種と必要 ROM のマトリクス</text>
+
+  <!-- ヘッダ行 -->
+  <rect x="30" y="50" width="250" height="36" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="40" y="74" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1f2328">ROM（サンプルでの名前例）</text>
+  <rect x="280" y="50" width="130" height="36" fill="#ddf4ff" stroke="#d0d7de"/>
+  <text x="345" y="74" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">FM-7</text>
+  <rect x="410" y="50" width="130" height="36" fill="#ddf4ff" stroke="#d0d7de"/>
+  <text x="475" y="74" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">FM77AV</text>
+  <rect x="540" y="50" width="130" height="36" fill="#ddf4ff" stroke="#d0d7de"/>
+  <text x="605" y="74" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">FM77AV40</text>
+  <rect x="670" y="50" width="130" height="36" fill="#ddf4ff" stroke="#d0d7de"/>
+  <text x="735" y="74" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">FM77AV40EX</text>
+
+  <!-- 行1 fbasic30 -->
+  <rect x="30" y="86" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="40" y="108" font-family="monospace" font-size="13" fill="#1f2328">7tbasic3.rom <tspan font-family="sans-serif" fill="#57606a">F-BASIC</tspan></text>
+  <rect x="280" y="86" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="345" y="108" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="410" y="86" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="475" y="108" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="540" y="86" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="605" y="108" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="670" y="86" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="735" y="108" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+
+  <!-- 行2 boot_dos -->
+  <rect x="30" y="120" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="40" y="142" font-family="monospace" font-size="13" fill="#1f2328">boot_dos.rom <tspan font-family="sans-serif" fill="#57606a">DOS ブート</tspan></text>
+  <rect x="280" y="120" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="345" y="142" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">DOS時必須</text>
+  <rect x="410" y="120" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="475" y="142" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="540" y="120" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="605" y="142" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="670" y="120" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="735" y="142" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+
+  <!-- 行3 boot_bas -->
+  <rect x="30" y="154" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="40" y="176" font-family="monospace" font-size="13" fill="#1f2328">boot_bas.rom <tspan font-family="sans-serif" fill="#57606a">BASIC ブート</tspan></text>
+  <rect x="280" y="154" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="345" y="176" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">BASIC時必須</text>
+  <rect x="410" y="154" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="475" y="176" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="540" y="154" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="605" y="176" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="670" y="154" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="735" y="176" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+
+  <!-- 行4 subsys_c -->
+  <rect x="30" y="188" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="40" y="210" font-family="monospace" font-size="13" fill="#1f2328">subsys_c.rom <tspan font-family="sans-serif" fill="#57606a">サブ Type-C</tspan></text>
+  <rect x="280" y="188" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="345" y="210" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="410" y="188" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="475" y="210" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="540" y="188" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="605" y="210" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="670" y="188" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="735" y="210" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+
+  <!-- 行5 initiate -->
+  <rect x="30" y="222" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="40" y="244" font-family="monospace" font-size="13" fill="#1f2328">initiate.rom <tspan font-family="sans-serif" fill="#57606a">イニシエータ</tspan></text>
+  <rect x="280" y="222" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="345" y="244" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="410" y="222" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="475" y="244" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="540" y="222" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="605" y="244" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="670" y="222" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="735" y="244" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+
+  <!-- 行6 subsys_a -->
+  <rect x="30" y="256" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="40" y="278" font-family="monospace" font-size="13" fill="#1f2328">subsys_a.rom <tspan font-family="sans-serif" fill="#57606a">サブ Type-A</tspan></text>
+  <rect x="280" y="256" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="345" y="278" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="410" y="256" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="475" y="278" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="540" y="256" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="605" y="278" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="670" y="256" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="735" y="278" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+
+  <!-- 行7 subsys_b -->
+  <rect x="30" y="290" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="40" y="312" font-family="monospace" font-size="13" fill="#1f2328">subsys_b.rom <tspan font-family="sans-serif" fill="#57606a">サブ Type-B</tspan></text>
+  <rect x="280" y="290" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="345" y="312" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="410" y="290" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="475" y="312" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="540" y="290" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="605" y="312" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="670" y="290" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="735" y="312" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+
+  <!-- 行8 subsyscg -->
+  <rect x="30" y="324" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="40" y="346" font-family="monospace" font-size="13" fill="#1f2328">subsyscg.rom <tspan font-family="sans-serif" fill="#57606a">CG ROM</tspan></text>
+  <rect x="280" y="324" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="345" y="346" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="410" y="324" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="475" y="346" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="540" y="324" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="605" y="346" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="670" y="324" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="735" y="346" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+
+  <!-- 行9 kanji -->
+  <rect x="30" y="358" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="40" y="380" font-family="monospace" font-size="13" fill="#1f2328">kanji.rom <tspan font-family="sans-serif" fill="#57606a">漢字 第1水準</tspan></text>
+  <rect x="280" y="358" width="130" height="34" fill="#fff1e5" stroke="#d0d7de"/>
+  <text x="345" y="380" font-family="sans-serif" font-size="13" fill="#bc4c00" text-anchor="middle">任意</text>
+  <rect x="410" y="358" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="475" y="380" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="540" y="358" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="605" y="380" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <rect x="670" y="358" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="735" y="380" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+
+  <!-- 行10 kanji2 -->
+  <rect x="30" y="392" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="40" y="414" font-family="monospace" font-size="13" fill="#1f2328">kanji2.rom <tspan font-family="sans-serif" fill="#57606a">漢字 第2水準</tspan></text>
+  <rect x="280" y="392" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="345" y="414" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="410" y="392" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="475" y="414" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="540" y="392" width="130" height="34" fill="#fff1e5" stroke="#d0d7de"/>
+  <text x="605" y="414" font-family="sans-serif" font-size="13" fill="#bc4c00" text-anchor="middle">任意</text>
+  <rect x="670" y="392" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="735" y="414" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+
+  <!-- 行11 dicrom -->
+  <rect x="30" y="426" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="40" y="448" font-family="monospace" font-size="13" fill="#1f2328">dicrom.rom <tspan font-family="sans-serif" fill="#57606a">辞書</tspan></text>
+  <rect x="280" y="426" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="345" y="448" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="410" y="426" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="475" y="448" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="540" y="426" width="130" height="34" fill="#fff1e5" stroke="#d0d7de"/>
+  <text x="605" y="448" font-family="sans-serif" font-size="13" fill="#bc4c00" text-anchor="middle">任意</text>
+  <rect x="670" y="426" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="735" y="448" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+
+  <!-- 行12 extsub -->
+  <rect x="30" y="460" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="40" y="482" font-family="monospace" font-size="13" fill="#1f2328">extsub.rom <tspan font-family="sans-serif" fill="#57606a">拡張サブ</tspan></text>
+  <rect x="280" y="460" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="345" y="482" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="410" y="460" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="475" y="482" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="540" y="460" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="605" y="482" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="670" y="460" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="735" y="482" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+
+  <!-- 凡例 -->
+  <rect x="30" y="516" width="64" height="26" rx="6" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="62" y="534" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
+  <text x="102" y="534" font-family="sans-serif" font-size="13" fill="#1f2328">その機種では必ず読み込む</text>
+  <rect x="290" y="516" width="64" height="26" rx="6" fill="#fff1e5" stroke="#bc4c00"/>
+  <text x="322" y="534" font-family="sans-serif" font-size="13" fill="#bc4c00" text-anchor="middle">任意</text>
+  <text x="362" y="534" font-family="sans-serif" font-size="13" fill="#1f2328">用途に応じて読み込む</text>
+  <rect x="520" y="516" width="64" height="26" rx="6" fill="#f6f8fa" stroke="#8b949e"/>
+  <text x="552" y="534" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <text x="592" y="534" font-family="sans-serif" font-size="13" fill="#1f2328">その機種では使わない</text>
+  <text x="30" y="566" font-family="sans-serif" font-size="12" fill="#57606a">ヘッドレス実行でも、選択した機種と起動モードに対応する ROM 一式を読み込んでください。</text>
+  <text x="30" y="584" font-family="sans-serif" font-size="12" fill="#57606a">同梱互換 ROM の BASIC は 7tbasic3.rom です。</text>
+  <text x="30" y="602" font-family="sans-serif" font-size="12" fill="#57606a">　サイズや読み込みメソッド名は本文の表を参照してください。ファイル名は一例です。</text>
+</svg>

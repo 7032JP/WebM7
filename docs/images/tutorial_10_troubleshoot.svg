@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 540" width="880" height="540">
+  <title>トラブルシュートの判断フロー。症状ごとに確認点と対処を示す</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="880" height="540" fill="#ffffff"/>
+  <text x="440" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">困ったときの判断フロー</text>
+
+  <!-- 症状1 -->
+  <rect x="40" y="56" width="360" height="64" rx="8" fill="#ffebe9" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="220" y="82" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">電源が入らない</text>
+  <text x="220" y="104" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">「先に ROM を読み込んでください」と表示</text>
+  <line x1="400" y1="88" x2="476" y2="88" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="480" y="56" width="360" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="660" y="82" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">ROM Files で必須 ROM がすべて OK か確認</text>
+  <text x="660" y="104" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">FM77AV 系は追加 ROM も必須（→ 3 章）</text>
+
+  <!-- 症状2 -->
+  <rect x="40" y="136" width="360" height="64" rx="8" fill="#ffebe9" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="220" y="162" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">画面は出るがキーが効かない</text>
+  <text x="220" y="184" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">文字を打っても反応しない</text>
+  <line x1="400" y1="168" x2="476" y2="168" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="480" y="136" width="360" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="660" y="162" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">画面（Screen）をクリックしてから入力</text>
+  <text x="660" y="184" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">スマートフォンは仮想キーボードをタップ</text>
+
+  <!-- 症状3 -->
+  <rect x="40" y="216" width="360" height="64" rx="8" fill="#ffebe9" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="220" y="242" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">ディスクから起動しない</text>
+  <text x="220" y="264" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">BASIC が立ち上がってしまう など</text>
+  <line x1="400" y1="248" x2="476" y2="248" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="480" y="216" width="360" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="660" y="242" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">Drive 0 にセット済みか・起動モードを確認</text>
+  <text x="660" y="264" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">DOS にしてリセット（→ 4-1・6 章）</text>
+
+  <!-- 症状4 -->
+  <rect x="40" y="296" width="360" height="64" rx="8" fill="#ffebe9" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="220" y="322" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">テープが読み込めない</text>
+  <text x="220" y="344" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">LOAD しても OK に戻らない など</text>
+  <line x1="400" y1="328" x2="476" y2="328" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="480" y="296" width="360" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="660" y="322" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">OK プロンプト後に LOAD ""・REW で巻き戻し</text>
+  <text x="660" y="344" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">WAV は取り込み品質も確認（→ テープ操作マニュアル）</text>
+
+  <!-- 症状5 -->
+  <rect x="40" y="376" width="360" height="64" rx="8" fill="#ffebe9" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="220" y="402" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">動作がおかしくなった</text>
+  <text x="220" y="424" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">画面が乱れる・反応しない など</text>
+  <line x1="400" y1="408" x2="476" y2="408" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="480" y="376" width="360" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="660" y="402" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">リセットを押す → 直らなければ電源を入れ直す</text>
+  <text x="660" y="424" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">それでも駄目なら ROM 読み込みからやり直し</text>
+
+  <!-- それでも解決しないとき -->
+  <line x1="440" y1="440" x2="440" y2="464" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="120" y="468" width="640" height="52" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="440" y="490" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">それでも解決しないとき</text>
+  <text x="440" y="510" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">画面最下部の「マニュアル」（アプリ内ヘルプ）と「テープ操作」マニュアルを参照してください</text>
+</svg>

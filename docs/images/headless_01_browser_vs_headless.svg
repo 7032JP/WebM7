@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 410" width="860" height="410">
+  <title>ブラウザ実行とヘッドレス実行の対比図。どちらも同一の core/ を動かす</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="860" height="410" fill="#ffffff"/>
+  <text x="430" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">ブラウザ実行とヘッドレス実行 ― 動いているコアは同一</text>
+
+  <!-- 左パネル: ブラウザ実行 -->
+  <rect x="20" y="48" width="400" height="285" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <text x="220" y="74" font-family="sans-serif" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">ブラウザ実行（ふだんの WebM7）</text>
+
+  <rect x="60" y="88" width="320" height="44" rx="8" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="220" y="115" font-family="sans-serif" font-size="14" fill="#1f2328" text-anchor="middle">入力: キーボード / マウス / タッチ</text>
+
+  <line x1="220" y1="132" x2="220" y2="152" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="120" y="156" width="200" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="220" y="180" font-family="sans-serif" font-size="16" font-weight="bold" fill="#1a7f37" text-anchor="middle">core/</text>
+  <text x="220" y="200" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">シミュレータ本体</text>
+
+  <line x1="220" y1="212" x2="220" y2="232" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="60" y="236" width="320" height="56" rx="8" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="220" y="259" font-family="sans-serif" font-size="14" fill="#1f2328" text-anchor="middle">画面 Canvas / 音 Web Audio / UI</text>
+  <text x="220" y="279" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">出力（人間が見る）</text>
+
+  <!-- 右パネル: ヘッドレス実行 -->
+  <rect x="440" y="48" width="400" height="285" rx="8" fill="#f6f8fa" stroke="#8250df" stroke-width="1.5"/>
+  <text x="640" y="74" font-family="sans-serif" font-size="15" font-weight="bold" fill="#8250df" text-anchor="middle">ヘッドレス実行（本書のやり方）</text>
+
+  <rect x="480" y="88" width="320" height="44" rx="8" fill="#fbefff" stroke="#8250df"/>
+  <text x="640" y="115" font-family="sans-serif" font-size="14" fill="#1f2328" text-anchor="middle">入力: テストスクリプト（queueText 等）</text>
+
+  <line x1="640" y1="132" x2="640" y2="152" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="540" y="156" width="200" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="640" y="180" font-family="sans-serif" font-size="16" font-weight="bold" fill="#1a7f37" text-anchor="middle">core/</text>
+  <text x="640" y="200" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">同じコアを Node.js で実行</text>
+
+  <line x1="640" y1="212" x2="640" y2="232" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="480" y="236" width="320" height="56" rx="8" fill="#fbefff" stroke="#8250df"/>
+  <text x="640" y="259" font-family="sans-serif" font-size="14" fill="#1f2328" text-anchor="middle">CPU・メモリ・VRAM の検査 / PPM 画像</text>
+  <text x="640" y="279" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">出力（スクリプトが検査する）</text>
+
+  <!-- 中央: 同一コアの強調 -->
+  <line x1="322" y1="184" x2="538" y2="184" stroke="#1a7f37" stroke-width="2" stroke-dasharray="6,4"/>
+  <rect x="408" y="168" width="44" height="32" rx="6" fill="#ffffff" stroke="#1a7f37"/>
+  <text x="430" y="191" font-family="sans-serif" font-size="20" font-weight="bold" fill="#1a7f37" text-anchor="middle">＝</text>
+
+  <rect x="130" y="350" width="600" height="44" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="430" y="377" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1a7f37" text-anchor="middle">ブラウザと共通のコア処理を自動検証できます</text>
+</svg>

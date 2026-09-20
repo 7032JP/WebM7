@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 440" width="880" height="440">
+  <title>テープ操作の流れ図。左が LOAD（読み込み）、右が SAVE（保存と録音の書き出し）</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="880" height="440" fill="#ffffff"/>
+  <text x="440" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">テープ操作の流れ（Tape Image パネル）</text>
+
+  <!-- 左: LOAD -->
+  <rect x="30" y="52" width="400" height="330" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <text x="230" y="80" font-family="sans-serif" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">読み込み（LOAD）</text>
+
+  <rect x="60" y="96" width="340" height="50" rx="8" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="230" y="117" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="middle">1. BASIC を起動して OK プロンプト</text>
+  <text x="230" y="137" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">Boot Mode: BASIC</text>
+
+  <line x1="230" y1="146" x2="230" y2="166" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="60" y="170" width="340" height="50" rx="8" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="230" y="191" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="middle">2. .t77 / .wav をファイル選択でセット</text>
+  <text x="230" y="211" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">Library の ▶T から挿入も可</text>
+
+  <line x1="230" y1="220" x2="230" y2="240" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="60" y="244" width="340" height="50" rx="8" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="230" y="265" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="middle">3. LOAD "" ＋ RETURN（機械語は LOADM ""）</text>
+  <text x="230" y="285" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">RUN "" なら読み込みと同時に実行</text>
+
+  <line x1="230" y1="294" x2="230" y2="314" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="60" y="318" width="340" height="50" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="230" y="339" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">4. CMT LED 点灯 → OK に戻れば成功</text>
+  <text x="230" y="359" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">LIST で確認、RUN で実行。読み直しは REW</text>
+
+  <!-- 右: SAVE -->
+  <rect x="450" y="52" width="400" height="330" rx="8" fill="#f6f8fa" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="650" y="80" font-family="sans-serif" font-size="15" font-weight="bold" fill="#bc4c00" text-anchor="middle">保存（SAVE → 録音 → 書き出し）</text>
+
+  <rect x="480" y="96" width="340" height="50" rx="8" fill="#fff8c5" stroke="#bc4c00"/>
+  <text x="650" y="117" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="middle">1. SAVE "ファイル名" を実行</text>
+  <text x="650" y="137" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">機械語は SAVEM（開始・終了・実行アドレス必須）</text>
+
+  <line x1="650" y1="146" x2="650" y2="166" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="480" y="170" width="340" height="50" rx="8" fill="#fff8c5" stroke="#bc4c00"/>
+  <text x="650" y="191" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="middle">2. 書き込んだ内容が自動で録音される</text>
+  <text x="650" y="211" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">録音が無い間は保存ボタンは淡色で押せません</text>
+
+  <line x1="650" y1="220" x2="650" y2="240" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="480" y="244" width="340" height="50" rx="8" fill="#fff8c5" stroke="#bc4c00"/>
+  <text x="650" y="265" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="middle">3. 録音→.t77 または 録音→.wav を押す</text>
+  <text x="650" y="285" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">不要になったら 録音クリア で消去</text>
+
+  <line x1="650" y1="294" x2="650" y2="314" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="480" y="318" width="340" height="50" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="650" y="339" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">4. PC へファイルとして保存される</text>
+  <text x="650" y="359" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">保存した T77 はそのまま LOAD で読み戻せます</text>
+
+  <!-- 下部注記 -->
+  <rect x="30" y="398" width="820" height="32" rx="8" fill="#f6f8fa" stroke="#57606a"/>
+  <text x="440" y="419" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">テープ読み込み中（モーター ON 時）はシミュレータが自動で高速化されます。詳細はテープ操作マニュアルへ</text>
+</svg>

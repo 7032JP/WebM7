@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 400" width="840" height="400">
+  <title>録音の仕組み。カセット書き込み線のトグルを CPU サイクル単位で計測し、パルス幅列として録音バッファに蓄え、T77 として書き出す</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="840" height="400" fill="#ffffff"/>
+  <text x="420" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">SAVE 時の「録音」の仕組み</text>
+
+  <text x="70" y="58" font-family="sans-serif" font-size="13" fill="#57606a">カセット WRITE データ線（$FD00 bit 0）のトグル波形:</text>
+
+  <!-- waveform -->
+  <path d="M70,110 H118 V150 H166 V110 H190 V150 H214 V110 H238 V150 H262 V110 H310 V150 H358 V110 H382 V150 H406 V110 H454 V150 H502 V110 H526 V150 H550 V110 H598 V150 H646 V110 H694"
+        fill="none" stroke="#0969da" stroke-width="2"/>
+  <text x="118" y="98" font-family="sans-serif" font-size="11" fill="#0969da" text-anchor="middle">長い区間 = 1200Hz</text>
+  <text x="226" y="98" font-family="sans-serif" font-size="11" fill="#bc4c00" text-anchor="middle">短い区間 = 2400Hz</text>
+
+  <!-- width measurement -->
+  <line x1="262" y1="158" x2="262" y2="174" stroke="#57606a" stroke-width="1"/>
+  <line x1="310" y1="158" x2="310" y2="174" stroke="#57606a" stroke-width="1"/>
+  <line x1="266" y1="166" x2="306" y2="166" stroke="#57606a" stroke-width="1.2" marker-end="url(#ah)"/>
+  <line x1="306" y1="166" x2="266" y2="166" stroke="#57606a" stroke-width="1.2" marker-end="url(#ah)"/>
+  <text x="324" y="171" font-family="sans-serif" font-size="12" fill="#57606a">1 区間ごとに長さ（CPU サイクル数）を計測</text>
+
+  <line x1="420" y1="186" x2="420" y2="210" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- buffer -->
+  <rect x="180" y="212" width="480" height="58" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="420" y="236" font-family="sans-serif" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">録音バッファ — 極性（H/L）＋幅 のパルス列</text>
+  <text x="420" y="258" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">rec の数字 = 取り込んだパルス数</text>
+
+  <line x1="420" y1="270" x2="420" y2="294" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- export -->
+  <rect x="180" y="296" width="480" height="58" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="420" y="320" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">録音→.t77 ボタンで T77 にシリアライズ</text>
+  <text x="420" y="342" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">ビッグエンディアンで書き出してダウンロード</text>
+</svg>

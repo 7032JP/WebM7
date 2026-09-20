@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" width="800" height="320">
+  <title>ヘッドレス時のテープ機能の制約。SAVE は動作、LOAD は完走しないことがある</title>
+  <rect x="0" y="0" width="800" height="320" fill="#ffffff"/>
+  <text x="400" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">テープ機能の制約（ヘッドレス時）</text>
+
+  <!-- SAVE -->
+  <rect x="50" y="60" width="330" height="150" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="215" y="92" font-family="sans-serif" font-size="16" font-weight="bold" fill="#1a7f37" text-anchor="middle">SAVE（書き込み・録音）</text>
+  <text x="215" y="130" font-family="sans-serif" font-size="20" font-weight="bold" fill="#1a7f37" text-anchor="middle">○ 動作します</text>
+  <text x="215" y="164" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">ヘッドレスでも書き込み側の</text>
+  <text x="215" y="184" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">自動テストが書けます</text>
+
+  <!-- LOAD -->
+  <rect x="420" y="60" width="330" height="150" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="585" y="92" font-family="sans-serif" font-size="16" font-weight="bold" fill="#bc4c00" text-anchor="middle">LOAD（読み込み）</text>
+  <text x="585" y="130" font-family="sans-serif" font-size="20" font-weight="bold" fill="#bc4c00" text-anchor="middle">△ 完走しないことがある</text>
+  <text x="585" y="164" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">テープの動作確認は</text>
+  <text x="585" y="184" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">ブラウザで行ってください</text>
+
+  <rect x="100" y="240" width="600" height="56" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="400" y="264" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">テープの制限と確認方法は本文の第9章を参照</text>
+  <text x="400" y="286" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">SAVE の自動テストは利用できます</text>
+</svg>

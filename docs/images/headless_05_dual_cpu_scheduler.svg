@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 390" width="840" height="390">
+  <title>メイン CPU とサブ CPU をスケジューラが交互に進める関係図</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="840" height="390" fill="#ffffff"/>
+  <text x="420" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">2 つの CPU とスケジューラ</text>
+
+  <!-- スケジューラ -->
+  <rect x="290" y="50" width="260" height="52" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="420" y="72" font-family="monospace" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">scheduler.exec(16667)</text>
+  <text x="420" y="92" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">16,667 マイクロ秒 = 1 フレーム（60Hz）</text>
+
+  <!-- CPU ボックス -->
+  <rect x="110" y="160" width="240" height="60" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="230" y="185" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">メイン CPU（MC6809）</text>
+  <text x="230" y="207" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">F-BASIC・プログラムの実行</text>
+
+  <rect x="490" y="160" width="240" height="60" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="610" y="185" font-family="sans-serif" font-size="15" font-weight="bold" fill="#8250df" text-anchor="middle">サブ CPU（MC6809）</text>
+  <text x="610" y="207" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">画面表示などを担当</text>
+
+  <line x1="350" y1="105" x2="245" y2="155" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="490" y1="105" x2="595" y2="155" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="420" y="140" font-family="sans-serif" font-size="13" fill="#57606a" text-anchor="middle">同期を保ちながら交互に少しずつ実行</text>
+
+  <!-- タイムライン -->
+  <text x="80" y="262" font-family="sans-serif" font-size="13" fill="#1f2328">1 フレーム（16,667 マイクロ秒）の中身のイメージ:</text>
+  <rect x="80" y="274" width="85" height="32" fill="#dafbe1" stroke="#1a7f37"/>
+  <rect x="165" y="274" width="85" height="32" fill="#fbefff" stroke="#8250df"/>
+  <rect x="250" y="274" width="85" height="32" fill="#dafbe1" stroke="#1a7f37"/>
+  <rect x="335" y="274" width="85" height="32" fill="#fbefff" stroke="#8250df"/>
+  <rect x="420" y="274" width="85" height="32" fill="#dafbe1" stroke="#1a7f37"/>
+  <rect x="505" y="274" width="85" height="32" fill="#fbefff" stroke="#8250df"/>
+  <rect x="590" y="274" width="85" height="32" fill="#dafbe1" stroke="#1a7f37"/>
+  <rect x="675" y="274" width="85" height="32" fill="#fbefff" stroke="#8250df"/>
+  <text x="122" y="295" font-family="sans-serif" font-size="12" fill="#1a7f37" text-anchor="middle">メイン</text>
+  <text x="207" y="295" font-family="sans-serif" font-size="12" fill="#8250df" text-anchor="middle">サブ</text>
+  <text x="292" y="295" font-family="sans-serif" font-size="12" fill="#1a7f37" text-anchor="middle">メイン</text>
+  <text x="377" y="295" font-family="sans-serif" font-size="12" fill="#8250df" text-anchor="middle">サブ</text>
+  <text x="462" y="295" font-family="sans-serif" font-size="12" fill="#1a7f37" text-anchor="middle">メイン</text>
+  <text x="547" y="295" font-family="sans-serif" font-size="12" fill="#8250df" text-anchor="middle">サブ</text>
+  <text x="632" y="295" font-family="sans-serif" font-size="12" fill="#1a7f37" text-anchor="middle">メイン</text>
+  <text x="717" y="295" font-family="sans-serif" font-size="12" fill="#8250df" text-anchor="middle">サブ</text>
+  <text x="80" y="328" font-family="sans-serif" font-size="12" fill="#57606a">0 マイクロ秒</text>
+  <text x="760" y="328" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="end">16,667 マイクロ秒</text>
+
+  <text x="420" y="368" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">exec(16667) を 1 回呼ぶと、両方の CPU がそろって 1 フレームぶん進みます</text>
+</svg>

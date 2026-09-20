@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 759.5999999999999 486" width="759.5999999999999" height="486">
+  <title>編集キー・カーソルキー・テンキーが FM-7 のどのキーに当たるかの対応図</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="759.5999999999999" height="486" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
+  <text x="379.79999999999995" y="32" font-family="sans-serif" font-size="16" fill="#1f2328" text-anchor="middle" font-weight="bold">編集キー・カーソルキー・テンキーの対応（日本語配列 / 英語配列 共通）</text>
+  <text x="379.79999999999995" y="54" font-family="sans-serif" font-size="11" fill="#8c959f" text-anchor="middle">上段＝物理キーの刻印 / 下段＝割り当たる FM-7 キー（「—」は割当なし）</text>
+  <text x="26" y="78" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">最上段（PrintScreen 列）</text>
+  <rect x="26" y="92" width="52" height="50" rx="5" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2"/>
+  <text x="52" y="108" font-family="sans-serif" font-size="6.5" fill="#57606a" text-anchor="middle">PrintScreen</text>
+  <text x="52" y="129" font-family="sans-serif" font-size="12" fill="#8c959f" text-anchor="middle">—</text>
+  <rect x="82" y="92" width="52" height="50" rx="5" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2"/>
+  <text x="108" y="108" font-family="sans-serif" font-size="7.5" fill="#57606a" text-anchor="middle">ScrollLock</text>
+  <text x="108" y="129" font-family="sans-serif" font-size="12" fill="#8c959f" text-anchor="middle">—</text>
+  <rect x="138" y="92" width="52" height="50" rx="5" fill="#ffebe9" stroke="#cf222e" stroke-width="1.2"/>
+  <text x="164" y="108" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">Pause</text>
+  <text x="164" y="130" font-family="sans-serif" font-size="14" fill="#7a1420" text-anchor="middle" font-weight="bold">BRK</text>
+  <text x="206" y="122" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">Pause は常に BREAK の予備として有効</text>
+  <rect x="16" y="166" width="441.59999999999997" height="286" rx="8" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1"/>
+  <rect x="26" y="176" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="52" y="192" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">Insert</text>
+  <text x="52" y="214" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">INS</text>
+  <rect x="82" y="176" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="108" y="192" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">Home</text>
+  <text x="108" y="214" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">HOM</text>
+  <rect x="138" y="176" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="164" y="192" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">PageUp</text>
+  <text x="164" y="214" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">CLS</text>
+  <rect x="26" y="230" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="52" y="246" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">Delete</text>
+  <text x="52" y="268" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">DEL</text>
+  <rect x="82" y="230" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="108" y="246" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">End</text>
+  <text x="108" y="268" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">EL</text>
+  <rect x="138" y="230" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="164" y="246" font-family="sans-serif" font-size="9.5" fill="#57606a" text-anchor="middle">PageDown</text>
+  <text x="164" y="268" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">DUP</text>
+  <rect x="82" y="338" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="108" y="354" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">↑</text>
+  <text x="108" y="376" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">↑</text>
+  <rect x="26" y="392" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="52" y="408" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">←</text>
+  <text x="52" y="430" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">←</text>
+  <rect x="82" y="392" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="108" y="408" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">↓</text>
+  <text x="108" y="430" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">↓</text>
+  <rect x="138" y="392" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="164" y="408" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">→</text>
+  <text x="164" y="430" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">→</text>
+  <rect x="227.6" y="176" width="52" height="50" rx="5" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2"/>
+  <text x="253.6" y="192" font-family="sans-serif" font-size="10.5" fill="#57606a" text-anchor="middle">NumLock</text>
+  <text x="253.6" y="213" font-family="sans-serif" font-size="12" fill="#8c959f" text-anchor="middle">—</text>
+  <rect x="283.6" y="176" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="309.6" y="192" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">/</text>
+  <text x="309.6" y="214" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">/</text>
+  <rect x="339.6" y="176" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="365.6" y="192" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">*</text>
+  <text x="365.6" y="214" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">*</text>
+  <rect x="395.6" y="176" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="421.6" y="192" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">-</text>
+  <text x="421.6" y="214" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">-</text>
+  <rect x="227.6" y="230" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="253.6" y="246" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">7</text>
+  <text x="253.6" y="268" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">7</text>
+  <rect x="283.6" y="230" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="309.6" y="246" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">8</text>
+  <text x="309.6" y="268" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">8</text>
+  <rect x="339.6" y="230" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="365.6" y="246" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">9</text>
+  <text x="365.6" y="268" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">9</text>
+  <rect x="395.6" y="230" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="421.6" y="246" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">+</text>
+  <text x="421.6" y="268" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">+</text>
+  <rect x="227.6" y="284" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="253.6" y="300" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">4</text>
+  <text x="253.6" y="322" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">4</text>
+  <rect x="283.6" y="284" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="309.6" y="300" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">5</text>
+  <text x="309.6" y="322" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">5</text>
+  <rect x="339.6" y="284" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="365.6" y="300" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">6</text>
+  <text x="365.6" y="322" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">6</text>
+  <rect x="227.6" y="338" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="253.6" y="354" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">1</text>
+  <text x="253.6" y="376" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">1</text>
+  <rect x="283.6" y="338" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="309.6" y="354" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">2</text>
+  <text x="309.6" y="376" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">2</text>
+  <rect x="339.6" y="338" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="365.6" y="354" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">3</text>
+  <text x="365.6" y="376" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">3</text>
+  <rect x="395.6" y="338" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="421.6" y="354" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">Enter</text>
+  <text x="421.6" y="376" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">RT</text>
+  <rect x="227.6" y="392" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="253.6" y="408" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">0</text>
+  <text x="253.6" y="430" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">0</text>
+  <rect x="339.6" y="392" width="52" height="50" rx="5" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="365.6" y="408" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">.</text>
+  <text x="365.6" y="430" font-family="sans-serif" font-size="14" fill="#6b2e00" text-anchor="middle" font-weight="bold">.</text>
+  <text x="471.59999999999997" y="190" font-family="sans-serif" font-size="11.5" fill="#1f2328" text-anchor="start" font-weight="bold">Cursor → Ten Key</text>
+  <text x="471.59999999999997" y="208" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">Options パネルでチェックを入れると</text>
+  <text x="471.59999999999997" y="226" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">カーソルキーがテンキーとして働きます。</text>
+  <text x="471.59999999999997" y="244" font-family="sans-serif" font-size="11.5" fill="#0969da" text-anchor="start">↑ → テンキー 8</text>
+  <text x="471.59999999999997" y="262" font-family="sans-serif" font-size="11.5" fill="#0969da" text-anchor="start">↓ → テンキー 2</text>
+  <text x="471.59999999999997" y="280" font-family="sans-serif" font-size="11.5" fill="#0969da" text-anchor="start">← → テンキー 4</text>
+  <text x="471.59999999999997" y="298" font-family="sans-serif" font-size="11.5" fill="#0969da" text-anchor="start">→ → テンキー 6</text>
+  <text x="471.59999999999997" y="334" font-family="sans-serif" font-size="11.5" fill="#1f2328" text-anchor="start" font-weight="bold">FM-7 のテンキーの「=」は</text>
+  <text x="471.59999999999997" y="352" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">一般の PC のテンキーに無いため、</text>
+  <text x="471.59999999999997" y="370" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">キーカスタマイズで割り当てます。</text>
+  <text x="471.59999999999997" y="406" font-family="sans-serif" font-size="11.5" fill="#1f2328" text-anchor="start" font-weight="bold">EL / CLS / DUP には現在</text>
+  <text x="471.59999999999997" y="424" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">入力コードを割り当てていません。</text>
+</svg>

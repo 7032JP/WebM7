@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 510" width="800" height="510">
+  <title>うまく読めないときの確認フロー。ステータス表示の確認から症状別の対処、録り直し後の再確認まで</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="800" height="510" fill="#ffffff"/>
+  <text x="400" y="28" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">うまく読めないときの確認フロー</text>
+
+  <!-- start -->
+  <rect x="220" y="44" width="360" height="48" rx="8" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>
+  <text x="400" y="73" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="middle">WAV をセットしてステータス表示を確認</text>
+  <line x1="400" y1="92" x2="400" y2="114" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- decision -->
+  <rect x="220" y="116" width="360" height="48" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="400" y="145" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">「N blocks OK」で BAD なし？</text>
+
+  <!-- yes -->
+  <line x1="580" y1="140" x2="618" y2="140" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="599" y="130" font-family="sans-serif" font-size="12" fill="#1a7f37" text-anchor="middle">はい</text>
+  <rect x="620" y="112" width="160" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="700" y="136" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">そのまま</text>
+  <text x="700" y="156" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">読み込み OK</text>
+
+  <!-- no -->
+  <line x1="400" y1="164" x2="400" y2="196" stroke="#57606a" stroke-width="1.5"/>
+  <text x="412" y="186" font-family="sans-serif" font-size="12" fill="#bc4c00">いいえ（症状別に確認）</text>
+  <line x1="152" y1="196" x2="648" y2="196" stroke="#57606a" stroke-width="1.5"/>
+  <line x1="152" y1="196" x2="152" y2="226" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="400" y1="196" x2="400" y2="226" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="648" y1="196" x2="648" y2="226" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- symptom 1 -->
+  <rect x="40" y="228" width="225" height="56" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="152" y="252" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00" text-anchor="middle">「... BAD」と出る</text>
+  <text x="152" y="272" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">読めないブロックがある</text>
+  <line x1="152" y1="284" x2="152" y2="312" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="40" y="314" width="225" height="80" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <text x="152" y="344" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">録音レベル（ゲイン）を上げて</text>
+  <text x="152" y="364" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">録り直す（最大の 90% 目安）</text>
+
+  <!-- symptom 2 -->
+  <rect x="288" y="228" width="225" height="56" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="400" y="252" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00" text-anchor="middle">まったく読み込まない</text>
+  <text x="400" y="272" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">セットしても反応がない</text>
+  <line x1="400" y1="284" x2="400" y2="312" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="288" y="314" width="225" height="80" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <text x="400" y="338" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">モノラル / 16bit / 44.1kHz で</text>
+  <text x="400" y="358" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">録り直す。前後の長い無音や</text>
+  <text x="400" y="378" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">余計な音を含めない</text>
+
+  <!-- symptom 3 -->
+  <rect x="536" y="228" width="225" height="56" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="648" y="252" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00" text-anchor="middle">途中で止まる</text>
+  <text x="648" y="272" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">読み込みが途切れる</text>
+  <line x1="648" y1="284" x2="648" y2="312" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="536" y="314" width="225" height="80" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <text x="648" y="344" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">録音レベル不足の可能性。</text>
+  <text x="648" y="364" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">ゲインを上げて再取り込み</text>
+
+  <!-- footer -->
+  <line x1="152" y1="394" x2="152" y2="420" stroke="#57606a" stroke-width="1.5"/>
+  <line x1="400" y1="394" x2="400" y2="420" stroke="#57606a" stroke-width="1.5"/>
+  <line x1="648" y1="394" x2="648" y2="420" stroke="#57606a" stroke-width="1.5"/>
+  <line x1="152" y1="420" x2="648" y2="420" stroke="#57606a" stroke-width="1.5"/>
+  <line x1="400" y1="420" x2="400" y2="442" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="160" y="444" width="480" height="48" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="400" y="473" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">録り直した WAV を再セットし、「N blocks OK」を確認</text>
+</svg>

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 480" width="760" height="480">
+  <title>T77 読み込みの全体の流れ。テープのセットから LOAD 完了までの 5 ステップ</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="480" fill="#ffffff"/>
+  <text x="380" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">T77 読み込み（LOAD / LOADM）の流れ</text>
+
+  <!-- entry A -->
+  <rect x="70" y="52" width="290" height="64" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="215" y="78" font-family="sans-serif" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">方法 A: Tape Image で開く</text>
+  <text x="215" y="100" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">ファイル選択で .t77 を選ぶ</text>
+
+  <!-- entry B -->
+  <rect x="400" y="52" width="290" height="64" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="545" y="78" font-family="sans-serif" font-size="15" font-weight="bold" fill="#8250df" text-anchor="middle">方法 B: Library から挿入</text>
+  <text x="545" y="100" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">「取り込み」→ 項目の ▶T で Tape へ</text>
+
+  <line x1="215" y1="116" x2="330" y2="150" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="545" y1="116" x2="430" y2="150" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- set -->
+  <rect x="140" y="152" width="480" height="56" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <text x="380" y="175" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328" text-anchor="middle">テープセット完了</text>
+  <text x="380" y="196" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">ファイル名と pos=0 (loaded) が表示される</text>
+  <line x1="380" y1="208" x2="380" y2="230" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- command -->
+  <rect x="140" y="232" width="480" height="56" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <text x="380" y="255" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328" text-anchor="middle">BASIC で読み込みコマンドを入力</text>
+  <text x="380" y="276" font-family="monospace" font-size="12" fill="#57606a" text-anchor="middle">LOAD "" ／ RUN "" ／ LOADM ""（名前指定は LOAD "TEST"）</text>
+  <line x1="380" y1="288" x2="380" y2="310" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- searching -->
+  <rect x="140" y="312" width="480" height="56" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="380" y="335" font-family="sans-serif" font-size="15" font-weight="bold" fill="#bc4c00" text-anchor="middle">searching… 読み込み中</text>
+  <text x="380" y="356" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">CMT LED が点灯し、テープ位置が進む</text>
+  <line x1="380" y1="368" x2="380" y2="390" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- ok -->
+  <rect x="140" y="392" width="480" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="380" y="415" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">OK に戻ったら成功</text>
+  <text x="380" y="436" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">LIST で内容確認、RUN で実行</text>
+</svg>

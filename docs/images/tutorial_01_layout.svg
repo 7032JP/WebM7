@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 590" width="880" height="590">
+  <title>WebM7 メイン画面のレイアウト見取り図。上にヘッダー、左にシミュレータ画面とハードウェアパネル、右にサイドパネル</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="880" height="590" fill="#ffffff"/>
+  <text x="440" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">メイン画面のレイアウト（ヘッダー ＋ 左右 2 カラム）</text>
+
+  <!-- ヘッダー -->
+  <rect x="24" y="48" width="832" height="58" rx="8" fill="#fff8c5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="440" y="70" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">ヘッダー — 機種タブ ／ スキン ／ 能力バッジ（→ 1-1・1-2）</text>
+  <text x="440" y="92" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">WebM7 ロゴ ｜ FM-7 / FM-77 / FM77AV / FM77AV20 / FM77AV40 / FM77AV20EX / FM77AV40EX ｜ スキン ｜ 機能バッジ・RAM / VRAM ｜ 機種比較</text>
+
+  <!-- 左カラム -->
+  <rect x="24" y="118" width="520" height="396" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <text x="284" y="142" font-family="sans-serif" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">左カラム — シミュレータ画面</text>
+
+  <!-- Screen -->
+  <rect x="56" y="156" width="456" height="140" rx="8" fill="#1f2328" stroke="#0969da" stroke-width="1.5"/>
+  <text x="284" y="216" font-family="sans-serif" font-size="16" font-weight="bold" fill="#7ee787" text-anchor="middle">Screen（640×200）</text>
+  <text x="284" y="242" font-family="sans-serif" font-size="13" fill="#d0d7de" text-anchor="middle">クリックするとキー入力が渡ります</text>
+
+  <!-- 表示倍率トグル -->
+  <rect x="56" y="304" width="456" height="32" rx="8" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="284" y="325" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">表示倍率トグル: Web標準 / x2 / x1 / FULL（→ 9-1）</text>
+
+  <!-- ツールバー1行目 -->
+  <rect x="56" y="344" width="456" height="46" rx="8" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="284" y="364" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="middle">音量 ／ ステータスバー（2 段） ／ Pause ・ 📷 ・ FULL</text>
+  <text x="284" y="382" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">LED・キー状態・ドライブ・fps・解像度（→ 9 章）</text>
+
+  <!-- ツールバー2行目 -->
+  <rect x="56" y="398" width="456" height="44" rx="8" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="284" y="417" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="middle">Debug Panels</text>
+  <text x="284" y="434" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">CPU / Memory / Keyboard / Palette / Sound / Input</text>
+
+  <!-- ハードウェアパネル -->
+  <rect x="56" y="450" width="456" height="48" rx="8" fill="#fff8c5" stroke="#bc4c00"/>
+  <text x="284" y="470" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00" text-anchor="middle">機種別ハードウェアパネル</text>
+  <text x="284" y="488" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">電源 / リセット / 起動モード / ドライブ（→ 4 章）</text>
+
+  <!-- 右カラム -->
+  <rect x="572" y="118" width="284" height="396" rx="8" fill="#f6f8fa" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="714" y="142" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">右カラム — サイドパネル</text>
+
+  <rect x="592" y="156" width="244" height="48" rx="8" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="714" y="176" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="middle">Options</text>
+  <text x="714" y="194" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">マウス / ジョイスティック等（→ 5 章）</text>
+
+  <rect x="592" y="212" width="244" height="48" rx="8" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="714" y="232" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="middle">ROM Files</text>
+  <text x="714" y="250" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">ROM の読み込み（→ 3 章）</text>
+
+  <rect x="592" y="268" width="244" height="48" rx="8" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="714" y="288" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="middle">Library</text>
+  <text x="714" y="306" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">仮想メディアの棚（→ 6 章）</text>
+
+  <rect x="592" y="324" width="244" height="48" rx="8" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="714" y="344" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="middle">Disk Images</text>
+  <text x="714" y="362" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">Drive 0 / Drive 1（→ 6 章）</text>
+
+  <rect x="592" y="380" width="244" height="48" rx="8" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="714" y="400" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="middle">Tape Image</text>
+  <text x="714" y="418" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">T77 / WAV テープ（→ 7 章）</text>
+
+  <rect x="592" y="436" width="244" height="48" rx="8" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="714" y="456" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="middle">BASIC Paste</text>
+  <text x="714" y="474" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">テキスト自動入力（→ 8 章）</text>
+
+  <!-- フッター -->
+  <rect x="24" y="530" width="832" height="40" rx="8" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="440" y="555" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">画面最下部: 「マニュアル」「チュートリアル」「テープ操作」「ヘッドレステスト」「ライセンス等」「更新履歴」のリンク</text>
+</svg>

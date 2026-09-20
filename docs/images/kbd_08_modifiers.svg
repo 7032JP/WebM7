@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 352" width="860" height="352">
+  <title>ソフトウェアキーボードの修飾キーの動作。Shift はスティッキー、GRPH は押している間だけ、CAP / カナ / CTR はトグル</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="860" height="352" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
+  <text x="430" y="30" font-family="sans-serif" font-size="18" fill="#1f2328" text-anchor="middle" font-weight="bold">ソフトウェアキーボードの修飾キーの動作</text>
+  <text x="430" y="52" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">Keyboard パネルのキーボード図と、タッチ端末のソフトウェアキーボードで共通です</text>
+  <rect x="26" y="72" width="262" height="168" rx="8" fill="#ffffff" stroke="#8250df" stroke-width="1.4"/>
+  <rect x="26" y="72" width="262" height="30" rx="8" fill="#fbefff" stroke="none" stroke-width="1"/>
+  <text x="40" y="92" font-family="sans-serif" font-size="13" fill="#4c2889" text-anchor="start" font-weight="bold">SHF（Shift）</text>
+  <text x="274" y="92" font-family="sans-serif" font-size="11.5" fill="#4c2889" text-anchor="end">スティッキー</text>
+  <text x="40" y="124" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">押すたびに ON / OFF が切り替わります。</text>
+  <text x="40" y="143" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">ON のまま次のキーを押すと Shift つきで</text>
+  <text x="40" y="162" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">入力され、そのキーを離すと自動で OFF に</text>
+  <text x="40" y="181" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">戻ります。</text>
+  <rect x="310" y="72" width="262" height="168" rx="8" fill="#ffffff" stroke="#8250df" stroke-width="1.4"/>
+  <rect x="310" y="72" width="262" height="30" rx="8" fill="#fbefff" stroke="none" stroke-width="1"/>
+  <text x="324" y="92" font-family="sans-serif" font-size="13" fill="#4c2889" text-anchor="start" font-weight="bold">GRP（GRPH）</text>
+  <text x="558" y="92" font-family="sans-serif" font-size="11.5" fill="#4c2889" text-anchor="end">押している間だけ</text>
+  <text x="324" y="124" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">押している間だけ有効な修飾キーです。</text>
+  <text x="324" y="143" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">指を離すと解除されます。</text>
+  <text x="324" y="162" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">キートップの表示もグラフィック文字に</text>
+  <text x="324" y="181" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">切り替わります。</text>
+  <rect x="594" y="72" width="262" height="168" rx="8" fill="#ffffff" stroke="#8250df" stroke-width="1.4"/>
+  <rect x="594" y="72" width="262" height="30" rx="8" fill="#fbefff" stroke="none" stroke-width="1"/>
+  <text x="608" y="92" font-family="sans-serif" font-size="13" fill="#4c2889" text-anchor="start" font-weight="bold">CAP / カナ / CTR</text>
+  <text x="842" y="92" font-family="sans-serif" font-size="11.5" fill="#4c2889" text-anchor="end">トグル</text>
+  <text x="608" y="124" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">押すたびに ON / OFF が切り替わります。</text>
+  <text x="608" y="143" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">CAP と カナ は点灯状態がキーの下線と</text>
+  <text x="608" y="162" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">画面下のステータス表示に出ます。</text>
+  <rect x="26" y="262" width="808" height="76" rx="8" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1"/>
+  <text x="40" y="284" font-family="sans-serif" font-size="12.5" fill="#1f2328" text-anchor="start" font-weight="bold">キートップの十字の表示</text>
+  <text x="40" y="306" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">文字キーのキートップには、左＝通常、上＝Shift、右＝GRPH、下＝カナ の 4 つの文字が十字に表示されます。</text>
+  <text x="40" y="324" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">いま入力される文字が白く、ほかは淡く描かれ、SHF / CAP / GRP / カナ の状態に合わせて切り替わります。</text>
+</svg>

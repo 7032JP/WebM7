@@ -1,0 +1,32 @@
+MIT License
+
+Copyright (c) 2026 Naomitsu.Tsugiiwa
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------
+What this file covers, and where to find the rest / 本ファイルの対象と、それ以外の案内
+
+| Covers / 対象 | License / ライセンス | File / ファイル |
+| --- | --- | --- |
+| This project's own work: the alternative ROM sources and built binaries, scripts, documentation, and the original glyphs / 本プロジェクトの成果物（代替 ROM のソースとビルド済みバイナリ、スクリプト、文書、独自字形） | MIT | [LICENSE-MIT.md](LICENSE-MIT.md) |
+| The bundled font in fonts/shinonome/, and roms/kanji.rom / roms/kanji2.rom, which take their glyphs from it / 同梱フォント fonts/shinonome/ と、それを字形の入力とする roms/kanji.rom / roms/kanji2.rom | Public domain (modified) / パブリックドメイン（改変あり） | [LICENSE-FONT.md](LICENSE-FONT.md) |
+
+If you redistribute the ROM files on their own, please keep LICENSE, LICENSE-MIT.md, and LICENSE-FONT.md together with them.
+ROM だけを配るときも、LICENSE / LICENSE-MIT.md / LICENSE-FONT.md を一緒に配ってください。

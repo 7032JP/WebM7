@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 400" width="880" height="400">
+  <title>queueText 自動送出のタイミングチャート。charGap と lineGap の間隔でキーが送られる</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+    <marker id="ahb" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#0969da"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="880" height="400" fill="#ffffff"/>
+  <text x="440" y="28" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">queueText の自動送出（既定: charGap=2, lineGap=12）</text>
+
+  <text x="60" y="60" font-family="monospace" font-size="14" fill="#1f2328">fm7.keyboard.queueText('RUN\n')</text>
+  <text x="390" y="60" font-family="sans-serif" font-size="14" fill="#57606a">→ キューに積む:</text>
+  <rect x="530" y="44" width="30" height="24" rx="4" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="545" y="61" font-family="monospace" font-size="13" fill="#1f2328" text-anchor="middle">R</text>
+  <rect x="566" y="44" width="30" height="24" rx="4" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="581" y="61" font-family="monospace" font-size="13" fill="#1f2328" text-anchor="middle">U</text>
+  <rect x="602" y="44" width="30" height="24" rx="4" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="617" y="61" font-family="monospace" font-size="13" fill="#1f2328" text-anchor="middle">N</text>
+  <rect x="638" y="44" width="76" height="24" rx="4" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="676" y="61" font-family="monospace" font-size="12" fill="#1f2328" text-anchor="middle">RETURN</text>
+
+  <!-- 送出キー -->
+  <rect x="44" y="110" width="32" height="30" rx="6" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="60" y="131" font-family="monospace" font-size="14" font-weight="bold" fill="#1a7f37" text-anchor="middle">R</text>
+  <line x1="60" y1="140" x2="60" y2="180" stroke="#1a7f37" stroke-width="1.5" marker-end="url(#ahb)"/>
+
+  <rect x="128" y="110" width="32" height="30" rx="6" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="144" y="131" font-family="monospace" font-size="14" font-weight="bold" fill="#1a7f37" text-anchor="middle">U</text>
+  <line x1="144" y1="140" x2="144" y2="180" stroke="#1a7f37" stroke-width="1.5" marker-end="url(#ahb)"/>
+
+  <rect x="212" y="110" width="32" height="30" rx="6" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="228" y="131" font-family="monospace" font-size="14" font-weight="bold" fill="#1a7f37" text-anchor="middle">N</text>
+  <line x1="228" y1="140" x2="228" y2="180" stroke="#1a7f37" stroke-width="1.5" marker-end="url(#ahb)"/>
+
+  <rect x="274" y="110" width="76" height="30" rx="6" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="312" y="131" font-family="monospace" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">RETURN</text>
+  <line x1="312" y1="140" x2="312" y2="180" stroke="#1a7f37" stroke-width="1.5" marker-end="url(#ahb)"/>
+
+  <rect x="756" y="110" width="120" height="30" rx="6" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="816" y="130" font-family="sans-serif" font-size="12" fill="#bc4c00" text-anchor="middle">次の行の 1 文字目</text>
+  <line x1="816" y1="140" x2="816" y2="180" stroke="#bc4c00" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- tick 行 -->
+  <text x="36" y="170" font-family="sans-serif" font-size="12" fill="#0969da" text-anchor="end">tick</text>
+  <circle cx="60" cy="166" r="3" fill="#0969da"/><circle cx="102" cy="166" r="3" fill="#0969da"/>
+  <circle cx="144" cy="166" r="3" fill="#0969da"/><circle cx="186" cy="166" r="3" fill="#0969da"/>
+  <circle cx="228" cy="166" r="3" fill="#0969da"/><circle cx="270" cy="166" r="3" fill="#0969da"/>
+  <circle cx="312" cy="166" r="3" fill="#0969da"/><circle cx="354" cy="166" r="3" fill="#0969da"/>
+  <circle cx="396" cy="166" r="3" fill="#0969da"/><circle cx="438" cy="166" r="3" fill="#0969da"/>
+  <circle cx="480" cy="166" r="3" fill="#0969da"/><circle cx="522" cy="166" r="3" fill="#0969da"/>
+  <circle cx="564" cy="166" r="3" fill="#0969da"/><circle cx="606" cy="166" r="3" fill="#0969da"/>
+  <circle cx="648" cy="166" r="3" fill="#0969da"/><circle cx="690" cy="166" r="3" fill="#0969da"/>
+  <circle cx="732" cy="166" r="3" fill="#0969da"/><circle cx="774" cy="166" r="3" fill="#0969da"/>
+  <circle cx="816" cy="166" r="3" fill="#0969da"/>
+
+  <!-- 時間軸 -->
+  <line x1="40" y1="190" x2="856" y2="190" stroke="#1f2328" stroke-width="2" marker-end="url(#ah)"/>
+  <text x="60" y="212" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">1</text>
+  <text x="102" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">2</text>
+  <text x="144" y="212" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">3</text>
+  <text x="186" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">4</text>
+  <text x="228" y="212" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">5</text>
+  <text x="270" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">6</text>
+  <text x="312" y="212" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">7</text>
+  <text x="354" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">8</text>
+  <text x="396" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">9</text>
+  <text x="438" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">10</text>
+  <text x="480" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">11</text>
+  <text x="522" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">12</text>
+  <text x="564" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">13</text>
+  <text x="606" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">14</text>
+  <text x="648" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">15</text>
+  <text x="690" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">16</text>
+  <text x="732" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">17</text>
+  <text x="774" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">18</text>
+  <text x="816" y="212" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">19</text>
+  <text x="856" y="232" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="end">フレーム（1 フレーム = 16,667 マイクロ秒）</text>
+
+  <!-- 間隔ブラケット -->
+  <path d="M60,250 L60,260 L144,260 L144,250" fill="none" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="102" y="280" font-family="sans-serif" font-size="13" fill="#1a7f37" text-anchor="middle">charGap=2 フレームごとに 1 キー</text>
+
+  <path d="M312,290 L312,300 L816,300 L816,290" fill="none" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="564" y="320" font-family="sans-serif" font-size="13" fill="#bc4c00" text-anchor="middle">RETURN の後は lineGap=12 フレーム待つ（BASIC が前の行を処理する時間）</text>
+
+  <rect x="60" y="344" width="760" height="40" rx="8" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="440" y="369" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">送出はスケジューラが毎フレーム自動で進めます。テスト側は scheduler.exec() を回すだけ（手動 tick は不要）</text>
+</svg>

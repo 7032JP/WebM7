@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 440" width="840" height="440">
+  <title>状態検査の見取り図。テストスクリプトから覗ける fm7 オブジェクト内の場所</title>
+  <defs>
+    <marker id="ahp" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8250df"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="840" height="440" fill="#ffffff"/>
+  <text x="420" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">状態検査の見取り図 ― テストから覗ける場所</text>
+
+  <!-- テストスクリプト -->
+  <rect x="40" y="180" width="180" height="80" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="130" y="212" font-family="sans-serif" font-size="15" font-weight="bold" fill="#8250df" text-anchor="middle">テストスクリプト</text>
+  <text x="130" y="236" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">console.log / 期待値の検査</text>
+
+  <line x1="220" y1="220" x2="276" y2="220" stroke="#8250df" stroke-width="2.5" marker-end="url(#ahp)"/>
+  <text x="248" y="206" font-family="sans-serif" font-size="12" fill="#8250df" text-anchor="middle">読む</text>
+
+  <!-- fm7 容器 -->
+  <rect x="280" y="60" width="520" height="330" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <text x="540" y="88" font-family="sans-serif" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">fm7（FM7 インスタンス）</text>
+
+  <rect x="305" y="104" width="230" height="62" rx="8" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="320" y="126" font-family="monospace" font-size="14" font-weight="bold" fill="#1a7f37">mainCPU</text>
+  <text x="320" y="148" font-family="monospace" font-size="12" fill="#1f2328">.pc <tspan font-family="sans-serif" fill="#57606a">プログラムカウンタ</tspan></text>
+
+  <rect x="555" y="104" width="220" height="62" rx="8" fill="#fbefff" stroke="#8250df"/>
+  <text x="570" y="126" font-family="monospace" font-size="14" font-weight="bold" fill="#8250df">subCPU</text>
+  <text x="570" y="148" font-family="monospace" font-size="12" fill="#1f2328">.pc <tspan font-family="sans-serif" fill="#57606a">プログラムカウンタ</tspan></text>
+
+  <rect x="305" y="180" width="230" height="62" rx="8" fill="#ffffff" stroke="#0969da"/>
+  <text x="320" y="202" font-family="monospace" font-size="14" font-weight="bold" fill="#0969da">mainRAM</text>
+  <text x="320" y="224" font-family="sans-serif" font-size="12" fill="#57606a">メイン RAM（Uint8Array）</text>
+
+  <rect x="555" y="180" width="220" height="120" rx="8" fill="#ffffff" stroke="#0969da"/>
+  <text x="570" y="202" font-family="monospace" font-size="14" font-weight="bold" fill="#0969da">display</text>
+  <text x="570" y="224" font-family="monospace" font-size="12" fill="#1f2328">.vram <tspan font-family="sans-serif" fill="#57606a">VRAM</tspan></text>
+  <text x="570" y="244" font-family="monospace" font-size="12" fill="#1f2328">.displayMode <tspan font-family="sans-serif" fill="#57606a">表示モード</tspan></text>
+  <text x="570" y="264" font-family="monospace" font-size="12" fill="#1f2328">.crtOn <tspan font-family="sans-serif" fill="#57606a">CRT 出力フラグ</tspan></text>
+  <text x="570" y="288" font-family="sans-serif" font-size="11" fill="#57606a">render() で PPM 出力も可（第8章）</text>
+
+  <rect x="305" y="256" width="230" height="78" rx="8" fill="#ffffff" stroke="#0969da"/>
+  <text x="320" y="278" font-family="monospace" font-size="14" font-weight="bold" fill="#0969da">scheduler</text>
+  <text x="320" y="300" font-family="monospace" font-size="12" fill="#1f2328">.mainCyclesTotal</text>
+  <text x="320" y="320" font-family="sans-serif" font-size="12" fill="#57606a">実行済みメイン CPU サイクル総数</text>
+
+  <text x="540" y="368" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">いずれも普通のプロパティとして直接読めます（特別な API は不要）</text>
+
+  <text x="420" y="424" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">「指定フレーム後に特定アドレスが期待値か」「PC が想定ルーチンに入ったか」といった検査が書けます</text>
+</svg>

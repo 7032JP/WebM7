@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 470" width="800" height="470">
+  <title>前面パネルの各部の模式図。電源、リセット、起動モード、ドライブ、イジェクト、ステータスバー</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <!-- 引き出し線の見出し（上段） -->
+  <rect x="40" y="26" width="110" height="40" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="60" cy="46" r="12" fill="#0969da"/>
+  <text x="60" y="51" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
+  <text x="80" y="51" font-family="sans-serif" font-size="15" fill="#1f2328">電源</text>
+  <rect x="165" y="26" width="125" height="40" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="185" cy="46" r="12" fill="#0969da"/>
+  <text x="185" y="51" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
+  <text x="205" y="51" font-family="sans-serif" font-size="15" fill="#1f2328">リセット</text>
+  <rect x="305" y="26" width="265" height="40" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="325" cy="46" r="12" fill="#0969da"/>
+  <text x="325" y="51" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
+  <text x="345" y="51" font-family="sans-serif" font-size="15" fill="#1f2328">起動モード（BASIC / DOS）</text>
+  <rect x="620" y="26" width="140" height="40" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="640" cy="46" r="12" fill="#0969da"/>
+  <text x="640" y="51" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
+  <text x="660" y="51" font-family="sans-serif" font-size="15" fill="#1f2328">イジェクト</text>
+  <line x1="95" y1="66" x2="105" y2="166" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="227" y1="66" x2="166" y2="170" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="437" y1="66" x2="252" y2="170" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="690" y1="66" x2="688" y2="139" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- 本体（横型バーの模式） -->
+  <rect x="60" y="130" width="680" height="110" rx="8" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>
+  <circle cx="105" cy="185" r="16" fill="#ffffff" stroke="#1f2328" stroke-width="1.5"/>
+  <line x1="105" y1="175" x2="105" y2="187" stroke="#1f2328" stroke-width="1.5"/>
+  <rect x="140" y="173" width="50" height="24" rx="4" fill="#ffffff" stroke="#1f2328" stroke-width="1.5"/>
+  <rect x="205" y="173" width="90" height="24" rx="4" fill="#ffffff" stroke="#1f2328" stroke-width="1.5"/>
+  <text x="250" y="190" font-family="sans-serif" font-size="14" fill="#1f2328" text-anchor="middle">BOOT</text>
+  <rect x="315" y="138" width="190" height="94" rx="4" fill="#1f2328" stroke="#57606a" stroke-width="1.5"/>
+  <line x1="331" y1="190" x2="489" y2="190" stroke="#f6f8fa" stroke-width="1.5"/>
+  <rect x="455" y="144" width="36" height="14" rx="3" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>
+  <text x="331" y="218" font-family="sans-serif" font-size="14" fill="#ffffff">Drv1</text>
+  <rect x="530" y="138" width="190" height="94" rx="4" fill="#1f2328" stroke="#57606a" stroke-width="1.5"/>
+  <line x1="546" y1="190" x2="704" y2="190" stroke="#f6f8fa" stroke-width="1.5"/>
+  <rect x="670" y="144" width="36" height="14" rx="3" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>
+  <text x="546" y="218" font-family="sans-serif" font-size="14" fill="#ffffff">Drv0</text>
+
+  <!-- ドライブの見出し（下段） -->
+  <rect x="300" y="272" width="340" height="40" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="320" cy="292" r="12" fill="#0969da"/>
+  <text x="320" y="297" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
+  <text x="340" y="297" font-family="sans-serif" font-size="15" fill="#1f2328">ドライブ（クリックでディスクを選択）</text>
+  <line x1="400" y1="272" x2="400" y2="235" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="620" y1="272" x2="620" y2="235" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- ステータスバー -->
+  <rect x="60" y="340" width="680" height="34" rx="6" fill="#1f2328" stroke="#57606a" stroke-width="1.5"/>
+  <text xml:space="preserve" x="80" y="362" font-family="sans-serif" font-size="14" fill="#ffffff">Drv1   Drv0   T:00 S:01   2D   MMR   NO STEAL   640x200</text>
+  <rect x="270" y="410" width="260" height="40" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="290" cy="430" r="12" fill="#0969da"/>
+  <text x="290" y="435" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">6</text>
+  <text x="310" y="435" font-family="sans-serif" font-size="15" fill="#1f2328">ステータスバー（内部状態）</text>
+  <line x1="400" y1="410" x2="400" y2="377" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+</svg>

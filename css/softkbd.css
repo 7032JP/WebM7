@@ -1,0 +1,146 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 7032 / Naomitsu Tsugiiwa */
+/* ===== Virtual Keyboard (Mobile) ===== */
+/* Layout mirrors the PC Keyboard debug panel exactly:
+   20-column grid (15 main + 1 spacer + 4 numpad).
+   Keys scale to fit viewport width via CSS custom property. */
+
+#softKbd {
+    /* In-flow: docked below the screen (moved into .left-col on touch). */
+    position: relative;
+    width: 100%;
+    z-index: 800;
+    background: #0d1220;
+    border-top: 1px solid #445;
+    padding: 2px 2px env(safe-area-inset-bottom, 2px) 2px;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+
+    /* Key size scales to viewport width.
+       20 keys + 19 gaps(1px) + 4px padding = need ~20*W + 23.
+       --skb-key: calc((100vw - 23px) / 20)  but clamped 16-30px. */
+    --skb-key: clamp(16px, calc((100vw - 23px) / 20), 30px);
+    --skb-gap: 1px;
+}
+#softKbd[hidden] { display: none !important; }
+
+/* Portrait (tall phone) layout: cursor/keypad stacked below the main block.
+   Widest row is the 15-column main block, so size keys to that → larger,
+   easier-to-tap keys than the 20-column wide layout. */
+#softKbd.portrait {
+    --skb-key: clamp(20px, calc((100vw - 18px) / 15), 44px);
+}
+/* SPACE spans the main block width minus CAP/GRP/カナ (3 keys + 3 gaps). */
+#softKbd.portrait .skb-key.space {
+    width: calc(var(--skb-key) * 12 + var(--skb-gap) * 11);
+}
+
+/* Close button */
+.skb-close {
+    position: absolute;
+    top: 0;
+    right: 2px;
+    width: 22px;
+    height: 22px;
+    background: transparent;
+    border: none;
+    color: #667;
+    font-size: 14px;
+    line-height: 22px;
+    text-align: center;
+    cursor: pointer;
+    z-index: 1;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    padding: 0;
+}
+.skb-close:active { color: #fff; }
+
+/* Rows */
+.skb-row { display: flex; gap: var(--skb-gap); justify-content: center; }
+
+/* Key cell */
+.skb-key {
+    background: #1a2a3a;
+    color: #8899aa;
+    border: 1px solid #2a3a4a;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(7px, calc(var(--skb-key) * 0.4), 10px);
+    width: var(--skb-key);
+    height: var(--skb-key);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    flex-grow: 0;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Spacer */
+.skb-spacer {
+    width: var(--skb-key);
+    height: var(--skb-key);
+    flex-shrink: 0;
+    flex-grow: 0;
+}
+
+/* Special widths — scale proportionally */
+.skb-key.enter-wide { width: calc(var(--skb-key) * 2 + var(--skb-gap)); }
+.skb-key.space {
+    /* 8 keys + 7 gaps */
+    width: calc(var(--skb-key) * 8 + var(--skb-gap) * 7);
+}
+
+/* 無変換 / 変換: FM77AV 以降のみ表示。FM-7 系では隠し、SPACE 幅を
+   8 セル ⇔ 6 セルで切り替えて カナ キーの位置を揃える。 */
+.skb-key.av-key {
+    font-size: clamp(6px, calc(var(--skb-key) * 0.28), 8px);
+    letter-spacing: -0.5px;
+}
+body.machine-fm7 .skb-key.av-key { display: none; }
+body.machine-av #softKbd .skb-key.space {
+    /* 6 keys + 5 gaps (無変換 / 変換 が入るぶん狭くする) */
+    width: calc(var(--skb-key) * 6 + var(--skb-gap) * 5);
+}
+body.machine-av #softKbd.portrait .skb-key.space {
+    /* 縦持ちレイアウト: 12 → 10 keys + 9 gaps */
+    width: calc(var(--skb-key) * 10 + var(--skb-gap) * 9);
+}
+
+/* Active / held state */
+.skb-key.active { background: #2a5a8a; color: #fff; border-color: #4ea8de; }
+.skb-key.ctrl.active,
+.skb-key.shift.active { background: #3a6a3a; border-color: #5c5; }
+
+/* LED indicators (CAP, カナ) */
+.skb-key.led { border-bottom: 2px solid #522; }
+.skb-key.led.active { border-bottom-color: #e44; }
+
+/* BREAK key: FM-7 系と FM77AV では他キーと同じグレー。
+   FM77AV20 以降 (body.machine-av20up) のみ朱色にする。 */
+body.machine-av20up .skb-key.break-key { border-color: #c44; color: #c88; }
+body.machine-av20up .skb-key.break-key.active { background: #8a2a2a; border-color: #f66; color: #fff; }
+
+/* CG ROM composite glyph (matches Keyboard panel) */
+.skb-key .skb-glyph {
+    width: calc(var(--skb-key) - 2px);
+    height: calc(var(--skb-key) - 2px);
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    pointer-events: none;
+}
+
+/* Hide on true desktop: mouse-primary AND no touch support.
+   'pointer: fine' alone is not enough (iPad + Magic Keyboard reports fine).
+   Use 'any-pointer: coarse' to detect touch capability regardless of
+   primary pointer — if ANY pointer is coarse, this is a touch device. */
+@media (pointer: fine) and (hover: hover) and (any-pointer: fine) and (not (any-pointer: coarse)) {
+    #softKbd { display: none !important; }
+}

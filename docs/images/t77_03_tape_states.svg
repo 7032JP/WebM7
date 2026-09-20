@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 400" width="840" height="400">
+  <title>テープの状態遷移図。未セット・セット済停止・再生録音中・テープ終端の 4 状態と REW / Eject の関係</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="840" height="400" fill="#ffffff"/>
+  <text x="420" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">テープカウンタとモーターの状態遷移</text>
+
+  <!-- S0 -->
+  <rect x="40" y="90" width="170" height="64" rx="8" fill="#f6f8fa" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="125" y="116" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328" text-anchor="middle">未セット</text>
+  <text x="125" y="138" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">LED 消灯・表示 --</text>
+
+  <!-- S1 -->
+  <rect x="290" y="90" width="190" height="64" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="385" y="116" font-family="sans-serif" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">セット済（停止）</text>
+  <text x="385" y="138" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">LED 淡色・位置を保持</text>
+
+  <!-- S2 -->
+  <rect x="570" y="90" width="230" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="685" y="116" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">再生・録音中（モーター ON）</text>
+  <text x="685" y="138" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">LED 点灯・進行率と位置を表示</text>
+
+  <!-- S3 -->
+  <rect x="570" y="250" width="230" height="64" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="685" y="276" font-family="sans-serif" font-size="15" font-weight="bold" fill="#bc4c00" text-anchor="middle">テープ終端（EOT）</text>
+  <text x="685" y="298" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">表示 EOT・それ以上は進まない</text>
+
+  <!-- S0 -> S1 -->
+  <line x1="210" y1="122" x2="288" y2="122" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="249" y="112" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">.t77 をセット</text>
+
+  <!-- S1 <-> S2 -->
+  <line x1="480" y1="104" x2="568" y2="104" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="524" y="82" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">LOAD / SAVE で ON</text>
+  <line x1="568" y1="140" x2="480" y2="140" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="524" y="158" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">モーター OFF</text>
+
+  <!-- S2 -> S3 -->
+  <line x1="685" y1="154" x2="685" y2="248" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="697" y="206" font-family="sans-serif" font-size="11" fill="#57606a">最後まで再生</text>
+
+  <!-- S3 -> S1 (REW) -->
+  <path d="M570,282 L385,282 L385,156" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="395" y="274" font-family="sans-serif" font-size="11" fill="#57606a">REW（pos=0 に巻き戻し）</text>
+
+  <!-- S1 self loop REW -->
+  <path d="M330,154 C330,196 440,196 440,158" fill="none" stroke="#8c959f" stroke-width="1.2" marker-end="url(#ah)"/>
+  <text x="333" y="208" font-family="sans-serif" font-size="11" fill="#8c959f">REW（位置 0 へ）</text>
+
+  <!-- S1 -> S0 (Eject) -->
+  <path d="M340,90 L340,58 L125,58 L125,88" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="232" y="50" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">Eject（取り出し）</text>
+
+  <!-- note -->
+  <rect x="40" y="330" width="540" height="44" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2" stroke-dasharray="5,3"/>
+  <text x="56" y="357" font-family="sans-serif" font-size="13" fill="#bc4c00">録音バッファは Eject では消えません。消すときは 録音クリア ボタン。</text>
+</svg>

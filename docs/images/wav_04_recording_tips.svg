@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 340" width="840" height="340">
+  <title>録音レベルの良い例と悪い例。レベル不足はノイズに埋もれ、最大の 9 割程度が適正、クリップは上げ過ぎ。推奨はモノラル 16bit 44.1kHz 以上</title>
+  <rect x="0" y="0" width="840" height="340" fill="#ffffff"/>
+  <text x="420" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">取り込みレベルとフォーマットの目安</text>
+
+  <!-- panel 1: too low -->
+  <rect x="30" y="56" width="240" height="160" rx="8" fill="#ffffff" stroke="#bc4c00" stroke-width="1.5"/>
+  <line x1="46" y1="116" x2="254" y2="116" stroke="#d0d7de" stroke-width="1"/>
+  <path d="M50,116 q 6,-9 12,0 q 6,9 12,0 q 6,-9 12,0 q 6,9 12,0 q 6,-9 12,0 q 6,9 12,0 q 6,-9 12,0 q 6,9 12,0 q 6,-9 12,0 q 6,9 12,0 q 6,-9 12,0 q 6,9 12,0 q 6,-9 12,0 q 6,9 12,0 q 6,-9 12,0 q 6,9 12,0 q 6,-9 12,0"
+        fill="none" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="150" y="172" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">× レベル不足</text>
+  <text x="150" y="196" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">ノイズに埋もれて読めない</text>
+
+  <!-- panel 2: good -->
+  <rect x="300" y="56" width="240" height="160" rx="8" fill="#ffffff" stroke="#1a7f37" stroke-width="1.5"/>
+  <line x1="316" y1="116" x2="524" y2="116" stroke="#d0d7de" stroke-width="1"/>
+  <path d="M320,116 q 12,-46 24,0 q 12,46 24,0 q 12,-46 24,0 q 12,46 24,0 q 12,-46 24,0 q 12,46 24,0 q 12,-46 24,0 q 12,46 24,0"
+        fill="none" stroke="#1a7f37" stroke-width="2"/>
+  <text x="420" y="172" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1a7f37" text-anchor="middle">○ 適正（最大の 90% 程度）</text>
+  <text x="420" y="196" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">クリップ（音割れ）の一歩手前まで</text>
+
+  <!-- panel 3: clipped -->
+  <rect x="570" y="56" width="240" height="160" rx="8" fill="#ffffff" stroke="#bc4c00" stroke-width="1.5"/>
+  <line x1="586" y1="76" x2="794" y2="76" stroke="#d0d7de" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="586" y1="156" x2="794" y2="156" stroke="#d0d7de" stroke-width="1" stroke-dasharray="4,3"/>
+  <path d="M590,116 L596,76 H614 L626,156 H644 L656,76 H674 L686,156 H704 L716,76 H734 L746,156 H764 L776,116"
+        fill="none" stroke="#bc4c00" stroke-width="2"/>
+  <text x="690" y="186" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">△ 音割れ（クリップ）</text>
+  <text x="690" y="208" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">上限に張り付くのは上げ過ぎ</text>
+
+  <!-- format note -->
+  <rect x="30" y="244" width="780" height="52" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="420" y="268" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">推奨フォーマット: モノラル / 16bit / 44.1kHz 以上</text>
+  <text x="420" y="288" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">8bit でも読めるが 16bit が安定。読み込みたい区間だけを録音する</text>
+</svg>

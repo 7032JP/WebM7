@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 310" width="860" height="310">
+  <title>フレーム実行ループのタイミングチャート。exec の繰り返しで実機時間が進む</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="860" height="310" fill="#ffffff"/>
+  <text x="430" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">フレーム実行ループ ― exec(16667) の繰り返しで実機時間が進む</text>
+
+  <rect x="170" y="48" width="520" height="36" rx="8" fill="#f6f8fa" stroke="#0969da"/>
+  <text x="430" y="72" font-family="monospace" font-size="13" fill="#1f2328" text-anchor="middle">for (let i = 0; i &lt; 300; i++) fm7.scheduler.exec(16667);</text>
+
+  <line x1="430" y1="84" x2="430" y2="110" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- 1 フレームぶんの箱を最初の区間に例示 -->
+  <rect x="60" y="120" width="24" height="26" fill="#ddf4ff" stroke="#0969da"/>
+  <rect x="88" y="120" width="24" height="26" fill="#ddf4ff" stroke="#0969da"/>
+  <rect x="116" y="120" width="24" height="26" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="155" y="138" font-family="sans-serif" font-size="13" fill="#57606a">… 1 マス = exec(16667) 1 回 = 1 フレーム</text>
+
+  <!-- 時間軸 -->
+  <line x1="60" y1="200" x2="810" y2="200" stroke="#1f2328" stroke-width="2" marker-end="url(#ah)"/>
+  <line x1="60" y1="192" x2="60" y2="208" stroke="#1f2328" stroke-width="2"/>
+  <line x1="204" y1="192" x2="204" y2="208" stroke="#1f2328" stroke-width="2"/>
+  <line x1="348" y1="192" x2="348" y2="208" stroke="#1f2328" stroke-width="2"/>
+  <line x1="492" y1="192" x2="492" y2="208" stroke="#1f2328" stroke-width="2"/>
+  <line x1="636" y1="192" x2="636" y2="208" stroke="#1f2328" stroke-width="2"/>
+  <line x1="780" y1="192" x2="780" y2="208" stroke="#1f2328" stroke-width="2"/>
+
+  <text x="60" y="228" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">0</text>
+  <text x="204" y="228" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">60</text>
+  <text x="348" y="228" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">120</text>
+  <text x="492" y="228" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">180</text>
+  <text x="636" y="228" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">240</text>
+  <text x="780" y="228" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">300</text>
+  <text x="820" y="228" font-family="sans-serif" font-size="12" fill="#57606a">フレーム</text>
+
+  <text x="60" y="182" font-family="sans-serif" font-size="13" fill="#0969da" text-anchor="middle">0 秒</text>
+  <text x="204" y="182" font-family="sans-serif" font-size="13" fill="#0969da" text-anchor="middle">1 秒</text>
+  <text x="348" y="182" font-family="sans-serif" font-size="13" fill="#0969da" text-anchor="middle">2 秒</text>
+  <text x="492" y="182" font-family="sans-serif" font-size="13" fill="#0969da" text-anchor="middle">3 秒</text>
+  <text x="636" y="182" font-family="sans-serif" font-size="13" fill="#0969da" text-anchor="middle">4 秒</text>
+  <text x="780" y="182" font-family="sans-serif" font-size="13" fill="#0969da" text-anchor="middle">5 秒</text>
+  <text x="430" y="160" font-family="sans-serif" font-size="13" fill="#0969da" text-anchor="middle">実機での経過時間（60 フレーム = 1 秒）</text>
+
+  <text x="60" y="262" font-family="sans-serif" font-size="13" fill="#1f2328">例: 300 フレーム回すと実機 5 秒ぶん、起動待ちの 600 フレームなら実機 10 秒ぶんの動作になります。</text>
+  <text x="60" y="284" font-family="sans-serif" font-size="13" fill="#57606a">scheduler.step() を使えばメイン CPU を 1 命令ずつ進めることもできます。</text>
+</svg>

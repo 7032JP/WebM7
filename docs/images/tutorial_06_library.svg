@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 480" width="880" height="480">
+  <title>Library とドライブの関係図。棚からドライブやテープへ挿入し、Commit で棚へ反映、Save で PC へ書き出す</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+    <marker id="ahg" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#1a7f37"/>
+    </marker>
+    <marker id="aho" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#bc4c00"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="880" height="480" fill="#ffffff"/>
+  <text x="440" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">Library（ブラウザ内の仮想メディアの棚）とドライブの関係</text>
+
+  <!-- PC ファイル -->
+  <rect x="40" y="70" width="200" height="90" rx="8" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>
+  <text x="140" y="98" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328" text-anchor="middle">PC 本体のファイル</text>
+  <text x="140" y="122" font-family="sans-serif" font-size="13" fill="#57606a" text-anchor="middle">.d77 / .t77</text>
+  <text x="140" y="144" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">（取り込み後は変更されない）</text>
+
+  <line x1="240" y1="115" x2="316" y2="115" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="278" y="105" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">取り込み</text>
+
+  <!-- Library 棚 -->
+  <rect x="320" y="60" width="280" height="220" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="460" y="88" font-family="sans-serif" font-size="16" font-weight="bold" fill="#8250df" text-anchor="middle">Library（棚）</text>
+  <rect x="344" y="102" width="232" height="34" rx="6" fill="#ffffff" stroke="#8250df"/>
+  <text x="356" y="124" font-family="sans-serif" font-size="13" fill="#1f2328">DEMO.D77　[Drive0]</text>
+  <rect x="344" y="142" width="232" height="34" rx="6" fill="#ffffff" stroke="#8250df"/>
+  <text x="356" y="164" font-family="sans-serif" font-size="13" fill="#1f2328">WORK.D77　＋2D で新規作成</text>
+  <rect x="344" y="182" width="232" height="34" rx="6" fill="#ffffff" stroke="#8250df"/>
+  <text x="356" y="204" font-family="sans-serif" font-size="13" fill="#1f2328">PROG.T77　[Tape]</text>
+  <text x="460" y="244" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">各項目: 論理FMT / Exp / Ren / Dup / Del</text>
+  <text x="460" y="264" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">＋2D / ＋2DD で空ディスク作成</text>
+
+  <!-- 挿入矢印 -->
+  <line x1="600" y1="115" x2="676" y2="105" stroke="#1a7f37" stroke-width="2" marker-end="url(#ahg)"/>
+  <text x="638" y="98" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">▶0 / ▶1</text>
+  <line x1="600" y1="206" x2="676" y2="228" stroke="#1a7f37" stroke-width="2" marker-end="url(#ahg)"/>
+  <text x="628" y="238" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">▶T</text>
+
+  <!-- ドライブ -->
+  <rect x="680" y="68" width="160" height="84" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="760" y="96" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">Drive 0 / Drive 1</text>
+  <text x="760" y="120" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">シミュレータの</text>
+  <text x="760" y="138" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">フロッピードライブ</text>
+
+  <rect x="680" y="192" width="160" height="66" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="760" y="220" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">Tape</text>
+  <text x="760" y="242" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">カセットテープ</text>
+
+  <!-- Commit 矢印（戻り） -->
+  <line x1="680" y1="160" x2="604" y2="172" stroke="#bc4c00" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#aho)"/>
+  <text x="644" y="186" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00" text-anchor="middle">⬆Commit</text>
+
+  <!-- 説明帯 -->
+  <rect x="40" y="310" width="800" height="64" rx="8" fill="#f6f8fa" stroke="#8250df" stroke-width="1.5"/>
+  <text x="60" y="336" font-family="sans-serif" font-size="13" fill="#1f2328">・棚での操作も BASIC からの書き込み（SAVE 等）も、すべてブラウザ内で完結します</text>
+  <text x="60" y="360" font-family="sans-serif" font-size="13" fill="#1f2328">・ドライブ側の変更は ⬆Commit を押したときだけ棚へ反映（未反映はオレンジの [Drive0*] 表示）</text>
+
+  <rect x="40" y="390" width="800" height="64" rx="8" fill="#fff8c5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="60" y="416" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00">PC へ書き出すのは Disk Images パネルの Save ボタン（.d77 書き出し）のみ。</text>
+  <text x="60" y="440" font-family="sans-serif" font-size="13" fill="#1f2328">保存ダイアログで上書きを指定しない限り、PC 本体の D77 ファイルは変更されません。</text>
+</svg>

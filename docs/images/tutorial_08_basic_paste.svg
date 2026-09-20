@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 330" width="880" height="330">
+  <title>BASIC Paste の流れ図。F-BASIC 起動後にファイルまたはクリップボードからテキストを自動入力する</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="880" height="330" fill="#ffffff"/>
+  <text x="440" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">BASIC Paste の流れ（テキストを自動入力）</text>
+
+  <!-- 入力元2つ -->
+  <rect x="40" y="60" width="240" height="70" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="160" y="88" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8250df" text-anchor="middle">.txt / .bas ファイルを選択</text>
+  <text x="160" y="112" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">プログラムリストのテキスト</text>
+
+  <rect x="40" y="150" width="240" height="70" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="160" y="178" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8250df" text-anchor="middle">Paste clipboard ボタン</text>
+  <text x="160" y="202" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">クリップボードの内容を流し込む</text>
+
+  <line x1="280" y1="95" x2="346" y2="125" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="280" y1="185" x2="346" y2="155" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- 自動入力 -->
+  <rect x="350" y="105" width="240" height="70" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="470" y="133" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">1 文字ずつ自動入力</text>
+  <text x="470" y="157" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">入力先に合わせて速度を自動調整</text>
+
+  <line x1="590" y1="140" x2="656" y2="140" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- RUN -->
+  <rect x="660" y="105" width="180" height="70" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="750" y="133" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1a7f37" text-anchor="middle">RUN で実行！</text>
+  <text x="750" y="157" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">入力完了後に RETURN</text>
+
+  <!-- Stop -->
+  <rect x="350" y="195" width="240" height="44" rx="8" fill="#ffebe9" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="470" y="222" font-family="sans-serif" font-size="13" fill="#bc4c00" text-anchor="middle">途中でやめるときは Stop ボタン</text>
+  <line x1="470" y1="195" x2="470" y2="179" stroke="#bc4c00" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- 前提・注意 -->
+  <rect x="40" y="260" width="800" height="56" rx="8" fill="#f6f8fa" stroke="#57606a"/>
+  <text x="60" y="284" font-family="sans-serif" font-size="13" fill="#1f2328">前提: F-BASIC が起動して OK プロンプトが出ていること</text>
+  <text x="60" y="306" font-family="sans-serif" font-size="13" fill="#1f2328">注意: BASIC キーワードは大文字推奨（小文字だとトークン化されない場合があります）</text>
+</svg>

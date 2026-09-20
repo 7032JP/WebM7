@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 330" width="840" height="330">
+  <title>T77 ファイル形式の構造。ヘッダ 16 バイトの後に 16 ビットのパルスエントリが並ぶ</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="840" height="330" fill="#ffffff"/>
+  <text x="420" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">T77 ファイルの構造</text>
+
+  <text x="40" y="62" font-family="sans-serif" font-size="13" fill="#57606a">ファイルの先頭から:</text>
+
+  <!-- layout bar -->
+  <rect x="40" y="72" width="200" height="56" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="140" y="96" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8250df" text-anchor="middle">ヘッダ 16 バイト</text>
+  <text x="140" y="116" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">マジック文字列 16 バイト</text>
+
+  <rect x="250" y="72" width="110" height="56" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="305" y="96" font-family="sans-serif" font-size="13" fill="#0969da" text-anchor="middle">パルス 1</text>
+  <text x="305" y="116" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">16bit</text>
+
+  <rect x="370" y="72" width="110" height="56" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="425" y="96" font-family="sans-serif" font-size="13" fill="#0969da" text-anchor="middle">パルス 2</text>
+  <text x="425" y="116" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">16bit</text>
+
+  <rect x="490" y="72" width="120" height="56" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="550" y="96" font-family="monospace" font-size="13" fill="#bc4c00" text-anchor="middle">0x0000</text>
+  <text x="550" y="116" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">ギャップ（無音）</text>
+
+  <rect x="620" y="72" width="110" height="56" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="675" y="96" font-family="sans-serif" font-size="13" fill="#0969da" text-anchor="middle">パルス …</text>
+  <text x="675" y="116" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">ファイル末尾まで</text>
+
+  <!-- expand lines -->
+  <line x1="370" y1="128" x2="200" y2="190" stroke="#8c959f" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="480" y1="128" x2="760" y2="190" stroke="#8c959f" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- bit field -->
+  <rect x="200" y="192" width="170" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="285" y="216" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">bit 15 — 極性</text>
+  <text x="285" y="236" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">1 = H ／ 0 = L</text>
+  <rect x="370" y="192" width="390" height="56" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="565" y="216" font-family="sans-serif" font-size="13" font-weight="bold" fill="#0969da" text-anchor="middle">bit 14〜0 — パルス幅</text>
+  <text x="565" y="236" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">CPU サイクル数に比例した単位</text>
+
+  <text x="40" y="290" font-family="sans-serif" font-size="13" fill="#57606a">書き出し: ビッグエンディアン（標準形式） ／ 読み込み: BE・LE を自動判別（旧形式も読める）</text>
+</svg>

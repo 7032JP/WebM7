@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 220" width="860" height="220">
+  <title>実機カセットテープから WAV 録音を経て WebM7 で読み込むまでの全体図</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="860" height="220" fill="#ffffff"/>
+  <text x="430" y="32" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">実機テープ → WAV → WebM7 の全体の流れ</text>
+
+  <rect x="30" y="60" width="185" height="96" rx="8" fill="#f6f8fa" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="122" y="90" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328" text-anchor="middle">実機カセット</text>
+  <text x="122" y="114" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">データレコーダ／</text>
+  <text x="122" y="132" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">ラジカセで再生</text>
+  <line x1="215" y1="108" x2="238" y2="108" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="240" y="60" width="185" height="96" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="332" y="90" font-family="sans-serif" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">PC で WAV 録音</text>
+  <text x="332" y="114" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">ライン入力で取り込み</text>
+  <text x="332" y="132" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">レベルは大きめに</text>
+  <line x1="425" y1="108" x2="448" y2="108" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="450" y="60" width="185" height="96" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="542" y="90" font-family="sans-serif" font-size="15" font-weight="bold" fill="#8250df" text-anchor="middle">WebM7 にセット</text>
+  <text x="542" y="114" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">Tape Image で .wav 選択</text>
+  <text x="542" y="132" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">「N blocks OK」を確認</text>
+  <line x1="635" y1="108" x2="658" y2="108" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="660" y="60" width="185" height="96" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="752" y="90" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">BASIC で読み込み</text>
+  <text x="752" y="114" font-family="monospace" font-size="12" fill="#57606a" text-anchor="middle">RUN "CAS:" など</text>
+  <text x="752" y="132" font-family="monospace" font-size="12" fill="#57606a" text-anchor="middle">機械語は LOADM</text>
+</svg>

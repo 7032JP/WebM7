@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 360" width="840" height="360">
+  <title>FSK の概念図。2400Hz の音がビット 0、1200Hz の音がビット 1 を表し、スタートビットとストップビットで 1 バイトを区切る</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="840" height="360" fill="#ffffff"/>
+  <text x="420" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">音の高さでビットを表す（FSK）</text>
+
+  <!-- short cycles = bit 0 -->
+  <path d="M80,110 q 10,-44 20,0 q 10,44 20,0 q 10,-44 20,0 q 10,44 20,0 q 10,-44 20,0 q 10,44 20,0"
+        fill="none" stroke="#0969da" stroke-width="2"/>
+  <text x="140" y="150" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">2400 Hz（短い周期）</text>
+  <text x="140" y="170" font-family="sans-serif" font-size="13" fill="#57606a" text-anchor="middle">= ビット 0</text>
+
+  <!-- long cycles = bit 1 -->
+  <path d="M420,110 q 20,-44 40,0 q 20,44 40,0 q 20,-44 40,0 q 20,44 40,0 q 20,-44 40,0 q 20,44 40,0"
+        fill="none" stroke="#bc4c00" stroke-width="2"/>
+  <text x="540" y="150" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">1200 Hz（長い周期）</text>
+  <text x="540" y="170" font-family="sans-serif" font-size="13" fill="#57606a" text-anchor="middle">= ビット 1</text>
+
+  <!-- byte frame -->
+  <text x="60" y="222" font-family="sans-serif" font-size="13" fill="#57606a">ビットの並び（1 バイトぶん）:</text>
+  <rect x="60" y="234" width="80" height="48" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="100" y="263" font-family="sans-serif" font-size="12" fill="#1a7f37" text-anchor="middle">スタート 0</text>
+  <rect x="148" y="234" width="416" height="48" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="174" y="263" font-family="monospace" font-size="13" fill="#0969da" text-anchor="middle">D0</text>
+  <text x="226" y="263" font-family="monospace" font-size="13" fill="#0969da" text-anchor="middle">D1</text>
+  <text x="278" y="263" font-family="monospace" font-size="13" fill="#0969da" text-anchor="middle">D2</text>
+  <text x="330" y="263" font-family="monospace" font-size="13" fill="#0969da" text-anchor="middle">D3</text>
+  <text x="382" y="263" font-family="monospace" font-size="13" fill="#0969da" text-anchor="middle">D4</text>
+  <text x="434" y="263" font-family="monospace" font-size="13" fill="#0969da" text-anchor="middle">D5</text>
+  <text x="486" y="263" font-family="monospace" font-size="13" fill="#0969da" text-anchor="middle">D6</text>
+  <text x="538" y="263" font-family="monospace" font-size="13" fill="#0969da" text-anchor="middle">D7</text>
+  <rect x="572" y="234" width="80" height="48" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="612" y="263" font-family="sans-serif" font-size="12" fill="#8250df" text-anchor="middle">ストップ 1</text>
+  <rect x="660" y="234" width="80" height="48" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="700" y="263" font-family="sans-serif" font-size="12" fill="#8250df" text-anchor="middle">ストップ 1</text>
+
+  <text x="60" y="320" font-family="sans-serif" font-size="13" fill="#57606a">1 バイト = スタートビット(0) ＋ データ 8 ビット（下位から）＋ ストップビット(1) × 2</text>
+</svg>

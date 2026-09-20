@@ -1,0 +1,217 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 928 478" width="928" height="478">
+  <title>FM-7 / FM-77 のソフトウェアキーボード全体図</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="928" height="478" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
+  <text x="464" y="32" font-family="sans-serif" font-size="18" fill="#1f2328" text-anchor="middle" font-weight="bold">FM-7 / FM-77 のキーボード</text>
+  <text x="464" y="54" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">Keyboard パネルのキーボード図 / タッチ端末のソフトウェアキーボードと同じ並び</text>
+  <rect x="16" y="68" width="896" height="324" rx="8" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1"/>
+  <rect x="598" y="78" width="40" height="40" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="618" y="102.68" font-family="sans-serif" font-size="13" fill="#0a3069" text-anchor="middle" font-weight="bold">EL</text>
+  <rect x="642" y="78" width="40" height="40" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="662" y="102.68" font-family="sans-serif" font-size="13" fill="#0a3069" text-anchor="middle" font-weight="bold">CLS</text>
+  <rect x="730" y="78" width="40" height="40" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="750" y="102.68" font-family="sans-serif" font-size="13" fill="#0a3069" text-anchor="middle" font-weight="bold">INS</text>
+  <rect x="774" y="78" width="40" height="40" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="794" y="102.68" font-family="sans-serif" font-size="13" fill="#0a3069" text-anchor="middle" font-weight="bold">↑</text>
+  <rect x="818" y="78" width="40" height="40" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="838" y="102.68" font-family="sans-serif" font-size="13" fill="#0a3069" text-anchor="middle" font-weight="bold">DEL</text>
+  <rect x="26" y="122" width="40" height="40" rx="4" fill="#ffebe9" stroke="#cf222e" stroke-width="1.2"/>
+  <text x="46" y="146.68" font-family="sans-serif" font-size="13" fill="#7a1420" text-anchor="middle" font-weight="bold">BRK</text>
+  <rect x="114" y="122" width="40" height="40" rx="4" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.2"/>
+  <text x="134" y="146.68" font-family="sans-serif" font-size="13" fill="#0b4a1f" text-anchor="middle" font-weight="bold">PF1</text>
+  <rect x="158" y="122" width="40" height="40" rx="4" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.2"/>
+  <text x="178" y="146.68" font-family="sans-serif" font-size="13" fill="#0b4a1f" text-anchor="middle" font-weight="bold">PF2</text>
+  <rect x="202" y="122" width="40" height="40" rx="4" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.2"/>
+  <text x="222" y="146.68" font-family="sans-serif" font-size="13" fill="#0b4a1f" text-anchor="middle" font-weight="bold">PF3</text>
+  <rect x="246" y="122" width="40" height="40" rx="4" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.2"/>
+  <text x="266" y="146.68" font-family="sans-serif" font-size="13" fill="#0b4a1f" text-anchor="middle" font-weight="bold">PF4</text>
+  <rect x="290" y="122" width="40" height="40" rx="4" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.2"/>
+  <text x="310" y="146.68" font-family="sans-serif" font-size="13" fill="#0b4a1f" text-anchor="middle" font-weight="bold">PF5</text>
+  <rect x="334" y="122" width="40" height="40" rx="4" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.2"/>
+  <text x="354" y="146.68" font-family="sans-serif" font-size="13" fill="#0b4a1f" text-anchor="middle" font-weight="bold">PF6</text>
+  <rect x="378" y="122" width="40" height="40" rx="4" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.2"/>
+  <text x="398" y="146.68" font-family="sans-serif" font-size="13" fill="#0b4a1f" text-anchor="middle" font-weight="bold">PF7</text>
+  <rect x="422" y="122" width="40" height="40" rx="4" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.2"/>
+  <text x="442" y="146.68" font-family="sans-serif" font-size="13" fill="#0b4a1f" text-anchor="middle" font-weight="bold">PF8</text>
+  <rect x="466" y="122" width="40" height="40" rx="4" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.2"/>
+  <text x="486" y="146.68" font-family="sans-serif" font-size="13" fill="#0b4a1f" text-anchor="middle" font-weight="bold">PF9</text>
+  <rect x="510" y="122" width="40" height="40" rx="4" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.2"/>
+  <text x="530" y="146.68" font-family="sans-serif" font-size="13" fill="#0b4a1f" text-anchor="middle" font-weight="bold">PF10</text>
+  <rect x="598" y="122" width="40" height="40" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="618" y="146.68" font-family="sans-serif" font-size="13" fill="#0a3069" text-anchor="middle" font-weight="bold">DUP</text>
+  <rect x="642" y="122" width="40" height="40" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="662" y="146.68" font-family="sans-serif" font-size="13" fill="#0a3069" text-anchor="middle" font-weight="bold">HOM</text>
+  <rect x="730" y="122" width="40" height="40" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="750" y="146.68" font-family="sans-serif" font-size="13" fill="#0a3069" text-anchor="middle" font-weight="bold">←</text>
+  <rect x="774" y="122" width="40" height="40" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="794" y="146.68" font-family="sans-serif" font-size="13" fill="#0a3069" text-anchor="middle" font-weight="bold">↓</text>
+  <rect x="818" y="122" width="40" height="40" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="838" y="146.68" font-family="sans-serif" font-size="13" fill="#0a3069" text-anchor="middle" font-weight="bold">→</text>
+  <rect x="26" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="46" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">ESC</text>
+  <rect x="70" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="90" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">1</text>
+  <rect x="114" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="134" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">2</text>
+  <rect x="158" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="178" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">3</text>
+  <rect x="202" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="222" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">4</text>
+  <rect x="246" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="266" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">5</text>
+  <rect x="290" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="310" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">6</text>
+  <rect x="334" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="354" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">7</text>
+  <rect x="378" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="398" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">8</text>
+  <rect x="422" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="442" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">9</text>
+  <rect x="466" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="486" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">0</text>
+  <rect x="510" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="530" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">-</text>
+  <rect x="554" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="574" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">^</text>
+  <rect x="598" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="618" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">¥</text>
+  <rect x="642" y="166" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="662" y="190.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">BS</text>
+  <rect x="730" y="166" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="750" y="190.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">7</text>
+  <rect x="774" y="166" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="794" y="190.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">8</text>
+  <rect x="818" y="166" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="838" y="190.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">9</text>
+  <rect x="862" y="166" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="882" y="190.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">*</text>
+  <rect x="26" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="46" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">TAB</text>
+  <rect x="70" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="90" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">Q</text>
+  <rect x="114" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="134" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">W</text>
+  <rect x="158" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="178" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">E</text>
+  <rect x="202" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="222" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">R</text>
+  <rect x="246" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="266" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">T</text>
+  <rect x="290" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="310" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">Y</text>
+  <rect x="334" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="354" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">U</text>
+  <rect x="378" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="398" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">I</text>
+  <rect x="422" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="442" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">O</text>
+  <rect x="466" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="486" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">P</text>
+  <rect x="510" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="530" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">@</text>
+  <rect x="554" y="210" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="574" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">[</text>
+  <rect x="598" y="210" width="84" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="640" y="234.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">RET</text>
+  <rect x="730" y="210" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="750" y="234.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">4</text>
+  <rect x="774" y="210" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="794" y="234.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">5</text>
+  <rect x="818" y="210" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="838" y="234.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">6</text>
+  <rect x="862" y="210" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="882" y="234.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">/</text>
+  <rect x="26" y="254" width="40" height="40" rx="4" fill="#fbefff" stroke="#8250df" stroke-width="1.2"/>
+  <text x="46" y="278.68" font-family="sans-serif" font-size="13" fill="#4c2889" text-anchor="middle" font-weight="bold">CTR</text>
+  <rect x="70" y="254" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="90" y="278.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">A</text>
+  <rect x="114" y="254" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="134" y="278.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">S</text>
+  <rect x="158" y="254" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="178" y="278.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">D</text>
+  <rect x="202" y="254" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="222" y="278.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">F</text>
+  <rect x="246" y="254" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="266" y="278.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">G</text>
+  <rect x="290" y="254" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="310" y="278.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">H</text>
+  <rect x="334" y="254" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="354" y="278.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">J</text>
+  <rect x="378" y="254" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="398" y="278.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">K</text>
+  <rect x="422" y="254" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="442" y="278.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">L</text>
+  <rect x="466" y="254" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="486" y="278.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">;</text>
+  <rect x="510" y="254" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="530" y="278.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">:</text>
+  <rect x="554" y="254" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="574" y="278.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">]</text>
+  <rect x="730" y="254" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="750" y="278.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">1</text>
+  <rect x="774" y="254" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="794" y="278.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">2</text>
+  <rect x="818" y="254" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="838" y="278.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">3</text>
+  <rect x="862" y="254" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="882" y="278.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">=</text>
+  <rect x="26" y="298" width="40" height="40" rx="4" fill="#fbefff" stroke="#8250df" stroke-width="1.2"/>
+  <text x="46" y="322.68" font-family="sans-serif" font-size="13" fill="#4c2889" text-anchor="middle" font-weight="bold">SHF</text>
+  <rect x="70" y="298" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="90" y="322.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">Z</text>
+  <rect x="114" y="298" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="134" y="322.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">X</text>
+  <rect x="158" y="298" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="178" y="322.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">C</text>
+  <rect x="202" y="298" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="222" y="322.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">V</text>
+  <rect x="246" y="298" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="266" y="322.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">B</text>
+  <rect x="290" y="298" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="310" y="322.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">N</text>
+  <rect x="334" y="298" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="354" y="322.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">M</text>
+  <rect x="378" y="298" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="398" y="322.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">,</text>
+  <rect x="422" y="298" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="442" y="322.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">.</text>
+  <rect x="466" y="298" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="486" y="322.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">/</text>
+  <rect x="510" y="298" width="40" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="530" y="322.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">_</text>
+  <rect x="554" y="298" width="40" height="40" rx="4" fill="#fbefff" stroke="#8250df" stroke-width="1.2"/>
+  <text x="574" y="322.68" font-family="sans-serif" font-size="13" fill="#4c2889" text-anchor="middle" font-weight="bold">SHF</text>
+  <rect x="730" y="298" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="750" y="322.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">0</text>
+  <rect x="774" y="298" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="794" y="322.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">.</text>
+  <rect x="818" y="298" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="838" y="322.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">+</text>
+  <rect x="862" y="298" width="40" height="40" rx="4" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2"/>
+  <text x="882" y="322.68" font-family="sans-serif" font-size="13" fill="#6b2e00" text-anchor="middle" font-weight="bold">RT</text>
+  <rect x="26" y="342" width="40" height="40" rx="4" fill="#fbefff" stroke="#8250df" stroke-width="1.2"/>
+  <text x="46" y="366.68" font-family="sans-serif" font-size="13" fill="#4c2889" text-anchor="middle" font-weight="bold">CAP</text>
+  <rect x="70" y="342" width="40" height="40" rx="4" fill="#fbefff" stroke="#8250df" stroke-width="1.2"/>
+  <text x="90" y="366.68" font-family="sans-serif" font-size="13" fill="#4c2889" text-anchor="middle" font-weight="bold">GRP</text>
+  <rect x="114" y="342" width="348" height="40" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+  <text x="288" y="366.68" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">SPACE</text>
+  <rect x="466" y="342" width="40" height="40" rx="4" fill="#fbefff" stroke="#8250df" stroke-width="1.2"/>
+  <text x="486" y="366.68" font-family="sans-serif" font-size="13" fill="#4c2889" text-anchor="middle" font-weight="bold">カナ</text>
+  <rect x="26" y="406" width="18" height="13" rx="3" fill="#ffebe9" stroke="#cf222e" stroke-width="1"/>
+  <text x="49" y="416" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">BREAK</text>
+  <rect x="98" y="406" width="18" height="13" rx="3" fill="#dafbe1" stroke="#1a7f37" stroke-width="1"/>
+  <text x="121" y="416" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">PF1〜PF10</text>
+  <rect x="194.2" y="406" width="18" height="13" rx="3" fill="#ddf4ff" stroke="#0969da" stroke-width="1"/>
+  <text x="217.2" y="416" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">編集・カーソル</text>
+  <rect x="310.2" y="406" width="18" height="13" rx="3" fill="#ffffff" stroke="#8c959f" stroke-width="1"/>
+  <text x="333.2" y="416" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">文字キー (英数・記号・カナ)</text>
+  <rect x="501" y="406" width="18" height="13" rx="3" fill="#fbefff" stroke="#8250df" stroke-width="1"/>
+  <text x="524" y="416" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">修飾・モード (SHF / CTR / CAP / GRP / カナ)</text>
+  <rect x="806.1999999999998" y="406" width="18" height="13" rx="3" fill="#fff1e5" stroke="#bc4c00" stroke-width="1"/>
+  <text x="829.1999999999998" y="416" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">テンキー</text>
+  <text x="26" y="440" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ FM-7 / FM-77 では 無変換 / 変換 キーが無く、そのぶん SPACE キーが広くなります。</text>
+</svg>

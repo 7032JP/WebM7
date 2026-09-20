@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 640" width="760" height="640">
+  <title>ヘッドレステスト 1 本の全体の流れ。コアの読み込みから状態検査までの 7 ステップ</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="640" fill="#ffffff"/>
+  <text x="380" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">ヘッドレステスト 1 本の流れ</text>
+
+  <!-- (1) -->
+  <rect x="70" y="50" width="470" height="56" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="100" cy="78" r="14" fill="#0969da"/>
+  <text x="100" y="83" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
+  <text x="126" y="73" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328">コアを import する</text>
+  <text x="126" y="94" font-family="monospace" font-size="12" fill="#57606a">import { FM7 } from '../core/index.js'</text>
+  <rect x="556" y="64" width="100" height="28" rx="6" fill="#fbefff" stroke="#8250df"/>
+  <text x="606" y="83" font-family="sans-serif" font-size="13" fill="#8250df" text-anchor="middle">第5章</text>
+  <line x1="305" y1="106" x2="305" y2="128" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- (2) -->
+  <rect x="70" y="132" width="470" height="56" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="100" cy="160" r="14" fill="#0969da"/>
+  <text x="100" y="165" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
+  <text x="126" y="155" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328">インスタンスを生成する</text>
+  <text x="126" y="176" font-family="monospace" font-size="12" fill="#57606a">const fm7 = new FM7()</text>
+  <rect x="556" y="146" width="100" height="28" rx="6" fill="#fbefff" stroke="#8250df"/>
+  <text x="606" y="165" font-family="sans-serif" font-size="13" fill="#8250df" text-anchor="middle">第6章</text>
+  <line x1="305" y1="188" x2="305" y2="210" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- (3) -->
+  <rect x="70" y="214" width="470" height="56" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="100" cy="242" r="14" fill="#0969da"/>
+  <text x="100" y="247" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
+  <text x="126" y="237" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328">ROM を読み込む</text>
+  <text x="126" y="258" font-family="monospace" font-size="12" fill="#57606a">loadFBasicROM() など</text>
+  <rect x="556" y="228" width="100" height="28" rx="6" fill="#fbefff" stroke="#8250df"/>
+  <text x="606" y="247" font-family="sans-serif" font-size="13" fill="#8250df" text-anchor="middle">第4章</text>
+  <line x1="305" y1="270" x2="305" y2="292" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- (4) -->
+  <rect x="70" y="296" width="470" height="56" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="100" cy="324" r="14" fill="#0969da"/>
+  <text x="100" y="329" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
+  <text x="126" y="319" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328">機種を設定する</text>
+  <text x="126" y="340" font-family="monospace" font-size="12" fill="#57606a">setMachineType('fm7')</text>
+  <rect x="556" y="310" width="100" height="28" rx="6" fill="#fbefff" stroke="#8250df"/>
+  <text x="606" y="329" font-family="sans-serif" font-size="13" fill="#8250df" text-anchor="middle">第7章</text>
+  <line x1="305" y1="352" x2="305" y2="374" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- (5) -->
+  <rect x="70" y="378" width="470" height="56" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="100" cy="406" r="14" fill="#0969da"/>
+  <text x="100" y="411" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
+  <text x="126" y="401" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328">リセット（起動）</text>
+  <text x="126" y="422" font-family="monospace" font-size="12" fill="#57606a">fm7.reset()</text>
+  <rect x="556" y="392" width="100" height="28" rx="6" fill="#fbefff" stroke="#8250df"/>
+  <text x="606" y="411" font-family="sans-serif" font-size="13" fill="#8250df" text-anchor="middle">第7章</text>
+  <line x1="305" y1="434" x2="305" y2="456" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- (6) -->
+  <rect x="70" y="460" width="470" height="56" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="100" cy="488" r="14" fill="#0969da"/>
+  <text x="100" y="493" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">6</text>
+  <text x="126" y="483" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328">フレーム実行ループ</text>
+  <text x="126" y="504" font-family="monospace" font-size="12" fill="#57606a">scheduler.exec(16667) を繰り返す（必要なら queueText）</text>
+  <rect x="556" y="474" width="100" height="28" rx="6" fill="#fbefff" stroke="#8250df"/>
+  <text x="606" y="493" font-family="sans-serif" font-size="13" fill="#8250df" text-anchor="middle">第7章</text>
+  <line x1="305" y1="516" x2="305" y2="538" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- (7) -->
+  <rect x="70" y="542" width="470" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <circle cx="100" cy="570" r="14" fill="#1a7f37"/>
+  <text x="100" y="575" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">7</text>
+  <text x="126" y="565" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328">状態検査 / 画像出力</text>
+  <text x="126" y="586" font-family="sans-serif" font-size="12" fill="#57606a">PC・メモリ・VRAM の検査、PPM 画像の書き出し</text>
+  <rect x="556" y="556" width="100" height="28" rx="6" fill="#fbefff" stroke="#8250df"/>
+  <text x="606" y="575" font-family="sans-serif" font-size="13" fill="#8250df" text-anchor="middle">第7・8章</text>
+</svg>

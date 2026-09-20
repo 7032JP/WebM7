@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 450" width="840" height="450">
+  <title>WAV デコードの仕組み。完全復調と適応スライスの 2 方式をチェックサム照合で比較し、品質の良い方を自動採用する</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="840" height="450" fill="#ffffff"/>
+  <text x="420" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">WAV がデコードされる仕組み</text>
+
+  <!-- input -->
+  <rect x="250" y="50" width="340" height="48" rx="8" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>
+  <text x="420" y="79" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328" text-anchor="middle">読み込んだ WAV（音声波形）</text>
+
+  <line x1="340" y1="98" x2="230" y2="128" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="500" y1="98" x2="610" y2="128" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- method 1 -->
+  <rect x="60" y="130" width="340" height="104" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="230" y="156" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">方式 1: 完全復調 → 再生成</text>
+  <text x="230" y="178" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">音声からビット列を復元し、理想的な</text>
+  <text x="230" y="196" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">きれいな搬送波として作り直してから読む</text>
+  <text x="230" y="218" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">ノイズ・振幅の揺れ・速度のムラに強い</text>
+
+  <!-- method 2 -->
+  <rect x="440" y="130" width="340" height="104" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="610" y="156" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8250df" text-anchor="middle">方式 2: 適応スライス</text>
+  <text x="610" y="178" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">波形を直接読み取る</text>
+  <text x="610" y="196" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">素直な録音に向く</text>
+
+  <line x1="230" y1="234" x2="340" y2="264" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="610" y1="234" x2="500" y2="264" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- checksum -->
+  <rect x="180" y="266" width="480" height="52" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="420" y="290" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">各データブロックの検査値（チェックサム）を照合</text>
+  <text x="420" y="310" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">正しく読めたブロック数を方式ごとに数える</text>
+
+  <line x1="420" y1="318" x2="420" y2="342" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- result -->
+  <rect x="140" y="344" width="560" height="58" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="420" y="368" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1a7f37" text-anchor="middle">品質の良い方式を自動で採用</text>
+  <text x="420" y="390" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">ステータスに正常ブロック数「N blocks OK」を表示（BAD は読めないブロック数）</text>
+</svg>

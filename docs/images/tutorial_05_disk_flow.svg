@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 360" width="880" height="360">
+  <title>ディスク挿入から起動までの流れ。D77 を Drive 0 にセットし、起動モード BASIC または DOS で電源 ON</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="880" height="360" fill="#ffffff"/>
+  <text x="440" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">ディスクから起動する流れ</text>
+
+  <!-- Step 1 -->
+  <rect x="40" y="70" width="240" height="100" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="160" y="98" font-family="sans-serif" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">1. ディスクをセット</text>
+  <text x="160" y="124" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">Disk Images パネルの</text>
+  <text x="160" y="144" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">Drive 0 で .d77 を選ぶ</text>
+
+  <line x1="280" y1="120" x2="316" y2="120" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Step 2 -->
+  <rect x="320" y="70" width="240" height="100" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="440" y="98" font-family="sans-serif" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">2. 起動モードを選ぶ</text>
+  <text x="440" y="124" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">BASIC（ディスクがあればそこから起動）</text>
+  <text x="440" y="144" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">または DOS</text>
+
+  <line x1="560" y1="120" x2="596" y2="120" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Step 3 -->
+  <rect x="600" y="70" width="240" height="100" rx="8" fill="#fff8c5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="720" y="98" font-family="sans-serif" font-size="15" font-weight="bold" fill="#bc4c00" text-anchor="middle">3. 電源 ON / リセット</text>
+  <text x="720" y="124" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">止まっていれば電源スイッチを押す</text>
+  <text x="720" y="144" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">動作中ならリセットを押す</text>
+
+  <line x1="720" y1="170" x2="720" y2="196" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- ゴール -->
+  <rect x="560" y="200" width="280" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="700" y="224" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">ディスクから起動！</text>
+  <text x="700" y="246" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">Drv0 LED とトラック表示が動きます</text>
+
+  <!-- 注意書き -->
+  <rect x="40" y="280" width="800" height="60" rx="8" fill="#fff8c5" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="440" y="305" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00" text-anchor="middle">書き込みはブラウザ内のみ — PC 本体の D77 ファイルは変更されません</text>
+  <text x="440" y="327" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">PC へ書き出すのは Disk Images の Save ボタンだけです（別名保存を推奨）</text>
+</svg>

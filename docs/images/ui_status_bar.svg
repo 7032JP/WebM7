@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" width="800" height="460">
+  <title>ステータスバー 2 段目の読み方。ドライブのアクセス LED と DMAC、FDC の状態、2D / 2DD、MMR、NO STEAL、画面モードと色数</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <!-- ステータスバー 2 段目 -->
+  <rect x="10" y="92" width="780" height="40" rx="6" fill="#1f2328" stroke="#57606a" stroke-width="1.5"/>
+  <circle cx="45" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="57" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">Drv1</text>
+  <circle cx="105" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="117" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">DMAC</text>
+  <circle cx="180" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="192" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">Drv0</text>
+  <circle cx="240" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="252" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">DMAC</text>
+  <text x="312" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">T:00 S:01 READ</text>
+  <rect x="444" y="101" width="36" height="22" rx="11" fill="none" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="462" y="117" font-family="sans-serif" font-size="14" fill="#ffffff" text-anchor="middle">2D</text>
+  <line x1="496" y1="100" x2="496" y2="124" stroke="#57606a" stroke-width="1.5"/>
+  <circle cx="512" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="524" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">MMR</text>
+  <line x1="574" y1="100" x2="574" y2="124" stroke="#57606a" stroke-width="1.5"/>
+  <circle cx="590" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="602" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">NO STEAL</text>
+  <line x1="682" y1="100" x2="682" y2="124" stroke="#57606a" stroke-width="1.5"/>
+  <text x="692" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">640x200 8色</text>
+
+  <!-- 番号と引き出し線 -->
+  <circle cx="112" cy="40" r="12" fill="#0969da"/>
+  <text x="112" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
+  <line x1="106" y1="50" x2="47" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="118" y1="50" x2="178" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="172" cy="184" r="12" fill="#0969da"/>
+  <text x="172" y="189" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
+  <line x1="166" y1="174" x2="107" y2="135" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="178" y1="174" x2="238" y2="135" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="370" cy="40" r="12" fill="#0969da"/>
+  <text x="370" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
+  <line x1="370" y1="52" x2="370" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="462" cy="184" r="12" fill="#0969da"/>
+  <text x="462" y="189" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
+  <line x1="462" y1="172" x2="462" y2="135" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="535" cy="40" r="12" fill="#0969da"/>
+  <text x="535" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
+  <line x1="535" y1="52" x2="535" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="640" cy="184" r="12" fill="#0969da"/>
+  <text x="640" y="189" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">6</text>
+  <line x1="640" y1="172" x2="640" y2="135" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="738" cy="40" r="12" fill="#0969da"/>
+  <text x="738" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">7</text>
+  <line x1="738" y1="52" x2="738" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- 凡例 -->
+  <rect x="10" y="215" width="780" height="235" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
+  <circle cx="36" cy="242" r="12" fill="#0969da"/>
+  <text x="36" y="247" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
+  <text x="58" y="247" font-family="sans-serif" font-size="14" fill="#1f2328">Drv1 / Drv0 のアクセス LED（黄=2D、白=2D DMA、緑=2DD、青=2DD DMA、赤=書き込み）</text>
+  <circle cx="36" cy="273" r="12" fill="#0969da"/>
+  <text x="36" y="278" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
+  <text x="58" y="278" font-family="sans-serif" font-size="14" fill="#1f2328">DMAC: DMA 転送でアクセス中に点灯（DMAC の無い機種では消灯）</text>
+  <circle cx="36" cy="304" r="12" fill="#0969da"/>
+  <text x="36" y="309" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
+  <text x="58" y="309" font-family="sans-serif" font-size="14" fill="#1f2328">FDC の状態（トラック / セクタ / 動作）</text>
+  <circle cx="36" cy="335" r="12" fill="#0969da"/>
+  <text x="36" y="340" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
+  <text x="58" y="340" font-family="sans-serif" font-size="14" fill="#1f2328">2D / 2DD: ドライブモード（両ドライブ共通）</text>
+  <circle cx="36" cy="366" r="12" fill="#0969da"/>
+  <text x="36" y="371" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
+  <text x="58" y="371" font-family="sans-serif" font-size="14" fill="#1f2328">MMR: MMR / TWR の使用中に点灯（高速 MMR 動作中は緑）</text>
+  <circle cx="36" cy="397" r="12" fill="#0969da"/>
+  <text x="36" y="402" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">6</text>
+  <text x="58" y="402" font-family="sans-serif" font-size="14" fill="#1f2328">NO STEAL: サイクルスチールが解除された状態で点灯</text>
+  <circle cx="36" cy="428" r="12" fill="#0969da"/>
+  <text x="36" y="433" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">7</text>
+  <text x="58" y="433" font-family="sans-serif" font-size="14" fill="#1f2328">画面モード / 色数</text>
+</svg>

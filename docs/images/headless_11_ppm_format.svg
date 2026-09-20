@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" width="800" height="320">
+  <title>PPM (P6) ファイルの構造。ヘッダ 3 行と RGB ピクセルデータの並び</title>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="800" height="320" fill="#ffffff"/>
+  <text x="400" y="30" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1f2328" text-anchor="middle">PPM (P6) ファイルの構造</text>
+
+  <text x="60" y="66" font-family="sans-serif" font-size="13" fill="#57606a">ファイルの先頭から:</text>
+
+  <rect x="60" y="78" width="100" height="56" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="110" y="112" font-family="monospace" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">P6\n</text>
+
+  <rect x="170" y="78" width="150" height="56" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="245" y="112" font-family="monospace" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">640 400\n</text>
+
+  <rect x="330" y="78" width="100" height="56" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="380" y="112" font-family="monospace" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">255\n</text>
+
+  <rect x="440" y="78" width="300" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="590" y="112" font-family="monospace" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">R G B R G B R G B …</text>
+
+  <text x="110" y="158" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">形式の印</text>
+  <text x="110" y="175" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">（P6 = バイナリ）</text>
+  <text x="245" y="158" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">幅と高さ</text>
+  <text x="245" y="175" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">（表示モードで変わる）</text>
+  <text x="380" y="158" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">最大輝度値</text>
+  <text x="590" y="158" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">ピクセルデータ（1 ピクセル = 3 バイト）</text>
+
+  <!-- ピクセル並びの拡大 -->
+  <line x1="590" y1="166" x2="430" y2="206" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="60" y="210" width="42" height="30" rx="4" fill="#ffd8d3" stroke="#bc4c00"/>
+  <text x="81" y="230" font-family="monospace" font-size="13" fill="#bc4c00" text-anchor="middle">R</text>
+  <rect x="102" y="210" width="42" height="30" rx="4" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="123" y="230" font-family="monospace" font-size="13" fill="#1a7f37" text-anchor="middle">G</text>
+  <rect x="144" y="210" width="42" height="30" rx="4" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="165" y="230" font-family="monospace" font-size="13" fill="#0969da" text-anchor="middle">B</text>
+  <rect x="186" y="210" width="42" height="30" rx="4" fill="#ffd8d3" stroke="#bc4c00"/>
+  <text x="207" y="230" font-family="monospace" font-size="13" fill="#bc4c00" text-anchor="middle">R</text>
+  <rect x="228" y="210" width="42" height="30" rx="4" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="249" y="230" font-family="monospace" font-size="13" fill="#1a7f37" text-anchor="middle">G</text>
+  <rect x="270" y="210" width="42" height="30" rx="4" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="291" y="230" font-family="monospace" font-size="13" fill="#0969da" text-anchor="middle">B</text>
+  <text x="330" y="230" font-family="sans-serif" font-size="13" fill="#57606a">… 各 1 バイト（0〜255）</text>
+  <path d="M60,248 L60,256 L186,256 L186,248" fill="none" stroke="#57606a" stroke-width="1.2"/>
+  <text x="123" y="274" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">1 ピクセル目</text>
+  <text x="500" y="252" font-family="sans-serif" font-size="12" fill="#57606a">並び順は画面の左上から右へ、1 行ずつ下へ。</text>
+
+  <text x="60" y="304" font-family="sans-serif" font-size="12" fill="#57606a">幅・高さは display.frame の width / height を使います（640 400 は一例）。</text>
+</svg>
