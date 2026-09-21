@@ -3948,3 +3948,26 @@ body {
     border-radius: 6px;
     background: #ffffff;
 }
+
+/* ===== 縦向きの狭い画面（スマートフォン）: 1 画面に 画面 → キーボード → 本体 の順 =====
+   .left-col を縦フレックスにし、.stage / .stage-main を解体して各要素を order で並べ替える。
+   表示倍率・ツールバー類は本体の下へ回す。 */
+@media (orientation: portrait) and (max-width: 600px) {
+    .main-layout { min-width: 0; max-width: 100%; box-sizing: border-box; }
+    .left-col,
+    body.hw-right .left-col { min-width: 0; max-width: 100%; display: flex; flex-direction: column; align-items: stretch; }
+    .left-col .stage,
+    body.hw-right .left-col .stage,
+    .left-col .hw-panel,
+    body.hw-right .left-col .hw-panel { display: contents; }
+    .left-col .stage-main { display: contents; }
+    .left-col .stage-main > * { order: 5; }
+    .left-col .stage-main > .screen-container { order: 1; }
+    .left-col #mobileBar { order: 2; }
+    .left-col #softKbd { order: 3; }
+    .left-col #hwBar,
+    .left-col #hwTowerBand,
+    .left-col #hwTower,
+    body.hw-right .left-col #hwTowerBand,
+    body.hw-right .left-col #hwTower { order: 4; grid-column: auto; grid-row: auto; width: 100%; }
+}

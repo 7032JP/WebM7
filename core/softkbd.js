@@ -360,6 +360,12 @@ class SoftKeyboard {
 // =====================================================================
 // Auto-initialize
 // =====================================================================
+// Narrow portrait screens (phones, including desktop-browser device emulation
+// that reports no touch) get the keyboard by default.
+function isNarrowPortrait() {
+    return _portraitMode();
+}
+
 function isTouchDevice() {
     if (window.matchMedia('(any-pointer: coarse)').matches) return true;
     return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -377,7 +383,7 @@ function init() {
 
         // Auto-show on touch devices (user can toggle via button)
         const pref = localStorage.getItem('webm7.ui.vkbd');
-        if (isTouchDevice() && pref !== '0') {
+        if ((isTouchDevice() || isNarrowPortrait()) && pref !== '0') {
             container.hidden = false;
             const kbdBtn = document.getElementById('mobileKbdBtn');
             if (kbdBtn) kbdBtn.classList.add('active');

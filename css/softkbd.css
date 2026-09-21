@@ -144,3 +144,9 @@ body.machine-av20up .skb-key.break-key.active { background: #8a2a2a; border-colo
 @media (pointer: fine) and (hover: hover) and (any-pointer: fine) and (not (any-pointer: coarse)) {
     #softKbd { display: none !important; }
 }
+
+/* Narrow portrait screens always get the keyboard (unless hidden by the user),
+   even when the browser reports a fine pointer (device emulation). */
+@media (orientation: portrait) and (max-width: 600px) {
+    #softKbd:not([hidden]) { display: block !important; }
+}
