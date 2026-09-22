@@ -197,27 +197,27 @@ canvas#screen {
     display: inline-block;
 }
 /* T:### S:### STATE  (track/sector up to 3 digits, state up to 4 chars) */
-#fdcTrackInfo { min-width: 108px; }
+#fdcTrackInfo { min-width: 6.75rem; }
 /* key code "$XX" (default "--") */
-#tbKeyLabel   { min-width: 28px; }
+#tbKeyLabel   { min-width: 1.75rem; }
 /* keyboard mode "ASCII" / "SCAN" */
-#tbKbdMode    { min-width: 38px; }
+#tbKbdMode    { min-width: 2.375rem; }
 /* "60 fps" (default "--") */
-#fpsLabel     { min-width: 44px; }
+#fpsLabel     { min-width: 2.75rem; }
 /* longest: "640x400 / 262144色" */
-#dispModeLabel { min-width: 132px; }
+#dispModeLabel { min-width: 8.25rem; }
 .status-led-item {
     display: flex;
     align-items: center;
     gap: 2px;
 }
 .status-led-name {
-    font-size: 10px;
+    font-size: 0.625rem;
     color: #888;
 }
 /* FDC Track/Sector/state readout sitting next to the drive LEDs */
 .fdc-track-info {
-    font-size: 10px;
+    font-size: 0.625rem;
     color: #6688aa;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
@@ -237,7 +237,7 @@ canvas#screen {
     gap: 4px;
 }
 .mod-pill {
-    font-size: 9px;
+    font-size: 0.5625rem;
     line-height: 1;
     letter-spacing: 0.5px;
     padding: 2px 4px;
@@ -329,14 +329,14 @@ input[type="range"]#volumeSlider {
    and scrolls to the matching section anchor. */
 .sp-section h3 .help-icon {
     display: inline-block;
-    width: 16px;
-    height: 16px;
-    line-height: 16px;
+    width: 1rem;
+    height: 1rem;
+    line-height: 1rem;
     text-align: center;
     border-radius: 50%;
     background: #2a3a55;
     color: #aac;
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-weight: bold;
     margin-left: 6px;
     cursor: help;
@@ -880,6 +880,26 @@ button:disabled {
     min-height: 30px;
     line-height: 1.2;
 }
+/* Library の行内ボタン (▶0 / ▶1 / Exp / Ren / Dup / Del …) は 1 行に多数並ぶので
+   側パネルの共通サイズより小さくする (.side-panel button より特異度を高く置く) */
+#libList .lib-row button { font-size: 0.5625rem; }
+/* Library の行の項目名: 残り幅を使い、収まらない分は … で省略する */
+#libList .lib-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ===== パネル内の小さな文字 (旧インラインの font-size のクラス化) =====
+   数字はモバイル表示での px 相当 (html の既定 16px のとき)。rem で持つので、
+   PC 表示では末尾の「PC 表示の文字サイズ」で html の font-size を上げた分だけ
+   連動して大きくなる。セレクト・補足・動作情報・デバッグ表示に使う。 */
+.fs-11 { font-size: 0.6875rem; }
+.fs-10 { font-size: 0.625rem; }
+.fs-9  { font-size: 0.5625rem; }
+.fs-8  { font-size: 0.5rem; }
 
 /* Rows holding a file input plus action buttons. flex-wrap ensures the
    buttons (e.g. Save / Eject) wrap onto the next line instead of being
@@ -1119,6 +1139,9 @@ button:disabled {
    stretches a fixed element to full height on first show; dragging clears
    bottom (style.bottom='auto') which is why moving "fixed" the size. */
 #debugPanel { left: 16px;  width: 200px; }
+/* Memory は CPU (#debugPanel) の真下。CPU の高さは文字サイズに連動するので、
+   ずらし量も rem で持ち、文字を大きくしても重ならないようにする */
+#memPanel   { top: 20rem; }
 #keyPanel   { left: 48px;  top: 88px;  width: 528px; }
 #palPanel   { left: 80px;  top: 120px; width: 176px; }
 /* Sound パネルは OPN のレジスタマトリクス (16 列) を載せるので幅を広げ、
@@ -1627,7 +1650,8 @@ button:disabled {
     /* === Side-panel form controls: touch-friendly === */
 
     /* Dropdowns: full 44px touch height and readable text.
-       !important overrides the inline font-size on individual <select>s. */
+       !important overrides the more specific per-select font-size rules
+       (.rom-item .rom-src etc.). */
     .side-panel select {
         min-height: 44px;
         font-size: 0.95em !important;
@@ -1688,8 +1712,9 @@ button:disabled {
     .rec-label { font-size: 0.78rem; }
 
     /* Library list: roomier rows and bigger per-item action buttons so the
-       tiny ▶0 / Exp / Del controls become tappable (44px target). */
-    #libList { max-height: 40vh; font-size: 0.85em; }
+       tiny ▶0 / Exp / Del controls become tappable (44px target). The list
+       text itself keeps the .fs-11 size. */
+    #libList { max-height: 40vh; }
     #libList .lib-row { gap: 6px; padding: 6px 2px; flex-wrap: wrap; }
     #libList .lib-row button {
         min-height: 40px;
@@ -1920,7 +1945,7 @@ select, textarea, input[type="text"] {
 .app-brand {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 19px;
+    font-size: 1.1875rem;
     letter-spacing: 2px;
     color: var(--ui-brand);
     user-select: none;
@@ -1946,7 +1971,7 @@ select, textarea, input[type="text"] {
     padding: 5px 10px;
     border: none;
     border-radius: 6px;
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-family: inherit;
     color: var(--ui-header-muted);
     background: transparent;
@@ -1964,7 +1989,7 @@ select, textarea, input[type="text"] {
 /* スキン切替チップはタイトルバーの右端（.app-header-inner の最後の要素。余白が
    あれば margin-left: auto で右端へ寄り、足りない時は能力バッジ行の右に続く） */
 .skin-chips-wrap { display: flex; align-items: center; gap: 7px; margin-left: auto; }
-.skin-chips-label { font-size: 10px; color: var(--ui-header-muted); }
+.skin-chips-label { font-size: 0.625rem; color: var(--ui-header-muted); }
 .skin-chips {
     display: flex;
     background: var(--ui-header-panel);
@@ -1977,7 +2002,7 @@ select, textarea, input[type="text"] {
     padding: 4px 9px;
     border: none;
     border-radius: 5px;
-    font-size: 10px;
+    font-size: 0.625rem;
     font-family: inherit;
     color: var(--ui-header-muted);
     background: transparent;
@@ -2003,7 +2028,7 @@ select, textarea, input[type="text"] {
     gap: 10px;
 }
 .scale-left { display: flex; align-items: center; gap: 10px; }
-.scale-label { font-size: 12px; color: var(--ui-muted); }
+.scale-label { font-size: 0.75rem; color: var(--ui-muted); }
 .scale-toggle {
     display: flex;
     background: var(--ui-panel2);
@@ -2017,7 +2042,7 @@ select, textarea, input[type="text"] {
     padding: 5px 14px;
     border: none;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-family: inherit;
     color: var(--ui-muted);
     background: transparent;
@@ -2044,7 +2069,7 @@ select, textarea, input[type="text"] {
 .scale-fs:disabled:hover { color: var(--ui-muted); }
 .scale-info {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--ui-faint);
     white-space: nowrap;
 }
@@ -3815,7 +3840,7 @@ body {
     background: var(--ui-panel);
     color: var(--ui-text);
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: 0.75rem;
     line-height: 1.4;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
     opacity: 0.96;
@@ -3840,7 +3865,7 @@ body {
     background: var(--ui-input);
     color: var(--ui-text);
     font-family: inherit;
-    font-size: 12px;
+    font-size: 0.75rem;
     line-height: 1.4;
     cursor: pointer;
 }
@@ -3890,7 +3915,7 @@ body {
     background: var(--ui-input);
     color: var(--ui-text);
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: 0.75rem;
     line-height: 1.4;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
@@ -3918,15 +3943,15 @@ body {
 }
 .guide-balloon-close {
     flex: 0 0 auto;
-    width: 20px;
-    height: 20px;
+    width: 1.25rem;
+    height: 1.25rem;
     padding: 0;
     border: none;
     border-radius: 4px;
     background: transparent;
     color: var(--ui-muted);
-    font-size: 15px;
-    line-height: 20px;
+    font-size: 0.9375rem;
+    line-height: 1.25rem;
     cursor: pointer;
 }
 .guide-balloon-close:hover,
@@ -3970,4 +3995,32 @@ body {
     .left-col #hwTower,
     body.hw-right .left-col #hwTowerBand,
     body.hw-right .left-col #hwTower { order: 4; grid-column: auto; grid-row: auto; width: 100%; }
+}
+
+/* ===== PC 表示の文字サイズ =====
+   マウス主体で幅 1024px 以上 (モバイル判定 `(max-width: 1023px), (any-pointer: coarse)`
+   の裏側) では、UI の文字を 1.5 倍に大きくする。UI の文字サイズは em /
+   rem で書いてあるので、html の font-size を上げるだけで全体が連動する (px の
+   ままの前面パネルの銘板・キーボードパレットのキー・canvas の表示倍率は変わらない)。
+   モバイル判定が効く範囲では html は既定 (16px) のままなので見た目は変わらない。 */
+@media (min-width: 1024px) and (not (any-pointer: coarse)) {
+    html { font-size: 150%; }
+    /* 側パネル: 18px の文字に合わせて 1.2 倍に広げる (ROM 行の 3 列とファイル選択が
+       収まる幅) */
+    .side-panel { width: 384px; min-width: 384px; }
+    /* 自動フィットがステータスバーを折り返す形を選んだ時 (body.toolbar-wrap) は、
+       ツールバー (ステータスバー・Debug Panels) の内容幅をステージ幅の決定から外す。
+       ステージ幅は画面と前面パネルで決まり、ツールバーはその幅の中で折り返す */
+    body.toolbar-wrap .stage-main .toolbar { contain: inline-size; }
+    /* ROM 行の状態タグ ("Error" など) が大きくなった分だけ列幅を広げ、ROM 名 + 札
+       (最長 "BOOT_BAS.ROM BASIC時必須") が残り幅に収まらない時は札を次の行へ折り返す */
+    .rom-list { --rom-col-status: 64px; }
+    .rom-item .rom-name { white-space: normal; }
+    /* Options の行 (Mouse のセレクトと補足など) が行幅に収まらない時は折り返し、
+       右端が欠けないようにする */
+    .ctrl-row { flex-wrap: wrap; white-space: normal; }
+    /* Library の行: ボタン列 (最大 7 個) が大きくなり項目名の幅が取れないので、
+       項目名を 1 行目、ボタン列を 2 行目に分けて項目名を読めるようにする */
+    #libList .lib-row { flex-wrap: wrap; }
+    #libList .lib-name { flex-basis: 100%; }
 }
