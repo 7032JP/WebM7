@@ -425,7 +425,7 @@
             <!-- machineTypeSelect は機種タブと各処理が参照する非表示のコントロール。 -->
             <div class="ctrl-row ctl-retired">
                 <label>Machine:</label>
-                <select id="machineTypeSelect" style="font-size:11px;">
+                <select id="machineTypeSelect" class="fs-11">
                     <option value="fm7" selected>FM-7</option>
                     <option value="fm77">FM-77</option>
                     <option value="fm77av">FM77AV</option>
@@ -446,25 +446,25 @@
             <div class="ctrl-row" id="fmCardRow">
                 <label for="fmCardCheck">FM Sound Card</label>
                 <input type="checkbox" id="fmCardCheck">
-                <span id="fmCardHint" class="ui-note" style="font-size:10px;margin-left:6px;display:none;">次回の電源投入 / リセットから有効になります</span>
+                <span id="fmCardHint" class="ui-note fs-10" style="margin-left:6px;display:none;">次回の電源投入 / リセットから有効になります</span>
             </div>
             <div class="ctrl-row" id="mouseRow">
                 <label for="mouseModeSelect" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用でき、インテリジェントマウスはジョイスティックポート経由のため FM 音源カードが必要です">Mouse</label>
-                <select id="mouseModeSelect" style="font-size:11px;" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用でき、インテリジェントマウスはジョイスティックポート経由のため FM 音源カードが必要です">
+                <select id="mouseModeSelect" class="fs-11" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用でき、インテリジェントマウスはジョイスティックポート経由のため FM 音源カードが必要です">
                     <option value="none">(None)</option>
                     <option value="bus">Mouse Set (bus)</option>
                     <option value="intel1">Intelligent Mouse (Port 1)</option>
                     <option value="intel2">Intelligent Mouse (Port 2)</option>
                 </select>
-                <span id="mouseHint" class="ui-note" style="font-size:10px;margin-left:6px;display:none;">インテリジェントマウスには FM 音源カードが必要です</span>
+                <span id="mouseHint" class="ui-note fs-10" style="margin-left:6px;display:none;">インテリジェントマウスには FM 音源カードが必要です</span>
             </div>
             <div class="ctrl-row">
                 <label>Joystick 1:</label>
-                <select id="joyDev1" style="font-size:11px;"><option value="">(None)</option></select>
+                <select id="joyDev1" class="fs-11"><option value="">(None)</option></select>
             </div>
             <div class="ctrl-row">
                 <label>Joystick 2:</label>
-                <select id="joyDev2" style="font-size:11px;"><option value="">(None)</option></select>
+                <select id="joyDev2" class="fs-11"><option value="">(None)</option></select>
             </div>
             <div class="ctrl-row">
                 <label for="cursorToNumpad">Cursor → Ten Key</label>
@@ -576,10 +576,10 @@
                 </div>
             </div>
             </div><!-- /userRomBlock -->
-            <div id="romInfoPanel" class="ui-info" style="margin-top:6px;font-size:10px;display:none;">
+            <div id="romInfoPanel" class="ui-info fs-10" style="margin-top:6px;display:none;">
                 <details>
                     <summary class="ui-info-link" style="cursor:pointer;">ROM Info <button id="romInfoCopyBtn" style="margin-left:4px;cursor:pointer;">Copy</button></summary>
-                    <pre id="romInfoText" style="margin:4px 0;white-space:pre-wrap;word-break:break-all;font-size:8px;line-height:1.3;max-height:150px;overflow-y:auto;overflow-x:hidden;"></pre>
+                    <pre id="romInfoText" class="fs-8" style="margin:4px 0;white-space:pre-wrap;word-break:break-all;line-height:1.3;max-height:150px;overflow-y:auto;overflow-x:hidden;"></pre>
                 </details>
             </div>
             <div class="sp-row sp-row-end" style="margin-top:4px;">
@@ -595,7 +595,7 @@
                 <button id="libNewBlank2D" title="新規 論理フォーマット済 2D ディスク (320KB・すぐ書き込み可)">＋2D</button>
                 <button id="libNewBlank2DD" title="新規 論理フォーマット済 2DD ディスク (640KB・すぐ書き込み可)">＋2DD</button>
             </div>
-            <div id="libList" style="margin-top:6px;font-size:11px;max-height:180px;overflow-y:auto;border:1px solid #2a2f3a;padding:2px;">
+            <div id="libList" class="fs-11" style="margin-top:6px;max-height:180px;overflow-y:auto;border:1px solid #2a2f3a;padding:2px;">
                 <div class="ui-empty" style="padding:4px;">(空)</div>
             </div>
         </div>
@@ -611,7 +611,7 @@
             </div>
             <div class="file-name-row" id="diskStatus0">--</div>
             <div class="disk-geom" id="diskGeom0">-- (no disk)</div>
-            <select id="diskSelect0" style="display:none;width:100%;font-size:11px;margin-top:2px;"></select>
+            <select id="diskSelect0" class="fs-11" style="display:none;width:100%;margin-top:2px;"></select>
             <label for="diskFile1">Drive 1 <span class="fdc-led" id="fdcLed1"></span></label>
             <div class="sp-row">
                 <input type="file" id="diskFile1" accept=".d77,.D77,.2d,.2D">
@@ -620,7 +620,7 @@
             </div>
             <div class="file-name-row" id="diskStatus1">--</div>
             <div class="disk-geom" id="diskGeom1">-- (no disk)</div>
-            <select id="diskSelect1" style="display:none;width:100%;font-size:11px;margin-top:2px;"></select>
+            <select id="diskSelect1" class="fs-11" style="display:none;width:100%;margin-top:2px;"></select>
             <div class="sp-row sp-row-end" style="margin-top:4px;">
                 <button id="clearDiskCacheBtn" title="ブラウザにキャッシュしたディスクイメージとファイル参照を消去します">Clear Disk Cache</button>
             </div>
@@ -649,17 +649,17 @@
             <div class="sp-row" style="margin-top:6px;">
                 <div style="display:flex;align-items:center;gap:4px;">
                     <span class="fdc-led" id="cmtLed"></span>
-                    <span class="ui-dim" style="font-size:11px;" title="カセットテープ (CMT)">CMT</span>
+                    <span class="ui-dim fs-11" title="カセットテープ (CMT)">CMT</span>
                 </div>
                 <button id="cmtRewindBtn" title="テープを巻き戻す" aria-label="テープを巻き戻す"><span class="btn-icon">⏮</span><span class="btn-text">REW</span></button>
-                <span class="ui-dim" style="font-size:11px;" id="cmtInfo">--</span>
+                <span class="ui-dim fs-11" id="cmtInfo">--</span>
             </div>
             <div class="rec-label">録音（BASIC の SAVE / SAVEM で書き込んだ内容）</div>
             <div class="sp-row">
                 <button id="cmtSaveT77Btn" title="直前に録音した内容を .t77 形式で PC へ保存" aria-label="録音を .t77 で保存"><span class="btn-icon">💾</span><span class="btn-text">録音→.t77</span></button>
                 <button id="cmtSaveWavBtn" title="直前に録音した内容を .wav (PCM) 形式で PC へ保存" aria-label="録音を .wav で保存"><span class="btn-icon">💾</span><span class="btn-text">録音→.wav</span></button>
                 <button id="cmtRecClearBtn" title="録音内容を消去" aria-label="録音内容を消去"><span class="btn-icon">🗑</span><span class="btn-text">録音クリア</span></button>
-                <span class="ui-dim" style="font-size:11px;" id="cmtRecInfo">rec 0</span>
+                <span class="ui-dim fs-11" id="cmtRecInfo">rec 0</span>
             </div>
         </div>
 
@@ -672,7 +672,7 @@
             <div class="sp-row" style="margin-top:6px;">
                 <button id="pasteClipBtn" title="クリップボードの内容を BASIC へ自動入力">Paste clipboard</button>
                 <button id="pasteStopBtn" title="自動入力を中止" aria-label="自動入力を中止"><span class="btn-icon">⏹</span><span class="btn-text">Stop</span></button>
-                <span class="ui-dim" style="font-size:11px;" id="pasteInfo">idle</span>
+                <span class="ui-dim fs-11" id="pasteInfo">idle</span>
             </div>
         </div>
 
@@ -725,7 +725,7 @@
 </div>
 
 <!-- Memory Panel -->
-<div class="input-panel" id="memPanel" style="right:auto;left:16px;top:320px;">
+<div class="input-panel" id="memPanel" style="right:auto;left:16px;">
     <div class="ip-header draggable-header">
         <span>Memory</span>
         <button class="ip-close" id="memPanelClose" aria-label="Close Memory panel">&times;</button>
@@ -741,12 +741,12 @@
                 <span class="d-label">TWR Offset ($FD92)</span><span class="d-val" id="twrOffsetVal">--</span>
             </div>
             <div class="ip-label" id="mmrMapLabel" style="display:none;margin-top:6px;">MMR Map (logical -> physical page)</div>
-            <div id="mmrMapGrid" style="display:none;font-family:monospace;font-size:10px;color:#cde;line-height:1.4;"></div>
+            <div id="mmrMapGrid" class="fs-10" style="display:none;font-family:monospace;color:#cde;line-height:1.4;"></div>
             <div class="ip-label" id="physMapLabel" style="display:none;margin-top:6px;">Physical Memory Map</div>
-            <div id="physMapGrid" style="display:none;font-family:monospace;font-size:10px;color:#cde;line-height:1.4;"></div>
+            <div id="physMapGrid" class="fs-10" style="display:none;font-family:monospace;color:#cde;line-height:1.4;"></div>
         </div>
         <div style="margin-top:6px;">
-            <button id="stateDumpBtn" style="font-size:11px;padding:2px 8px;cursor:pointer;width:100%;">State Dump</button>
+            <button id="stateDumpBtn" class="fs-11" style="padding:2px 8px;cursor:pointer;width:100%;">State Dump</button>
         </div>
     </div>
 </div>
@@ -757,11 +757,11 @@
         <div style="display:flex;justify-content:space-between;align-items:center;">
             <span style="color:#cde;font-weight:bold;">State Dump</span>
             <div>
-                <button id="stateDumpCopy" style="font-size:11px;padding:2px 10px;margin-right:6px;cursor:pointer;">Copy</button>
-                <button id="stateDumpClose" style="font-size:11px;padding:2px 10px;cursor:pointer;">Close</button>
+                <button id="stateDumpCopy" class="fs-11" style="padding:2px 10px;margin-right:6px;cursor:pointer;">Copy</button>
+                <button id="stateDumpClose" class="fs-11" style="padding:2px 10px;cursor:pointer;">Close</button>
             </div>
         </div>
-        <textarea id="stateDumpText" style="flex:1;min-height:60vh;background:#0c1018;color:#cde;border:1px solid #334;font-family:monospace;font-size:11px;padding:6px;" readonly></textarea>
+        <textarea id="stateDumpText" class="fs-11" style="flex:1;min-height:60vh;background:#0c1018;color:#cde;border:1px solid #334;font-family:monospace;padding:6px;" readonly></textarea>
     </div>
 </div>
 
@@ -773,22 +773,22 @@
     </div>
     <div class="ip-body">
         <div class="ip-section">
-            <div class="ip-label">Keyboard <span id="kbdModeVal" style="float:right;font-size:10px;color:#8899aa;">ASCII</span></div>
+            <div class="ip-label">Keyboard <span id="kbdModeVal" class="fs-10" style="float:right;color:#8899aa;">ASCII</span></div>
             <div class="key-display" id="keyDisplay">--</div>
             <div id="fm7Kbd" class="fm7-kbd"></div>
         </div>
         <div class="ip-section">
             <div class="ip-label">キーカスタマイズ</div>
             <div style="display:flex;gap:4px;margin-top:3px;">
-                <select id="kbdLayoutSel" style="font-size:10px;flex:1;min-width:0;"></select>
-                <select id="kbdFormSel" style="font-size:10px;flex:1;min-width:0;"></select>
+                <select id="kbdLayoutSel" class="fs-10" style="flex:1;min-width:0;"></select>
+                <select id="kbdFormSel" class="fs-10" style="flex:1;min-width:0;"></select>
             </div>
             <div style="display:flex;gap:4px;align-items:center;margin-top:4px;">
                 <button id="kbdCustomBtn" style="font-size:0.8em;padding:1px 8px;cursor:pointer;">カスタマイズ開始</button>
                 <button id="kbdResetBtn" style="font-size:0.8em;padding:1px 8px;cursor:pointer;">リセット</button>
             </div>
-            <div id="kbdCustomHint" style="font-size:10px;color:#8899aa;margin-top:4px;line-height:1.4;display:none;"></div>
-            <div id="kbdAssignList" style="font-size:10px;color:#aab;margin-top:4px;line-height:1.5;max-height:96px;overflow:auto;"></div>
+            <div id="kbdCustomHint" class="fs-10" style="color:#8899aa;margin-top:4px;line-height:1.4;display:none;"></div>
+            <div id="kbdAssignList" class="fs-10" style="color:#aab;margin-top:4px;line-height:1.5;max-height:96px;overflow:auto;"></div>
         </div>
     </div>
 </div>
@@ -2124,7 +2124,7 @@ for (const [filename, entry] of Object.entries(ROM_FILE_MAP)) {
 // 起動補助はブート ROM が利用者のものであるときだけ有効にする。
 
 // ビルドスタンプ。公開時に値が入る。
-const BUILD_STAMP = '20260921135124';
+const BUILD_STAMP = '20260922200629';
 
 const ALTROM_DIR = 'assets/altroms/';
 
@@ -3402,20 +3402,20 @@ async function renderLibrary() {
         const slotTag = inSlots.length
             ? `<span style="color:${dirtyBound ? 'var(--ui-slot-dirty, #ffcc66)' : 'var(--ui-slot-clean, #66cc88)'};">[${inSlots.join(',')}]</span>` : '';
         const insertBtns = isDisk
-            ? `<button data-act="ins0" data-id="${it.id}" class="lib-ins-btn" style="font-size:9px;padding:0 3px;" title="Drive 0 へ挿入" aria-label="Drive 0 へ挿入">▶0</button>
-               <button data-act="ins1" data-id="${it.id}" class="lib-ins-btn" style="font-size:9px;padding:0 3px;" title="Drive 1 へ挿入" aria-label="Drive 1 へ挿入">▶1</button>`
+            ? `<button data-act="ins0" data-id="${it.id}" class="lib-ins-btn" style="padding:0 3px;" title="Drive 0 へ挿入" aria-label="Drive 0 へ挿入">▶0</button>
+               <button data-act="ins1" data-id="${it.id}" class="lib-ins-btn" style="padding:0 3px;" title="Drive 1 へ挿入" aria-label="Drive 1 へ挿入">▶1</button>`
             : isTape
-            ? `<button data-act="inst" data-id="${it.id}" class="lib-ins-btn" style="font-size:9px;padding:0 3px;" title="Tape へ挿入" aria-label="Tape へ挿入">▶T</button>`
+            ? `<button data-act="inst" data-id="${it.id}" class="lib-ins-btn" style="padding:0 3px;" title="Tape へ挿入" aria-label="Tape へ挿入">▶T</button>`
             : '';
         const commitBtn = dirtyBound
-            ? `<button data-act="commit" data-id="${it.id}" style="font-size:9px;padding:0 3px;background:#664400;color:#ffcc66;" title="ドライブの変更をライブラリへ反映">⬆Commit</button>`
+            ? `<button data-act="commit" data-id="${it.id}" style="padding:0 3px;background:#664400;color:#ffcc66;" title="ドライブの変更をライブラリへ反映">⬆Commit</button>`
             : '';
         const fmtBtn = isDisk
-            ? `<button data-act="fmt" data-id="${it.id}" style="font-size:9px;padding:0 3px;" title="論理フォーマット (FAT/ディレクトリ初期化, BASIC で書き込み可能にする)">論理FMT</button>`
+            ? `<button data-act="fmt" data-id="${it.id}" style="padding:0 3px;" title="論理フォーマット (FAT/ディレクトリ初期化, BASIC で書き込み可能にする)">論理FMT</button>`
             : '';
         return `
             <div class="lib-row" style="display:flex;align-items:center;gap:3px;padding:2px;border-bottom:1px solid #1a1f2a;">
-              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              <span class="lib-name">
                 <span style="color:#88aacc;">${kindLabel}</span>
                 <span title="${nameEsc}">${nameEsc}</span>
                 <span style="color:var(--ui-dim, #888);">${sz}</span>
@@ -3424,10 +3424,10 @@ async function renderLibrary() {
               ${insertBtns}
               ${commitBtn}
               ${fmtBtn}
-              <button data-act="exp" data-id="${it.id}" style="font-size:9px;padding:0 3px;" title="この項目を .d77 ファイルとして PC へ書き出します（保存ダイアログで上書き指定しない限り既存ファイルは変更されません）">Exp</button>
-              <button data-act="ren" data-id="${it.id}" style="font-size:9px;padding:0 3px;" title="名前変更">Ren</button>
-              <button data-act="dup" data-id="${it.id}" style="font-size:9px;padding:0 3px;" title="複製">Dup</button>
-              <button data-act="del" data-id="${it.id}" style="font-size:9px;padding:0 3px;color:#cc6666;" title="削除">Del</button>
+              <button data-act="exp" data-id="${it.id}" style="padding:0 3px;" title="この項目を .d77 ファイルとして PC へ書き出します（保存ダイアログで上書き指定しない限り既存ファイルは変更されません）">Exp</button>
+              <button data-act="ren" data-id="${it.id}" style="padding:0 3px;" title="名前変更">Ren</button>
+              <button data-act="dup" data-id="${it.id}" style="padding:0 3px;" title="複製">Dup</button>
+              <button data-act="del" data-id="${it.id}" style="padding:0 3px;color:#cc6666;" title="削除">Del</button>
             </div>`;
     }).join('');
 }
@@ -4444,7 +4444,8 @@ function _renderKeymap() {
         const del = document.createElement('button');
         del.textContent = '✕';
         del.title = '削除';
-        del.style.cssText = 'font-size:9px;line-height:1;padding:0 3px;cursor:pointer;';
+        del.className = 'fs-9';
+        del.style.cssText = 'line-height:1;padding:0 3px;cursor:pointer;';
         del.addEventListener('click', () => {
             delete keymapUser[phys];
             _saveKeymap(); buildAndApplyKeymap(); _renderKeymap();
@@ -5655,6 +5656,7 @@ document.getElementById('copyrightYear').textContent =
     const layout  = document.querySelector('.main-layout');
     const panel   = document.querySelector('.side-panel');
     const leftCol = document.querySelector('.left-col');
+    const header  = document.querySelector('.app-header');
     if (!layout) return;
 
     function fitMainLayout() {
@@ -5667,16 +5669,20 @@ document.getElementById('copyrightYear').textContent =
         }
         if (mobileMQ.matches) {            // mobile drawer layout: no scaling
             layout.style.zoom = '';
+            document.body.classList.remove('toolbar-wrap');
             if (panel) panel.style.maxHeight = '';
             document.querySelectorAll('.input-panel').forEach((p) => { p.style.transform = ''; });
             return;
         }
         // Fixed scale modes: x1 (dod) / x2 pin the canvas to an exact pixel
         // size, so the layout must not be zoomed (zoom would multiply the CSS
-        // pixel size and break the device-pixel mapping).
+        // pixel size and break the device-pixel mapping). The toolbar wraps
+        // within the stage width so the layout stays as narrow as the screen
+        // allows (x1 then fits a 1280px-wide window on the horizontal skins).
         const scaleMode = document.body.dataset.scaleMode || 'free';
         if (scaleMode !== 'free') {
             layout.style.zoom = '1';
+            document.body.classList.add('toolbar-wrap');
             if (panel) {
                 const availH = Math.max(240, window.innerHeight * 0.9);
                 panel.style.maxHeight = Math.max(160, availH - 8) + 'px';
@@ -5684,23 +5690,47 @@ document.getElementById('copyrightYear').textContent =
             document.querySelectorAll('.input-panel').forEach((p) => { p.style.transform = ''; });
             return;
         }
-        // Target a fraction of the viewport: 80% normally, 60% when any
-        // floating debug panel (CPU / Memory / etc.) is open so it leaves
-        // room for those panels.
+        // Available size: the full window width (minus the vertical scrollbar,
+        // if any), and the window height minus the app header and the layout's
+        // own vertical padding. The header stays in view; the footer is allowed
+        // to fall below the fold. When a floating debug panel (CPU / Memory /
+        // etc.) is open, use 75% of that so it leaves room for those panels.
         const debugOpen = !!document.querySelector('.input-panel.open');
-        const factor = debugOpen ? 0.6 : 0.8;
+        const factor = debugOpen ? 0.75 : 1;
         // Measure natural (unscaled) dimensions.
         layout.style.zoom = '1';
         if (panel) panel.style.maxHeight = '';   // CSS fallback applies during measure
-        const naturalW = layout.scrollWidth;
-        const leftH    = leftCol ? leftCol.scrollHeight : 0;
-        const availW   = Math.max(320, window.innerWidth  * factor);
-        const availH   = Math.max(240, window.innerHeight * factor);
+        const cs       = getComputedStyle(layout);
+        const padY     = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+        const headerH  = header ? header.getBoundingClientRect().height : 0;
+        // 8px off the width absorbs the rounding of the zoomed width.
+        const availW   = Math.max(320, (document.documentElement.clientWidth - 8) * factor);
+        const availH   = Math.max(240, (window.innerHeight - headerH - padY) * factor);
 
         // Scale to fill the width; if that would make the screen + toolbar
         // column taller than the viewport, limit the scale to the height.
-        let scale = availW / naturalW;
-        if (leftH > 0 && leftH * scale > availH) scale = availH / leftH;
+        const fitScale = () => {
+            const naturalW = layout.scrollWidth;      // includes the layout's padding
+            const leftH    = leftCol ? leftCol.scrollHeight : 0;
+            let s = availW / naturalW;
+            if (leftH > 0 && leftH * s > availH) s = availH / leftH;
+            return s;
+        };
+        // Try both stage widths and keep the one that shows the screen larger:
+        //   - wide: the status bar's content width sets the stage width (the bar
+        //     never wraps; best when the window height is the limit), or
+        //   - wrapped (body.toolbar-wrap): the screen and the front panel set the
+        //     stage width and the status bar wraps within it (narrower but
+        //     taller; best when the window width is the limit, e.g. the FM-7
+        //     skin with its side tower).
+        document.body.classList.remove('toolbar-wrap');
+        const wide = fitScale();
+        document.body.classList.add('toolbar-wrap');
+        let scale = fitScale();
+        if (wide >= scale) {
+            document.body.classList.remove('toolbar-wrap');
+            scale = wide;
+        }
         scale = Math.max(0.6, Math.min(scale, 2.5));
 
         layout.style.zoom = String(scale);
