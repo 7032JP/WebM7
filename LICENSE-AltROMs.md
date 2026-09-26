@@ -2,9 +2,9 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 上流の名前 | [7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.0) |
+| 上流の名前 | [7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.3) |
 | 作者 | Naomitsu Tsugiiwa |
-| バージョン | v1.0.0（署名付きタグ）。同梱の `assets/altroms/SHA256SUMS` の ROM 行は同タグの `SHA256SUMS` と同じ値 |
+| バージョン | v1.0.3（署名付きタグ）。同梱の `assets/altroms/SHA256SUMS` の ROM 行は同タグの `SHA256SUMS` と同じ値 |
 | ライセンス | MIT License（原文は [`assets/altroms/LICENSE`](assets/altroms/LICENSE)。適用範囲は [`assets/altroms/LICENSE-MIT.md`](assets/altroms/LICENSE-MIT.md)） |
 | 本プロジェクトでの範囲 | `assets/altroms/` 配下の ROM イメージと付属文書 |
 | 改変の有無 | なし（取得時に SHA-256 で検証して同梱） |
@@ -46,3 +46,6 @@ ROM 本体と併せて、次の権利表示文書と検証用ハッシュを `as
 `assets/altroms/LICENSE-FONT.md` に現れる相対パス（`fonts/`、`roms/`、`scripts/`、
 `docs/` 等）は、互換 ROM セット側の配布物（ソース一式）内のパスであり、
 本プロジェクトのパスではありません。
+
+これらの文書中の「本リポジトリ」「this repository / this project」は互換 ROM セット側の配布物を指し、
+本プロジェクト（WebM7）全体を指すものではありません。

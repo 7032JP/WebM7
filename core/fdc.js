@@ -485,7 +485,7 @@ export class FDC {
         this.motorOn = false;
         // Cold spin-up model (opt-in via strictSpinup).  When the spindle
         // motor goes from stopped to running it needs time to reach 300 RPM;
-        // Read/Seek issued during this window miss on real hardware.  Lenient
+        // Read/Seek issued during this window miss.  Lenient
         // default keeps the drive instantly ready.
         this.strictSpinup = false;
         this._spinupRemaining = 0;   // CPU cycles left until motor is up to speed
@@ -764,9 +764,8 @@ export class FDC {
     // Real disk: ~12.5ms between adjacent sectors (200ms / 16 sectors)
     static MULTI_SECTOR_GAP_US = 6000;
     // MB8877 RNF search window: 5 index pulses (5 revolutions at 300rpm = 1s)
-    // Real hardware keeps BUSY asserted while scanning sector IDs; only after
+    // The controller keeps BUSY asserted while scanning sector IDs; only after
     // 5 index pulses without a matching R does it set RNF and raise INTRQ.
-    // Some software relies on this timing behavior.
     static RNF_TIMEOUT_US = 1000000;
 
     // CPU-clock-dependent cycle counts (set by setCPUClock)
@@ -1323,14 +1322,14 @@ export class FDC {
 
             case FDC_STATE.WRITE_TRACK:
                 // Data-driven by CPU writes to $FD1B (see _writeTrackByte).
-                // The real MB8877 starts WRITE TRACK at the index pulse and
-                // ends at the NEXT index pulse — exactly one disk revolution.
+                // WRITE TRACK is treated as lasting one disk revolution
+                // (index pulse to the next index pulse).
                 // We accumulate elapsed cycles from command start and complete
                 // after one revolution, regardless of how many bytes the CPU
                 // managed to feed.  DRQ is paced at BYTE_DELAY (see
                 // _reqNextTrackByte) so the CPU feeds ~one track's worth of
-                // bytes per revolution, matching real hardware and preventing
-                // the format routine from over-running its track buffer.
+                // bytes per revolution, which keeps the format routine from
+                // over-running its track buffer.
                 this._wtElapsed = (this._wtElapsed || 0) + (cycles || 0);
                 if (this._wtElapsed >= FDC.REVOLUTION_CYCLES) {
                     this._completeCommand(0);
@@ -1395,13 +1394,11 @@ export class FDC {
         this.statusReg = STATUS.BUSY;
         this.drqFlag = false;
 
-        // Strict: a command issued before the motor has spun up to speed
-        // misses on real hardware.  A correct IPL waits for spin-up, then
-        // RESTOREs.  Report NOT_READY so the premature access is caught.
+        // Strict: 回転待ちの間は NOT_READY を返す。
         if (this.strictSpinup && this._spinupRemaining > 0) {
             if (typeof this.onHwWarn === 'function') {
                 this.onHwWarn('fdc-spinup',
-                    `FDC command $${cmd.toString(16).padStart(2,'0')} issued during motor spin-up (${Math.round(this._spinupRemaining / 1.794)}us left); real hardware misses`);
+                    `FDC command $${cmd.toString(16).padStart(2,'0')} issued during motor spin-up (${Math.round(this._spinupRemaining / 1.794)}us left); spin-up wait is active`);
             }
             this._completeCommand(STATUS.NOT_READY);
             return;
@@ -1559,7 +1556,7 @@ export class FDC {
 
     /**
      * Compute rotational latency to reach the target sector from the
-     * current disk rotation phase.  On real hardware the disk spins
+     * current disk rotation phase.  The disk spins
      * continuously at 300 RPM; the time to reach a given sector depends
      * on where the head is in the rotation when the command is issued.
      *
@@ -1836,7 +1833,7 @@ export class FDC {
             }
             // MB8877: on missing sector, keep BUSY asserted while searching
             // for 5 index pulses (5 revolutions ≈ 1 s at 300rpm), then assert
-            // RNF + INTRQ. Some software depends on this delay.
+            // RNF + INTRQ.
             this.statusReg = STATUS.BUSY;
             this.drqFlag = false;
             this.state = FDC_STATE.RNF_WAIT;
@@ -1888,7 +1885,7 @@ export class FDC {
     /**
      * Advance read transfer after CPU reads data register.
      * @param {number} [elapsedSinceDrq=0] - Cycles elapsed since the DRQ
-     *   that the CPU just consumed.  On real hardware, bytes arrive from the
+     *   that the CPU just consumed.  Bytes arrive from the
      *   spinning disk at fixed intervals (BYTE_DELAY).  If the CPU reads the
      *   data register quickly, the remaining time until the *next* byte is
      *   shorter than a full BYTE_DELAY.  Accounting for this prevents
@@ -2074,7 +2071,7 @@ export class FDC {
             this._wtDataRemaining--;
             if (this._wtDataRemaining <= 0) {
                 // Sector data field captured.  Return to gap scanning and keep
-                // accepting bytes — the real MB8877 runs WRITE TRACK for a full
+                // accepting bytes — WRITE TRACK is treated as lasting a full
                 // revolution (until the index pulse), so we let the CPU feed the
                 // trailing gap.  Completion happens via the idle timeout in
                 // step() once the CPU stops writing (or the safety cap below).

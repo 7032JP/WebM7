@@ -34,7 +34,7 @@ WebM7 のシミュレータコアは、ブラウザなしで **Node.js から直
 
 - **Node.js**（ES Modules 対応バージョン。新しめの LTS を推奨）
 - WebM7 のソース一式（`core/` ディレクトリ。エンジン部だけを読み込みます）
-- ご自身で用意した **ROM イメージ**（第4章）
+- 同梱の互換 ROM イメージ、またはご自身で用意した ROM イメージ（第4章）
 - 必要に応じてディスクイメージ（`.d77` など）やテープイメージ（`.t77` / `.wav`）
 
 WebM7 のコアは ES Modules (`import`) で書かれています。テストスクリプトの拡張子は **`.mjs`** とすれば、Node.js がそれを ES Module として実行します（`package.json` などの追加設定は不要です）。
@@ -67,6 +67,8 @@ WebM7/
 │   └── …                  fm7_browser.js / display_canvas.js / audio_output.js / softkbd.js /
 │                          cgrom_glyph.js / fdd_sound.js / audio-worklet-processor.js
 │                          （ブラウザ結合部。ヘッドレスでは読み込みません）
+├── assets/
+│   └── altroms/           同梱の互換 ROM セット（LICENSE / SHA256SUMS 等を含む）
 ├── css/                   スタイルシート
 ├── icons/                 PWA アイコン
 ├── docs/                  ドキュメント（本書を含む）
@@ -76,7 +78,7 @@ WebM7/
 ├── CHANGELOG.md  LICENSE  LICENSE-*.md
 ```
 
-> ヘッドレステストに必要なのは `core/` だけです。テスト用のディレクトリやスクリプトは含まれていませんので、下記のとおり**ご自身で作成**します。
+> ヘッドレステストでは `core/` のエンジン部を読み込みます。ROM と必要なメディアイメージは第4章の手順で指定してください。テスト用のディレクトリやスクリプトは含まれていませんので、下記のとおり**ご自身で作成**します。
 
 ### 3.2 テスト用ディレクトリを作る
 
@@ -117,13 +119,13 @@ cd test && node your_test.mjs
 
 ## 4. ROM の用意
 
-シミュレータの起動には ROM イメージが必要です。WebM7 には独立実装の互換 ROM セット（MIT License）を `assets/altroms/` に同梱しており、漢字系 ROM（漢字 ROM `kanji.rom` / `kanji2.rom`・辞書 ROM `dicrom.rom`）を含む基本 ROM はそのまま使えます。純正 ROM は同梱・配信しません。**互換 ROM セットに含まれない ROM を使う場合は、ご自身で適法に用意し、任意のフォルダに置いてください。**テストスクリプトでは、そのフォルダを定数にして読み込みます。なお、漢字系 ROM（KANJI / KANJI2）に含まれる第三者素材由来の字形は、MIT License の対象外です（同梱の `assets/altroms/LICENSE-FONT.md` を参照）。
+シミュレータの起動には ROM イメージが必要です。WebM7 には独立実装の互換 ROM セット（MIT License）を `assets/altroms/` に同梱しており、漢字系 ROM（漢字 ROM `kanji.rom` / `kanji2.rom`・辞書 ROM `dicrom.rom`）を含む基本 ROM はそのまま使えます。純正 ROM は同梱・配信しません。**互換 ROM セットに含まれない ROM を使う場合は、ご自身で適法に用意し、任意のフォルダに置いてください。**テストスクリプトでは、そのフォルダを定数にして読み込みます。漢字系 ROM の字形の条件は `LICENSE-Shinonome.md` を参照してください。
 
 必要な ROM は機種により異なります。読み込みメソッドと、本書のサンプルコードで使う**ファイル名の例**は次のとおりです（ファイル名は各自の ROM に合わせてください。同梱互換 ROM の BASIC は `7tbasic3.rom` です）。
 
 | 区分 | 読み込みメソッド | サンプルでの名前例 | サイズの目安 | 主な対象機種 |
 |---|---|---|---|---|
-| F-BASIC ROM | `loadFBasicROM()` | `7tbasic3.rom` | 約 31KB | 全機種（常に必須。本体搭載 ROM） |
+| BASIC ROM | `loadFBasicROM()` | `7tbasic3.rom`（同梱の 7T-BASIC） | 約 31KB | 全機種（常に必須。本体搭載 BASIC ROM に対応） |
 | DOS ブート ROM | `loadBootROM()` | `boot_dos.rom` | 512 バイト | FM-7 系（Boot Mode: DOS で必須） |
 | BASIC ブート ROM | `loadBootBasROM()` | `boot_bas.rom` | 512 バイト | FM-7 系（Boot Mode: BASIC で必須） |
 | サブシステム ROM (Type-C) | `loadSubROM()` | `subsys_c.rom` | 約 10KB | 全機種（常に必須。サブ CPU 用） |
@@ -138,8 +140,8 @@ cd test && node your_test.mjs
 
 機種ごとに読み込むべき ROM の目安は次のとおりです（ブラウザ WebM7 本体の必須／任意の区分と同じです）。
 
-- **FM-7** … F-BASIC ROM＋サブシステム Type-C＋Boot Mode に対応するブート ROM（BASIC なら BASIC ブート ROM、DOS なら DOS ブート ROM）が必須です。
-- **FM77AV / FM77AV20 / FM77AV20EX / FM77AV40 / FM77AV40EX/SX** … F-BASIC ROM・サブシステム Type-C に加えてイニシエータ ROM・サブシステム Type-A / Type-B・CG ROM・漢字 ROM（第1水準）が必須です（ブート ROM（DOS / BASIC）は不要です）。
+- **FM-7** … BASIC ROM＋サブシステム Type-C＋Boot Mode に対応するブート ROM（BASIC なら BASIC ブート ROM、DOS なら DOS ブート ROM）が必須です。
+- **FM77AV / FM77AV20 / FM77AV20EX / FM77AV40 / FM77AV40EX/SX** … BASIC ROM・サブシステム Type-C に加えてイニシエータ ROM・サブシステム Type-A / Type-B・CG ROM・漢字 ROM（第1水準）が必須です（ブート ROM（DOS / BASIC）は不要です）。
 - **FM77AV40EX/SX** … さらに漢字 ROM（第2水準）・辞書 ROM・拡張サブ ROM が必須です。
 
 ![図: 機種と必要 ROM のマトリクス](images/headless_03_rom_matrix.svg)
@@ -150,35 +152,9 @@ cd test && node your_test.mjs
 
 > ROM 読み込みメソッドはいずれも `ArrayBuffer`（または `Uint8Array.buffer`）を引数に取ります。`readFileSync()` で読んだバッファをそのまま渡せます。
 
-### 4.1 素材の置き場所をテストから解決する
+### 4.1 素材の置き場所
 
-ROM やディスクイメージの置き場所を絶対パスで書くと、環境が変わったときに動かなくなります。置き場所は 1 箇所にまとめておき、各テストはそこから相対で組み立てるのが安全です。
-
-たとえば、`test/` の中に置き場所だけを解決する小さなモジュールを 1 本作り（ここでは `test/_paths.mjs` という名前にします）、そこから素材のルートパスを `MATERIALS` のような定数として公開しておくと、他のテストからはそれを読み込むだけで済みます。
-
-```javascript
-// test/_paths.mjs
-import { fileURLToPath } from 'node:url';
-
-export const MATERIALS = (process.env.WEBM7_MATERIALS || fileURLToPath(new URL('../../', import.meta.url)))
-    .replace(/\/+$/, '');
-```
-
-- 既定値を**このリポジトリの親ディレクトリ**にしておくと、素材のフォルダをリポジトリと同じ階層に並べるだけで、設定なしでそのまま動くようになります。
-- 別の場所に置きたい場合に備えて、環境変数（例: `WEBM7_MATERIALS`）で上書きできるようにしておくと便利です。
-
-```bash
-WEBM7_MATERIALS=/path/to/materials node test/your_test.mjs
-```
-
-各テストからは次のように使います。
-
-```javascript
-import { MATERIALS } from './_paths.mjs';
-
-const ROMS_FM7 = `${MATERIALS}/roms/fm7`;   // 例: /path/to/materials/roms/fm7
-const DISK     = `${MATERIALS}/disks/sample.d77`;
-```
+ROM やディスクイメージの置き場所は、スクリプトに絶対パスで書き込まず、環境変数などで指定できるようにしておくと、環境が変わってもテストを書き換えずに済みます（第6章のサンプルの `WEBM7_ROM_DIR` を参照）。
 
 ---
 
@@ -189,8 +165,6 @@ const DISK     = `${MATERIALS}/disks/sample.d77`;
 ```javascript
 import { FM7 } from '../core/index.js';
 ```
-
-> `performance.now()` を固定値にするスタブは置かないでください。
 
 ---
 
@@ -274,20 +248,11 @@ fm7.reset();
 
 | 機種 | ブートモード | 起動経路 |
 |---|---|---|
-| FM-7 | `'basic'` | BASIC ブート ROM（`loadBootBasROM()`）を `$FE00` から **実コードとして実行**します。ブートセクタの読み込みや F-BASIC への遷移も ROM 側のコードが行います。 |
-| FM-7 | `'dos'` | DOS ブート ROM（`loadBootROM()`）を `$FE00` から実コードとして実行します。一部ディスクの起動を補助します（`romAdjust = false` で無効化できます）。 |
-| FM77AV 系 | どちらでも | イニシエータ ROM（`loadInitiateROM()`）を `$6000` から **実コードとして実行**します。ブートモードは `$FD0B` の起動状態レジスタとイニシエータ引き渡し後の扱いにのみ影響します。`_bootModeExplicit` を `true` にしない場合は、ドライブ 0 にディスクがあれば `'dos'`、無ければ `'basic'` として扱われます。 |
+| FM-7 | `'basic'` | BASIC ブート ROM（`loadBootBasROM()`）を実行します。 |
+| FM-7 | `'dos'` | DOS ブート ROM（`loadBootROM()`）を実行します。 |
+| FM77AV 系 | どちらでも | イニシエータ ROM（`loadInitiateROM()`）を実行します。`_bootModeExplicit` を `true` にしない場合は、ドライブ 0 にディスクがあれば `'dos'`、無ければ `'basic'` として扱われます。 |
 
-**起動補助（`romAdjust`）** … FM-7 の DOS モードでは、起動のためにディスクの先頭部分を先読みすることがあります。同梱互換 ROM を使う場合は起動補助を無効にしてください。`fm7.romAdjust`（真偽値、既定値 `true`）を `false` にすると無効化できます。`reset()`／起動の**前**に設定してください。通常のハードウェア動作はこの設定の影響を受けません。
-
-```javascript
-fm7.romAdjust = false;             // 起動補助を行わない（reset() の前に設定）
-fm7._bootModeOverride = 'basic';   // 起動経路も明示する
-fm7._bootModeExplicit = true;
-fm7.reset();
-```
-
-起動補助を無効にしてブートモードも指定する場合は、上の例のように **`romAdjust = false` と `_bootModeOverride`、`_bootModeExplicit = true`** を組み合わせてください。FM-7 では選択するモードのブート ROM、FM77AV 系ではイニシエータ ROM を読み込んでおきます。選択した機種に合う ROM を指定してください。
+FM-7 では選択するモードのブート ROM、FM77AV 系ではイニシエータ ROM を読み込んでおきます。選択した機種に合う ROM を指定してください。
 
 ### 7.2 実行（時間を進める）
 
@@ -501,7 +466,7 @@ fm7.cmt.loadWAV(new Uint8Array(readFileSync('./tape.wav')).buffer);   // WAV 形
 - **テープの動作確認** … 制限と確認方法は第9章を参照してください。
 - **オートタイプは受付開始を待ってから** … `queueText` 後はフレームを回し続ければ自動送出されますが、ROM ローダ実行中など入力受付前に送ると取りこぼすことがあります。`OK`（Ready）プロンプト到達を待ってから送ってください。
 - **画面サイズは表示モードで変わる** … 幅・高さは `render()` 後に確定します。PPM 書き出しは `display.frame` の `width` / `height` を使ってください（第8章のサンプルはそうなっています）。
-- **リセット後の NMI 受け付け開始条件** … MC6809 はリセット後、S をプログラムで設定するまで NMI を受け付けません。本シミュレータは S を設定する命令（`LDS` の全アドレッシング・`LEAS`・`TFR` / `EXG` で S を転送先にしたもの）のいずれでも NMI を有効にします。リセット直後に `LDS #imm` で S を設定してください。
+- **リセット後の NMI 受け付け開始条件** … MC6809 はリセット後、S をプログラムで設定するまで NMI を受け付けません。自作のコードを動かす場合は、リセット直後に `LDS #imm` で S を設定してください。
 
 ---
 

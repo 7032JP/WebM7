@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 330" width="880" height="330">
-  <title>BASIC Paste の流れ図。F-BASIC 起動後にファイルまたはクリップボードからテキストを自動入力する</title>
+  <title>BASIC Paste の流れ図。BASIC の起動後にファイルまたはクリップボードからテキストを自動入力する</title>
   <defs>
     <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
@@ -39,6 +39,6 @@
 
   <!-- 前提・注意 -->
   <rect x="40" y="260" width="800" height="56" rx="8" fill="#f6f8fa" stroke="#57606a"/>
-  <text x="60" y="284" font-family="sans-serif" font-size="13" fill="#1f2328">前提: F-BASIC が起動して OK プロンプトが出ていること</text>
+  <text x="60" y="284" font-family="sans-serif" font-size="13" fill="#1f2328">前提: BASIC が起動して OK プロンプトが出ていること</text>
   <text x="60" y="306" font-family="sans-serif" font-size="13" fill="#1f2328">注意: BASIC キーワードは大文字推奨（小文字だとトークン化されない場合があります）</text>
 </svg>

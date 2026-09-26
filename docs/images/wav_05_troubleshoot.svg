@@ -15,14 +15,14 @@
 
   <!-- decision -->
   <rect x="220" y="116" width="360" height="48" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
-  <text x="400" y="145" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">「N blocks OK」で BAD なし？</text>
+  <text x="400" y="145" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">品質表示に BAD がない？（録音品質の目安）</text>
 
   <!-- yes -->
   <line x1="580" y1="140" x2="618" y2="140" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
   <text x="599" y="130" font-family="sans-serif" font-size="12" fill="#1a7f37" text-anchor="middle">はい</text>
   <rect x="620" y="112" width="160" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
-  <text x="700" y="136" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">そのまま</text>
-  <text x="700" y="156" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">読み込み OK</text>
+  <text x="700" y="136" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">LOAD して</text>
+  <text x="700" y="156" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">結果を確認</text>
 
   <!-- no -->
   <line x1="400" y1="164" x2="400" y2="196" stroke="#57606a" stroke-width="1.5"/>

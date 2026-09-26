@@ -18,7 +18,7 @@ npx serve .
 
 ブラウザで `http://localhost:8080` を開きます。
 
-互換 ROM セット（`assets/altroms/`）を同梱済みのため、ROM ファイルなしでそのまま起動できます。互換 ROM セットは独立実装（MIT License）の別配布物 [7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.0) です。同梱の ROM 本体と権利表示文書の再検証手順は [LICENSE-AltROMs.md](LICENSE-AltROMs.md) を参照してください。
+互換 ROM セット（`assets/altroms/`）を同梱済みのため、ROM ファイルなしでそのまま起動できます。互換 ROM セットの配布元と権利表示は [README.md](README.md) のライセンスの節を参照してください。
 
 ROM ファイルの読み込みや操作方法については [README.md](README.md) を参照してください。
 キーボードの配置・固有キーの対応・キーの割り当て変更は [docs/Keyboard_Manual.md](docs/Keyboard_Manual.md) にまとめています。
@@ -32,11 +32,11 @@ manifest.webmanifest  PWA マニフェスト
 sw.js               PWA サービスワーカー（オフライン対応・アプリシェルのキャッシュ）
 icons/              PWA アイコン一式（192/512/maskable/apple-touch/favicon）
 css/
-  style.css         スタイルシート（機種テーマ・スキン・ハードウェアパネルの意匠を含む）
+  style.css         スタイルシート（機種テーマ・スキン・ハードウェアパネルの配色を含む）
   softkbd.css       ソフトウェアキーボードのスタイル
 assets/
-  granite.png       FM77AV40SX スキンの御影石風テクスチャ
-  altroms/          同梱の互換 ROM セット（独立実装・MIT License。別配布物）
+  granite.png       FM77AV40SX スキンのテクスチャ
+  altroms/          同梱の互換 ROM セット（独立実装・MIT License）
 core/               共有エンジン（View 横断で再利用する中核）とブラウザ結合部
   [エンジン部: ブラウザ API 非依存。Node.js から直接動かせる（docs/Headless_Test_Manual.md）]
   index.js          コアの公開 API 窓口（FM7 / D77Disk / CPU6809 / Display / キーボード定数 等を再エクスポート）
@@ -67,14 +67,14 @@ core/               共有エンジン（View 横断で再利用する中核）�
 | 要素 | DOM | 役割 |
 |---|---|---|
 | ヘッダー | `.app-header` / `#machineTabs` / `#skinChips` / `#capBadgeRow` | 機種タブ、スキン切り替え、能力バッジと RAM / VRAM 容量表示 |
-| ハードウェアパネル | `#hwPanel`（`#hwTower` / `#hwBar`） | 電源・リセット・起動モード・ドライブの操作部。実機の筐体を模した意匠 |
+| ハードウェアパネル | `#hwPanel`（`#hwTower` / `#hwBar`） | 電源・リセット・起動モード・ドライブの操作部。機種ごとの配色 |
 | サイドパネル | `.side-panel` の各 `.sp-section` | Options / ROM Files / Library / Disk Images / Tape Image / BASIC Paste |
 
 ![図: 前面パネルの各部。電源、リセット、起動モード、ドライブ、イジェクト、ステータスバー](docs/images/ui_front_panel.svg)
 
 ![図: ステータスバー 2 段目の読み方。ドライブのアクセス LED と DMAC、FDC の状態、2D / 2DD、MMR、NO STEAL、画面モードと色数](docs/images/ui_status_bar.svg)
 
-- 機種タブ・ハードウェアパネルの操作は、いずれもサイドパネル内の既存コントロール（`#machineTypeSelect`、`#powerToggle`、`#resetBtn`、`bootMode` ラジオ）へ委譲します。これらは状態源として DOM に残し、`.ctl-retired` で表示のみ隠しています。
+- 機種タブ・ハードウェアパネルの操作は、いずれもサイドパネル内の既存コントロール（`#machineTypeSelect`、`#powerToggle`、`#resetBtn`、`bootMode` ラジオ）へ委譲します。これらは状態源として DOM に残し、表示だけを隠しています。
 - スキンは `<body>` の `ui-skin-*` クラスで切り替わります。選択可能なスキンは `index.html` の `UI_SKIN_CHOICES`、スキンの無い機種の割り当ては `UI_MACHINE_GROUPS` で定義しています。選択は `uiSkins` 設定としてブラウザに保存されます。
 - 機種による表示差（LED 色、無変換 / 変換キーの有無、BREAK キーの色、ドライブベイの形状）は `<body>` の `machine-fm7` / `machine-av` / `machine-av20up` クラスで制御します。
 
@@ -93,4 +93,4 @@ core/               共有エンジン（View 横断で再利用する中核）�
 
 [MIT License](LICENSE) © 2026 [7032](https://x.com/7032) / Naomitsu Tsugiiwa
 
-本ライセンスは WebM7 自体の成果物（ソースコードのほか、本プロジェクトが作成したドキュメント・図・アイコン・テクスチャ等を含みます）に適用されます。ROM データその他第三者に権利が帰属する要素（各社ブランドロゴなど）には適用されません。FM 音源の FM 合成部（core/opn.js の一部）は "FM Sound Generator" (fmgen) Copyright (C) by cisc 1998, 2003 の移植で、原典の利用条件が適用されます（原文は core/fmgen_readme.txt を同梱）。同梱の互換 ROM セット（`assets/altroms/`）は別配布物であり、その条件は同梱の `assets/altroms/LICENSE` に従います（漢字系 ROM に含まれる第三者素材由来の字形は、互換 ROM セットの MIT License の対象外です）。詳細は [LICENSE-MIT.md](LICENSE-MIT.md)（「ライセンスの案内」の表と各 `LICENSE-*.md`） を参照してください。
+本ライセンスは WebM7 自体の成果物（ソースコードのほか、本プロジェクトが作成したドキュメント・図・アイコン・テクスチャ等を含みます）に適用されます。第三者に権利が帰属する要素（各社ブランドロゴなど）には適用されません。FM 音源の FM 合成部（core/opn.js の一部）は "FM Sound Generator" (fmgen) Copyright (C) by cisc 1998, 2003 の移植で、原典の利用条件が適用されます（原文は core/fmgen_readme.txt を同梱）。同梱の互換 ROM セット（`assets/altroms/`）の条件は同梱の `assets/altroms/LICENSE` に従います（漢字系 ROM の字形の扱いは [LICENSE-Shinonome.md](LICENSE-Shinonome.md)）。詳細は [LICENSE-MIT.md](LICENSE-MIT.md)（「ライセンスの案内」の表と各 `LICENSE-*.md`） を参照してください。

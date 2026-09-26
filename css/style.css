@@ -1596,7 +1596,7 @@ button:disabled {
     .footer-links { flex-wrap: wrap; gap: 4px; }
 
     /* === Side-panel: touch-friendly buttons ===
-       Apple HIG calls for a 44pt minimum tappable area, so keep min-height at
+       Mobile guidelines call for a 44pt minimum tappable area, so keep min-height at
        44px but use a modest font/padding so buttons are not visually bulky. */
     .side-panel button {
         min-height: 44px;
@@ -1810,11 +1810,11 @@ body {
     --hw-loaded-led: #ff5a76;
 }
 body.ui-skin-fm7, body.ui-skin-new7, body.ui-skin-fm77 {
-    --hw-power-lamp: #e0392b;   /* FM-7 / FM-new7 / FM-77: 赤 */
+    --hw-power-lamp: #e0392b;   /* FM-7 / FM-NEW7 / FM-77: 赤 */
     --hw-loaded-led: #e0392b;
 }
 body.ui-skin-avex, body.ui-skin-avsx {
-    --hw-power-lamp: #3ecf6a;   /* AV40EX / AV40SX: 緑の電源・赤の LED */
+    --hw-power-lamp: #3ecf6a;   /* FM77AV40EX / FM77AV40SX: 緑の電源・赤の LED */
     --hw-loaded-led: #ff3b3b;
 }
 
@@ -2090,7 +2090,7 @@ select, textarea, input[type="text"] {
     align-items: center;
 }
 .stage-main .toolbar { width: 100%; }
-/* FM-7 / FM-new7 スキン: 画面列の下に上面帯 (#hwTowerBand)、右列に外付けユニット
+/* FM-7 / FM-NEW7 スキン: 画面列の下に上面帯 (#hwTowerBand)、右列に外付けユニット
    (#hwTower) を置く 2 列 2 行のグリッド。#hwTower は 2 行にまたがり、下端を
    #hwTowerBand の下端と揃える（縦に伸ばす）。
    .hw-panel は display: contents で箱を消し、中の #hwTowerBand / #hwTower を
@@ -2157,7 +2157,7 @@ body.hw-right #hwBar { display: none; }
 .hw-bay:not(.loaded),
 .hw-vbay:not(.loaded) { cursor: pointer; }
 
-/* --- FM-7 / FM-new7: 上面帯（画面下・横型）と縦型タワー（右列） --- */
+/* --- FM-7 / FM-NEW7: 上面帯（画面下・横型）と縦型タワー（右列） --- */
 .hw-tower,
 .hw-tower-top {
     flex-direction: column;
@@ -2464,7 +2464,7 @@ body.hw-power-on .hw-rocker {
     letter-spacing: 3px;
     color: #736b58;
 }
-/* FM-new7 スキン: FM-7 スキンと同じ構成で、電源スイッチの埋め込み枠の中全体が白。
+/* FM-NEW7 スキン: FM-7 スキンと同じ構成で、電源スイッチの埋め込み枠の中全体が白。
    スイッチのボタンそのものは FM-7 と同じ黒（枠内黒＋ボタン黒の FM-7 との対比） */
 body.ui-skin-new7 .hw-rocker-well {
     background: #f6f2e7;
@@ -2872,7 +2872,7 @@ body.ui-skin-fm77 .hw-bar-lip {
 body.ui-skin-fm77 .hw-lip-left { display: none; }
 body.ui-skin-fm77 .hw-lip-trio { display: flex; margin-left: auto; }
 
-/* --- AV40EX / AV40SX スキン: 薄型スリムバー --- */
+/* --- FM77AV40EX / FM77AV40SX スキン: 薄型スリムバー --- */
 body.ui-skin-avex .hw-bar,
 body.ui-skin-avsx .hw-bar {
     --hwbar-border: #2c2c30;
@@ -3508,7 +3508,7 @@ body.ui-skin-avsx .hw-kbd-jack { border-color: #7c7b76; }
     .scale-toggle { padding: 2px; }
     .scale-fs { margin-left: 0; border-left: none; border-radius: 6px; padding: 3px 10px; font-size: 11px; }
     .stage { gap: 6px; }
-    /* FM-7 / FM-new7: グリッドをやめて縦積み（画面 → 上面帯 → 外付けユニット） */
+    /* FM-7 / FM-NEW7: グリッドをやめて縦積み（画面 → 上面帯 → 外付けユニット） */
     body.hw-right .stage { display: flex; flex-direction: column; align-items: stretch; }
     body.hw-right .hw-panel { display: flex; flex-direction: column; gap: 6px; width: 100%; }
     /* 画面下のパネルは固定の高さをやめ、内容に合わせて縮める */
@@ -3618,7 +3618,7 @@ body.machine-av20up .fm7-key.break-key.active { background: #8a2a2a; border-colo
    状態源は Options パネルの非表示 bootMode ラジオ。現在の選択は
    body.boot-dos と .hw-boot-chip.active で表示する。 */
 
-/* FM-7 / FM-new7: 上面帯下段（背面パネル）右端の 4 連 DIP スイッチ（左端レバーが BOOT 相当） */
+/* FM-7 / FM-NEW7: 上面帯下段（背面パネル）右端の 4 連 DIP スイッチ（左端レバーが BOOT 相当） */
 .hw-dip-wrap {
     display: flex;
     flex-direction: column;

@@ -17,7 +17,7 @@
 
   <!-- 行1 fbasic30 -->
   <rect x="30" y="86" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
-  <text x="40" y="108" font-family="monospace" font-size="13" fill="#1f2328">7tbasic3.rom <tspan font-family="sans-serif" fill="#57606a">F-BASIC</tspan></text>
+  <text x="40" y="108" font-family="monospace" font-size="13" fill="#1f2328">7tbasic3.rom <tspan font-family="sans-serif" fill="#57606a">BASIC</tspan></text>
   <rect x="280" y="86" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
   <text x="345" y="108" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
   <rect x="410" y="86" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>

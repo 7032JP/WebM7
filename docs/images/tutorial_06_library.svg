@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 480" width="880" height="480">
-  <title>Library とドライブの関係図。棚からドライブやテープへ挿入し、Commit で棚へ反映、Save で PC へ書き出す</title>
+  <title>Library とドライブの関係図。棚からドライブやテープへ挿入し、Commit で棚へ反映、Save または Exp で PC へ書き出す</title>
   <defs>
     <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
@@ -61,6 +61,6 @@
   <text x="60" y="360" font-family="sans-serif" font-size="13" fill="#1f2328">・ドライブ側の変更は ⬆Commit を押したときだけ棚へ反映（未反映はオレンジの [Drive0*] 表示）</text>
 
   <rect x="40" y="390" width="800" height="64" rx="8" fill="#fff8c5" stroke="#bc4c00" stroke-width="1.5"/>
-  <text x="60" y="416" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00">PC へ書き出すのは Disk Images パネルの Save ボタン（.d77 書き出し）のみ。</text>
-  <text x="60" y="440" font-family="sans-serif" font-size="13" fill="#1f2328">保存ダイアログで上書きを指定しない限り、PC 本体の D77 ファイルは変更されません。</text>
+  <text x="60" y="416" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00">変更はブラウザ内に保持されます。PC へ保存するには Save または Library の Exp で書き出してください。</text>
+  <text x="60" y="440" font-family="sans-serif" font-size="13" fill="#1f2328">元のファイルを残す場合は別名で保存してください。</text>
 </svg>

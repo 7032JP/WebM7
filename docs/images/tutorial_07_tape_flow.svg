@@ -58,7 +58,7 @@
 
   <rect x="480" y="318" width="340" height="50" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
   <text x="650" y="339" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">4. PC へファイルとして保存される</text>
-  <text x="650" y="359" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">保存した T77 はそのまま LOAD で読み戻せます</text>
+  <text x="650" y="359" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">セットして LOAD し、読み込み結果を確認</text>
 
   <!-- 下部注記 -->
   <rect x="30" y="398" width="820" height="32" rx="8" fill="#f6f8fa" stroke="#57606a"/>

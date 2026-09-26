@@ -1282,7 +1282,7 @@ export class Display {
      * Scroll counter: execute VRAM rotation only on even count.
      * $D40E and $D40F are always written as a pair. The counter
      * ensures scroll executes once per pair, not on each write.
-     * Matches real hardware behavior: scroll on register pair write.
+     * レジスタの組への書込みごとにスクロールを適用する。
      */
     _scrollCountUp(pg) {
         this._vramOffsetCount[pg]++;
@@ -1302,9 +1302,8 @@ export class Display {
     _vramScroll(offset) {
         this._pushScrollTrace('SCROLL', { diff: offset & 0xFFFF });
 
-        // 400-line: hardware scroll PHYSICALLY rotates VRAM (matches real CRTC
-        // display-offset behaviour), so CPU access and the renderer both stay
-        // raw. The active byte-parity field (even/odd bytes form two independent
+        // 400-line: 400 ライン時は対象領域を回転する。VRAM そのものを回転するので、
+        // CPU アクセスとレンダラーはどちらも変換なしで読む。The active byte-parity field (even/odd bytes form two independent
         // scroll fields, selected by activeVramPage) is rotated within each 32KB
         // plane of the active block. The offset counts in field units, so the
         // byte span is offset*2; wrap is within the 0x8000 plane.
@@ -1918,7 +1917,7 @@ export class Display {
         this._vramOffsetCount = [0, 0];
         this.vramOffsetFlag = false;
         // リセット時は表示を消灯し、サブ CPU が $D408 を読むと点灯する
-        // (実機の回路の作法。コンストラクタの説明を参照)。
+        // (コンストラクタの説明を参照)。
         this.crtOn = false;
         this.vramaFlag = false;
         this.insLedOn = false;

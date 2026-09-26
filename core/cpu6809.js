@@ -533,7 +533,7 @@ export class CPU6809 {
             case 0x0F: // Extended indirect [addr16]
                 // Only valid with indirect flag (postbyte $1F = [nn]).
                 // Non-indirect $0F is undefined on 6809 — do NOT fetch address.
-                // Real hardware treats it as zero-offset from register.
+                // このアドレス指定はレジスタからの変位を 0 として扱う。
                 if (indirect) {
                     addr = this.fetchWord();
                     this.cycle += 5;
