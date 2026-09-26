@@ -31,12 +31,11 @@ MIT License は次の成果物に適用されます。
 | 本プロジェクトの成果物（JavaScript / HTML / CSS、文書、図、アイコン、テクスチャ） | MIT License（[`LICENSE`](LICENSE)） | 本書 |
 | FM 音源の移植部（`core/opn.js` の FM 合成部） | fmgen の利用条件（原文 `core/fmgen_readme.txt`） | [`LICENSE-fmgen.md`](LICENSE-fmgen.md) |
 | 同梱の互換 ROM セット（`assets/altroms/`） | MIT License（別配布物。原文 `assets/altroms/LICENSE`） | [`LICENSE-AltROMs.md`](LICENSE-AltROMs.md) |
-| 漢字フォント素材（互換 ROM セット内の `kanji.rom` / `kanji2.rom` に含まれる第三者素材由来の字形） | パブリックドメイン（原文 `assets/altroms/LICENSE-FONT.md` 第 4 節） | [`LICENSE-Shinonome.md`](LICENSE-Shinonome.md) |
+| 漢字フォント素材（互換 ROM セット内の `kanji.rom` / `kanji2.rom` に含まれる第三者素材由来の字形） | パブリックドメインとして提供（上流の宣言。原文 `assets/altroms/LICENSE-FONT.md` 第 4 節） | [`LICENSE-Shinonome.md`](LICENSE-Shinonome.md) |
+
+## MIT License の対象外の要素
 
 次の要素は本プロジェクトの著作物ではなく、MIT License の対象外です。
-独立したライセンス文書はなく、次節に注記としてまとめます。
-
-## 適用範囲と注記
 
 ### 各社のブランドロゴ（`index.html`）
 

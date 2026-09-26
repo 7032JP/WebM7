@@ -304,19 +304,19 @@ const GRPH_CURSOR = new Map([
 const KEY_BUFFER_SIZE = 16;
 
 // 独自メッセージの自動送出。半角カタカナと ASCII を通常のキー入力経路へ送る。
-const HIDDEN_MSG_TEXT =
-    'WebM7ﾃﾞｱｿﾝﾃﾞｸﾚﾃｱﾘｶﾞﾄｳ｡ｺﾉﾒｯｾｰｼﾞﾊWebM7ｵﾘｼﾞﾅﾙﾃﾞｽ｡FM-7ﾉﾀﾉｼｲｾｶｲｦｺﾞﾕｯｸﾘﾄﾞｳｿﾞ!!';
-const HIDDEN_MSG_BYTES = (() => {
+const ORIGINAL_MSG_TEXT =
+    'WebM7ﾃﾞｱｿﾝﾃﾞｸﾚﾃｱﾘｶﾞﾄｳ｡FM-7ﾉﾀﾉｼｲｾｶｲｦｺﾞﾕｯｸﾘﾄﾞｳｿﾞ!!';
+const ORIGINAL_MSG_BYTES = (() => {
     const out = [];
-    for (const ch of HIDDEN_MSG_TEXT) {
+    for (const ch of ORIGINAL_MSG_TEXT) {
         const c = ch.codePointAt(0);
         out.push((c >= 0xFF61 && c <= 0xFF9F) ? (c - 0xFEC0) : (c & 0xFF));
     }
     out.push(0x00); // 終端(最後のキーとして送出)
     return out;
 })();
-const HIDDEN_MSG_GAP_US = 122880; // 文字間隔(自己ペーシングと併用, 約123ms)
-const HIDDEN_MSG_MOD_CODES = new Set(
+const ORIGINAL_MSG_GAP_US = 122880; // 文字間隔(自己ペーシングと併用, 約123ms)
+const ORIGINAL_MSG_MOD_CODES = new Set(
     ['ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight']);
 
 export class Keyboard {
@@ -408,10 +408,10 @@ export class Keyboard {
         this._autoQueue = [];
         this._autoWaitUs = 0;   // emulated microseconds left before next key
 
-        // --- キーボードエンコーダ隠しメッセージ ---
-        this._hiddenMsgFired = false;   // リセットまでに再生済み
-        this._hiddenMsgActive = false;  // 送出中
-        this._hiddenMsgEnabled = false; // FM77AV系でホストが有効化
+        // --- 独自メッセージ ---
+        this._origMsgFired = false;   // リセットまでに再生済み
+        this._origMsgActive = false;  // 送出中
+        this._origMsgEnabled = false; // FM77AV系でホストが有効化
         this._modHeld = new Set();       // Shift/Ctrlの物理押下(コード表に無い)
         this.onKeyEncBeep = null;        // 送出中の各文字でホストがBEEPを鳴らす
     }
@@ -430,14 +430,13 @@ export class Keyboard {
     keyDown(event) {
         const code = event.code;
 
-        if (HIDDEN_MSG_MOD_CODES.has(code)) this._modHeld.add(code);
+        if (ORIGINAL_MSG_MOD_CODES.has(code)) this._modHeld.add(code);
         // 送出中は物理キー入力を無視する。
-        if (this._hiddenMsgActive) { event.preventDefault(); return; }
-        // 隠しメッセージのチョード: FM77AV系, CAPS+KANA点灯,
-        // 左右SHIFT+CTRL+GRPH押下で T。
-        if (code === 'KeyT' && this._hiddenMessageChord(event)) {
+        if (this._origMsgActive) { event.preventDefault(); return; }
+        // 独自メッセージを送る条件を判定する。
+        if (code === 'KeyT' && this._origMessageChord(event)) {
             event.preventDefault();
-            this._startHiddenMessage();
+            this._startOrigMessage();
             return;
         }
 
@@ -494,7 +493,7 @@ export class Keyboard {
     keyUp(event) {
         const code = event.code;
 
-        if (HIDDEN_MSG_MOD_CODES.has(code)) this._modHeld.delete(code);
+        if (ORIGINAL_MSG_MOD_CODES.has(code)) this._modHeld.delete(code);
 
         if (code === 'AltLeft') {
             this.graphMode = false;
@@ -629,26 +628,23 @@ export class Keyboard {
         }
     }
 
-    /**
-     * 隠しメッセージのチョードが成立しているか。
-     * FM77AV系, CAPS/KANA点灯, 左右SHIFT+CTRL+GRPH押下が条件。
-     */
-    _hiddenMessageChord(event) {
-        return this._hiddenMsgEnabled
-            && !this._hiddenMsgFired
+    /** 独自メッセージを送る条件を判定する。 */
+    _origMessageChord(event) {
+        return this._origMsgEnabled
+            && !this._origMsgFired
             && this.capsLock && this.kanaMode && this.graphMode
             && this._modHeld.has('ShiftLeft') && this._modHeld.has('ShiftRight')
             && (event.ctrlKey || this._modHeld.has('ControlLeft')
                 || this._modHeld.has('ControlRight'));
     }
 
-    /** 隠しメッセージの自動送出を開始する。 */
-    _startHiddenMessage() {
-        this._hiddenMsgFired = true;
-        this._hiddenMsgActive = true;
+    /** 独自メッセージの自動送出を開始する。 */
+    _startOrigMessage() {
+        this._origMsgFired = true;
+        this._origMsgActive = true;
         this.clearAutoType();
-        for (const code of HIDDEN_MSG_BYTES) {
-            this._autoQueue.push({ code, gap: HIDDEN_MSG_GAP_US });
+        for (const code of ORIGINAL_MSG_BYTES) {
+            this._autoQueue.push({ code, gap: ORIGINAL_MSG_GAP_US });
         }
     }
 
@@ -716,10 +712,10 @@ export class Keyboard {
         const next = this._autoQueue.shift();
         this._pushKey(next.code);
         this._autoWaitUs = next.gap;
-        if (this._hiddenMsgActive) {
+        if (this._origMsgActive) {
             if (this._autoQueue.length === 0) {
                 // 終端(0x00)を送り終えた — 完了。BEEPは鳴らさない。
-                this._hiddenMsgActive = false;
+                this._origMsgActive = false;
                 this.graphMode = false;
                 this._modHeld.delete('ShiftLeft');
                 this._modHeld.delete('ShiftRight');
@@ -879,8 +875,8 @@ export class Keyboard {
         this.insMode = false;
         this.graphMode = false;
         this._modHeld.clear();
-        this._hiddenMsgActive = false;
-        this._hiddenMsgFired = false;
+        this._origMsgActive = false;
+        this._origMsgFired = false;
     }
 
     // ------------------------------------------------------------------

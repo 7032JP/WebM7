@@ -14,7 +14,7 @@
   <text x="220" y="104" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">「先に ROM を読み込んでください」と表示</text>
   <line x1="400" y1="88" x2="476" y2="88" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
   <rect x="480" y="56" width="360" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
-  <text x="660" y="82" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">ROM Files で必須 ROM がすべて OK か確認</text>
+  <text x="660" y="82" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">ROM Files で必須 ROM が「互換」か「OK」か確認</text>
   <text x="660" y="104" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">FM77AV 系は追加 ROM も必須（→ 3 章）</text>
 
   <!-- 症状2 -->
@@ -51,7 +51,7 @@
   <line x1="400" y1="408" x2="476" y2="408" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
   <rect x="480" y="376" width="360" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
   <text x="660" y="402" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">リセットを押す → 直らなければ電源を入れ直す</text>
-  <text x="660" y="424" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">それでも駄目なら ROM 読み込みからやり直し</text>
+  <text x="660" y="424" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">それでも駄目なら ROM の供給元を「同梱互換」に戻す</text>
 
   <!-- それでも解決しないとき -->
   <line x1="440" y1="440" x2="440" y2="464" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>

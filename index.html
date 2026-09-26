@@ -174,8 +174,8 @@
         </div><!-- /.stage-main -->
 
         <!-- ================= 機種別ハードウェアパネル =================
-             電源・リセット・フロッピードライブを実機モチーフの意匠で表示する。
-             FM-7 (FM-7 / FM-new7 スキン) は、画面下の横型の上面帯 (#hwTowerBand) と
+             電源・リセット・フロッピードライブを機種ごとの配色の操作パネルとして表示する。
+             FM-7 (FM-7 / FM-NEW7 スキン) は、画面下の横型の上面帯 (#hwTowerBand) と
              画面右列の縦型タワー (#hwTower, 5.25インチ外付けユニット) の 2 つ、
              FM-77 / FM77AV 系 / AV40EX 系は横型バー (#hwBar, 画面下)。
              どれを表示するかは body の意匠クラス (hw-right) で CSS が切り替える。
@@ -183,10 +183,10 @@
              よう、CSS の共通の高さ (--hw-bottom-h / --hw-bottom-lip-h) に揃えてある。 -->
         <div class="hw-panel" id="hwPanel">
 
-            <!-- FM-7 / FM-new7: 上面帯（画面下・横型）。2 段構成で、
+            <!-- FM-7 / FM-NEW7 スキン: 上面帯（画面下・横型）。2 段構成で、
                  上段は黄色のカバー（左に機種名、右端に電源スイッチ。低め）、
                  下段はクリーム色の背面パネル（上段の倍以上の高さ）: 左端に RESET、右端に BOOT の
-                 DIP スイッチ、その間に実機の背面と同じ並びのダミー部品（AC インレット、DIN 端子 3 個、
+                 DIP スイッチ、その間にダミー部品（AC インレット、DIN 端子 3 個、
                  RCA ジャック、調整穴 2 個、エッジコネクタ 2 個。表示のみ）。表記は各部品の上 -->
             <div class="hw-tower-top" id="hwTowerBand">
                 <div class="hw-tower-cover">
@@ -230,7 +230,7 @@
                 </div>
             </div>
 
-            <!-- FM-7 / FM-new7: 5.25インチ縦スロット＋回転レバーの外付けユニット表現（画面右列）。
+            <!-- FM-7 / FM-NEW7 スキン: 5.25インチ縦スロット＋回転レバーの外付けユニット表現（画面右列）。
                  下端は画面下の上面帯の下端と揃う。見出しとドライブの箱は上、足元の飾り行は下端 -->
             <div class="hw-tower" id="hwTower">
                 <div class="hw-tower-drives">
@@ -439,7 +439,7 @@
             <div class="ctrl-row ctl-retired">
                 <label>Boot Mode:</label>
                 <div class="radio-group">
-                    <label title="BASIC モードの起動 ROM で起動。ディスクがあればディスクから起動し、無ければ F-BASIC を起動"><input type="radio" name="bootMode" value="basic" checked> BASIC</label>
+                    <label title="BASIC モードの起動 ROM で起動。ディスクがあればディスクから起動し、無ければ BASIC を起動（同梱互換 ROM では 7T-BASIC）"><input type="radio" name="bootMode" value="basic" checked> BASIC</label>
                     <label title="DOS モードの起動 ROM で起動（起動可能なディスクをセットしておく）"><input type="radio" name="bootMode" value="dos"> DOS</label>
                 </div>
             </div>
@@ -901,7 +901,7 @@
         既定では同梱の互換 ROM セット（独立実装・MIT License）で動作するため、ROM ファイルの用意は不要です。お手持ちの ROM ファイルを使うこともできます。</p>
 
         <p class="md-note" style="font-size:0.85em;"><strong>ROMファイルの取り扱いについて</strong><br>
-        ・本シミュレータが同梱・配信するのは、独立実装の互換 ROM セット（MIT License。配布元は <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.0" target="_blank" rel="noopener">7032 Alternative ROMs</a>）のみです。純正 ROM は同梱も配信もしません。なお、漢字系 ROM に含まれる第三者素材由来の字形は、MIT License の対象外です（同梱の <code>assets/altroms/LICENSE-FONT.md</code> を参照）。<br>
+        ・本シミュレータが同梱・配信するのは、独立実装の互換 ROM セット（MIT License。配布元は <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.3" target="_blank" rel="noopener">7032 Alternative ROMs</a>）のみです。純正 ROM は同梱も配信もしません。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>
         ・利用者がご用意されたROMファイルはユーザーのブラウザ内（ローカル環境）でのみ処理します。ROMデータがサーバーに送信・保存されることはありません。</p>
 
         <p class="md-note" style="font-size:0.85em;">選択した機種に合う ROM を指定してください。</p>
@@ -919,7 +919,7 @@
         <h3 id="help-rom">1. ROM の供給元を選ぶ / ROMファイルを読み込む（ROM Files パネル）</h3>
         <p>本シミュレータは<strong>同梱の互換 ROM セットを常に土台</strong>として動作します。そのうえで、<strong>ROM 1 本ごとに供給元を選べます</strong>。各 ROM の行にある選択で「同梱互換」か「自分の ROM」を指定してください（例: <code>FBASIC30.ROM</code> だけ、あるいは <code>KANJI.ROM</code> だけをお手持ちのものにする、といった使い分けができます）。指定はブラウザに保存され、次回以降も維持されます。現在どの組み合わせで動作しているかは、同じパネル上部の <strong>ROM Set</strong> 表示で確認できます。</p>
         <ul>
-        <li><strong>同梱互換（既定）</strong> — 独立実装の互換 ROM セット（MIT License）を使用します。ROM ファイルの用意は不要で、そのまま起動できます（行の横に「互換」と表示されます）。漢字 ROM（第1水準・全機種）も同梱されており、漢字表示に対応しています。ソフトウェアの動作条件は、下記の互換 ROM の互換性情報を参照してください（第2水準漢字 ROM・辞書 ROM は FM77AV40EX/SX で必須です。辞書 ROM を使うかな漢字変換には対応していません）。漢字系 ROM に含まれる第三者素材由来の字形は、MIT License の対象外です（同梱の <code>assets/altroms/LICENSE-FONT.md</code> を参照）。<br>同梱互換 ROM の BASIC は、プログラムをアスキー形式（<code>SAVE ,A</code> と同じ形式）だけで読み書きします。中間コード（バイナリ）形式で保存されたファイルは読み込めません（<a href="https://github.com/7032JP/7032AltROMs/blob/v1.0.0/docs/COMPATIBILITY.md" target="_blank" rel="noopener">COMPATIBILITY.md §3.2</a>）。お手持ちのプログラムファイルをそのまま使う場合は、<code>FBASIC30.ROM</code> の行を「自分の ROM」に切り替えてください。保存はアスキー形式のみ対応しています（詳細は上記の COMPATIBILITY.md を参照）。機械語ファイル（<code>SAVEM</code> / <code>LOADM</code>）の形式は従来どおりです</li>
+        <li><strong>同梱互換（既定）</strong> — 独立実装の互換 ROM セット（MIT License）を使用します。ROM ファイルの用意は不要で、そのまま起動できます（行の横に「互換」と表示されます）。漢字 ROM（第1水準・全機種）も同梱されており、漢字表示に対応しています。ソフトウェアの動作条件は、下記の互換 ROM の互換性情報を参照してください（第2水準漢字 ROM・辞書 ROM は FM77AV40EX/SX で必須です。辞書 ROM を使うかな漢字変換には対応していません）。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>同梱互換 ROM の BASIC は、プログラムをアスキー形式（<code>SAVE ,A</code> と同じ形式）だけで読み書きします。中間コード（バイナリ）形式で保存されたファイルは読み込めません（<a href="https://github.com/7032JP/7032AltROMs/blob/v1.0.3/docs/COMPATIBILITY.md" target="_blank" rel="noopener">COMPATIBILITY.md §3.2</a>）。お手持ちのプログラムファイルをそのまま使う場合は、<code>FBASIC30.ROM</code> の行を「自分の ROM」に切り替えてください。保存はアスキー形式のみ対応しています（詳細は上記の COMPATIBILITY.md を参照）。機械語ファイル（<code>SAVEM</code> / <code>LOADM</code>）の形式は従来どおりです</li>
         <li><strong>自分の ROM</strong> — お手持ちの ROM ファイルを読み込んで使用します。ROM ファイルを読み込むと、その行は自動的に「自分の ROM」に切り替わります（行の横に「OK」と表示されます）</li>
         </ul>
         <p>「自分の ROM」に指定する行には以下の ROM ファイルが必要です（ご自身が適法に所有する実機から取得したものを用意してください）。</p>
@@ -997,7 +997,7 @@
         <p>T77 形式・WAV 形式のカセットテープイメージを「Tape Image」にセットできます。</p>
         <ul>
         <li>T77 テープイメージ形式に対応。バイトオーダーは自動検出</li>
-        <li>WAV 形式（PCM 8bit / 16bit、モノラル・多チャンネル）にも対応。波形をしきい値判定してテープ信号として再生</li>
+        <li>WAV 形式（PCM 8bit / 16bit、モノラル・多チャンネル）にも対応。波形を周期から復調する方式と、しきい値を自動調整して切り分ける方式を自動で切り替えてテープ信号として再生</li>
         <li><strong>REW</strong> ボタンでテープを巻き戻し、<strong>Eject</strong> ボタンで取り出し</li>
         <li>テープ読み込み中（モーター ON 時）はシミュレータが自動的に高速化されます</li>
         <li>BASIC モードで起動後、<code>RUN ""</code>、<code>LOAD</code>、<code>LOADM</code> でテープから読込</li>
@@ -1006,9 +1006,9 @@
         </ul>
 
         <h3 id="help-paste">5. BASIC Paste</h3>
-        <p>テキストを F-BASIC 画面へ自動入力できます。</p>
+        <p>テキストを BASIC 画面へ自動入力できます。</p>
         <ul>
-        <li>F-BASIC 起動後、TXT/BAS ファイルを選ぶか <strong>Paste clipboard</strong> でクリップボードの内容を 1 文字ずつ自動入力</li>
+        <li>BASIC 起動後（同梱互換 ROM では 7T-BASIC）、TXT/BAS ファイルを選ぶか <strong>Paste clipboard</strong> でクリップボードの内容を 1 文字ずつ自動入力</li>
         <li>BASIC プログラムのリストを貼り付ければ、そのままプログラムとして入力されます（入力後 <code>RUN</code> で実行）</li>
         <li>入力先の処理に合わせて速度を自動調整します。<strong>Stop</strong> で中断できます</li>
         <li>BASIC キーワードは大文字推奨（小文字だとトークン化されない場合があります）</li>
@@ -1019,7 +1019,7 @@
         <p><img class="help-figure" src="docs/images/ui_front_panel.svg" alt="前面パネルの各部。電源、リセット、起動モード、ドライブ、イジェクト、ステータスバー"></p>
         <ol>
         <li>画面上部の<strong>機種タブ</strong>で機種を選択（FM-7 / FM-77 / FM77AV 〜 FM77AV40EX）</li>
-        <li><strong>Boot Mode</strong>（BASIC / DOS）を機種別ハードウェアパネルで選択。FM-7（FM-7 / FM-new7 スキン）は RESET 横の DIP スイッチ、FM-77 は前面の BOOT ボタン、FM77AV 系は下部帯の BASIC / DOS ボタンです</li>
+        <li><strong>Boot Mode</strong>（BASIC / DOS）を機種別ハードウェアパネルで選択。FM-7（FM-7 / FM-NEW7 スキン）は RESET 横の DIP スイッチ、FM-77 は前面の BOOT ボタン、FM77AV 系は下部帯の BASIC / DOS ボタンです</li>
         <li>ハードウェアパネルの<strong>電源スイッチ</strong>で起動（もう一度押すと停止。画面下の Pause で一時停止・Resume で再開）</li>
         </ol>
         <p>画面（Screen）をクリックするとキーボード入力がシミュレータに渡ります。</p>
@@ -1059,7 +1059,7 @@
         <tr><td><strong>Library</strong></td><td>ディスク (D77) / テープ (T77) をブラウザ内で管理する仮想メディアの棚。ファイル選択で取り込み、＋2D / ＋2DD で論理フォーマット済みの空ディスクを作成、▶0 / ▶1 / ▶T でドライブ・テープへ挿入、⬆Commit で棚へ反映。論理FMT / Exp / Ren / Dup / Del も可能</td></tr>
         <tr><td><strong>Disk Images</strong></td><td>D77 形式のディスクイメージを Drive 0 / Drive 1 にセット。セット時にファイル名を表示。Save ボタンで書き込み後イメージを .d77 保存（書込時は自動でブラウザ保存・<code>*</code>表示）。Eject ボタンで取り出し。セット中ディスクの情報（2D/2DD・シリンダ/サイド/セクタ/セクタ長）を表示。読み書き状況とドライブ動作状態は画面下のステータスバーに表示（同じ行に 2D / 2DD のドライブモードとドライブごとの DMA 転送、MMR/TWR・サイクルスチール・画面モードと色数の内部状態も表示）</td></tr>
         <tr><td><strong>Tape Image</strong></td><td>T77 / WAV 形式のテープイメージをセット。REW（巻き戻し）、Eject ボタン。CMT LED 付き。録音→.t77 / 録音→.wav で書き込み内容を保存（録音クリアで消去）</td></tr>
-        <tr><td><strong>BASIC Paste</strong></td><td>TXT / BAS ファイルの選択、または Paste clipboard でクリップボードの内容を F-BASIC 画面へ 1 文字ずつ自動入力。Stop で中断</td></tr>
+        <tr><td><strong>BASIC Paste</strong></td><td>TXT / BAS ファイルの選択、または Paste clipboard でクリップボードの内容を BASIC 画面へ 1 文字ずつ自動入力。Stop で中断</td></tr>
         </table>
 
         <h2>Input Monitor</h2>
@@ -1106,9 +1106,7 @@
         <p>画面のすぐ下、表示倍率トグルの右端にある <strong>FULL</strong> ボタンまたは <strong>F11</strong> キーでシミュレータ画面をフルスクリーン表示できます。もう一度押すと元に戻ります。</p>
 
         <h2>ROMファイルについて</h2>
-        <p>純正 ROM の権利は各権利者に帰属します。ご自身が適法に所有する実機から取得したものをお使いください。</p>
-
-        <p class="md-fine" style="font-size:0.75em;margin-top:20px;">機種名・製品名は対応対象を示すために使用しています。本プロジェクトは各メーカーの公式製品ではなく、富士通株式会社とは一切関係ありません。</p>
+        <p>お手持ちの ROM は、ご自身が適法に所有する実機から取得したものをお使いください。</p>
 
         <div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #2a2a4a;">
             <button id="helpCloseBottom" style="padding:10px 48px;font-size:1.1em;font-weight:bold;background:linear-gradient(180deg,#e8c840,#c8a020);color:#1a1a2e;border:none;border-radius:6px;cursor:pointer;font-family:inherit;letter-spacing:0.05em;">閉じる</button>
@@ -1154,19 +1152,19 @@
         <h2>同梱互換 ROM セット</h2>
         <p class="md-note" style="font-size:0.85em;">本シミュレータには、独立実装の互換 ROM セット（MIT License）を同梱しており、既定ではこの互換 ROM セットで動作します。
         ROM 本体と併せてライセンス文（LICENSE・その適用範囲を記した LICENSE-MIT.md）・同梱フォントの由来と原ライセンス文（LICENSE-FONT.md）・検証用ハッシュ（SHA256SUMS）・説明（README.md）を
-        <code>assets/altroms/</code> に同梱しています。互換 ROM セットのソースと文書は配布元 <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.0" target="_blank" rel="noopener">7032 Alternative ROMs</a> にあります。</p>
+        <code>assets/altroms/</code> に同梱しています。互換 ROM セットのソースと文書は配布元 <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.3" target="_blank" rel="noopener">7032 Alternative ROMs</a> にあります。</p>
         <p class="md-note" style="font-size:0.85em;">ただし、<strong>漢字系 ROM（KANJI・KANJI2）に含まれる第三者素材由来の字形は、上記 MIT License の対象ではありません。</strong>
         独自字形と変換処理の適用条件は、同梱の <code>assets/altroms/LICENSE-MIT.md</code> / <code>assets/altroms/LICENSE-FONT.md</code> を参照してください。
         これらの文書に現れる相対パスは互換 ROM セット側の配布物（ソース一式）内のパスです。</p>
 
         <h2>ROMファイルの取り扱いについて</h2>
         <ul class="md-note" style="font-size:0.85em;">
-        <li>本シミュレータが同梱・配信するのは、上記の独立実装互換 ROM セット（MIT License。ただし漢字系 ROM に含まれる第三者素材由来の字形は、MIT License の対象外）のみです。純正 ROM は同梱も配信もしません。</li>
+        <li>本シミュレータが同梱・配信するのは、上記の独立実装互換 ROM セット（MIT License）のみです。純正 ROM は同梱も配信もしません。</li>
         <li>利用者がご用意されたROMファイルはユーザーのブラウザ内（ローカル環境）でのみ処理します。ROMデータがサーバーに送信・保存されることはありません。</li>
         </ul>
 
         <h2>ライセンス</h2>
-        <p class="md-note" style="font-size:0.8em;">本ライセンスはWebM7自体の成果物（JavaScript, HTML, CSS のソースコードのほか、本プロジェクトが作成したドキュメント・図・アイコン・テクスチャ等を含みます）に適用されます。ROMデータその他第三者に権利が帰属する要素（各社ブランドロゴなど）には適用されません。FM 音源の FM 合成部（core/opn.js の一部）は "FM Sound Generator" (fmgen) Copyright (C) by cisc 1998, 2003 の移植で、原典の利用条件が適用されます（原文は core/fmgen_readme.txt を同梱）。同梱の互換 ROM セット（<code>assets/altroms/</code>）は別配布物であり、その条件は同梱の <code>assets/altroms/LICENSE</code> に従います（漢字系 ROM に含まれる第三者素材由来の字形は MIT License の対象外です）。適用範囲の区分は配布物の <code>LICENSE-MIT.md</code> の「ライセンスの案内」の表にあり、詳細はそれぞれ <code>LICENSE-MIT.md</code>（本プロジェクトの成果物と注記）・<code>LICENSE-fmgen.md</code>（FM 音源部）・<code>LICENSE-AltROMs.md</code>（互換 ROM セット）・<code>LICENSE-Shinonome.md</code>（漢字フォント素材）を参照してください。</p>
+        <p class="md-note" style="font-size:0.8em;">本ライセンスはWebM7自体の成果物（JavaScript, HTML, CSS のソースコードのほか、本プロジェクトが作成したドキュメント・図・アイコン・テクスチャ等を含みます）に適用されます。第三者に権利が帰属する要素（各社ブランドロゴなど）には適用されません。FM 音源の FM 合成部（core/opn.js の一部）は "FM Sound Generator" (fmgen) Copyright (C) by cisc 1998, 2003 の移植で、原典の利用条件が適用されます（原文は core/fmgen_readme.txt を同梱）。同梱の互換 ROM セット（<code>assets/altroms/</code>）は別配布物であり、その条件は同梱の <code>assets/altroms/LICENSE</code> に従います。適用範囲の区分は配布物の <code>LICENSE-MIT.md</code> の「ライセンスの案内」の表にあり、詳細はそれぞれ <code>LICENSE-MIT.md</code>（本プロジェクトの成果物と注記）・<code>LICENSE-fmgen.md</code>（FM 音源部）・<code>LICENSE-AltROMs.md</code>（互換 ROM セット）・<code>LICENSE-Shinonome.md</code>（漢字フォント素材）を参照してください。</p>
 
         <pre style="background:#1a1a2e;padding:16px;border-radius:6px;font-size:0.78em;color:#c8c8d0;white-space:pre-wrap;line-height:1.5;margin:12px 0;">MIT License
 
@@ -2119,12 +2117,11 @@ for (const [filename, entry] of Object.entries(ROM_FILE_MAP)) {
 // 同梱の互換 ROM セット (assets/altroms/ — 独立実装・MIT License)
 // を常に土台とし、ROM スロット
 // ごとに供給元を選ぶ。
-// 'builtin': 同梱の互換 ROM を fetch して使用 (既定)。起動補助は対象外。
+// 'builtin': 同梱の互換 ROM を fetch して使用 (既定)。
 // 'user': 利用者の ROM ファイル (IndexedDB に保存) を使用。
-// 起動補助はブート ROM が利用者のものであるときだけ有効にする。
 
 // ビルドスタンプ。公開時に値が入る。
-const BUILD_STAMP = '20260922205231';
+const BUILD_STAMP = '20260926195254';
 
 const ALTROM_DIR = 'assets/altroms/';
 
@@ -2140,7 +2137,7 @@ const ALTROM_QUERY = BUILD_STAMP === 'dev' ? '' : ('?v=' + encodeURIComponent(BU
 let romSlotSource = {};
 
 // 実際にコアへ読み込んだ ROM の供給元 (slot → 'user' | 'builtin')。
-// 起動補助の切り分けと ROM Set 表示はこの実績値から決める。
+// ROM Set 表示はこの実績値から決める。
 let activeRomOrigins = {};
 
 // IndexedDB に保存済みの利用者 ROM があるスロットの集合 (UI 表示用のキャッシュ)。
@@ -2383,13 +2380,6 @@ function updateRomSourceUI(ok) {
     updateRomSlotSelectUI();
 }
 
-// 起動補助はブート ROM が利用者のものであるときだけ有効にする。
-function applyRomAdjustFlags() {
-    const origins = activeRomOrigins || {};
-    fm7.romAdjust = Object.values(origins).some((o) => o === 'user');
-    fm7.romAdjustBoot = (origins['bootdos'] === 'user' || origins['bootbas'] === 'user');
-}
-
 // ROM セットを組み直す。
 // 同梱互換 ROM セットを土台とし、スロットごとに供給元へ従って読み込む。
 // 毎回 fm7.clearROMs() してから一方向に読むため、利用者 ROM を同梱互換 ROM で
@@ -2483,7 +2473,6 @@ async function applyRomSet({ persist = false } = {}) {
         romStatusEl.textContent = ok ? '互換 ROM セット' : '互換 ROM 取得失敗';
         romStatusEl.classList.toggle('loaded', ok);
     }
-    applyRomAdjustFlags();
     updateRomSourceUI(ok);
     if (typeof updateRomInfo === 'function') updateRomInfo();
     if (typeof updatePowerReadiness === 'function') updatePowerReadiness();
@@ -3324,7 +3313,7 @@ updateRecButtonsState();
 function startPaste(text) {
     if (!text) return;
     if (!fm7.romLoaded.fbasic) {
-        pasteInfo.textContent = 'F-BASIC ROM 未ロード';
+        pasteInfo.textContent = 'BASIC ROM 未ロード';
         return;
     }
     const n = fm7.keyboard.queueText(text);
@@ -3748,9 +3737,6 @@ powerToggle.addEventListener('change', async () => {
         // Start: reset + run
         fm7.setFMCard(document.getElementById('fmCardCheck').checked);
         if (fmCardHint) fmCardHint.style.display = 'none';
-        // 起動補助は、実際に読み込んだ ROM の供給元から決める。
-        // 同梱互換 ROM では起動補助を行わない。
-        applyRomAdjustFlags();
         fm7.reset();
         fm7.start(canvas);
         setEmuState('running');
@@ -5005,7 +4991,7 @@ function generateStateDump() {
     // --- ROM checksums ---
     lines.push('[ROMs]');
     const romBlobs = [
-        ['F-BASIC',    fm7.fbasicROM,    fm7.romLoaded && fm7.romLoaded.fbasic],
+        ['BASIC ROM',  fm7.fbasicROM,    fm7.romLoaded && fm7.romLoaded.fbasic],
         ['Boot',       fm7.bootROM,      fm7.romLoaded && fm7.romLoaded.boot],
         ['Boot-BAS',   fm7.bootBasROM,   fm7.romLoaded && fm7.romLoaded.bootBas],
         ['Sub (C)',    fm7.subROM,       fm7.romLoaded && fm7.romLoaded.sub],
@@ -5771,13 +5757,13 @@ document.getElementById('copyrightYear').textContent =
 //   av     = FM77AV(初代): 黒筐体 AV 意匠＋フルハイト 3.5 インチ 2D
 //   av2040 = FM77AV20 / FM77AV40: 黒筐体 AV 意匠＋ハーフハイト 2DD（同一見た目）
 //   avex   = FM77AV20EX / FM77AV40EX: 赤ピンストライプの薄型スリムバー（同一見た目）
-//   avsx   = AV40SX: FM77AV40EX のスキンとしてのみ存在（御影石＋グリーン電源）
+//   avsx   = FM77AV40EX の FM77AV40SX スキンとしてのみ存在（御影石＋グリーン電源）
 // 銘板の機種名表記のみ各機種のものにする。
 const UI_SKIN_CLASSES = ['ui-skin-fm7', 'ui-skin-new7', 'ui-skin-fm77',
                          'ui-skin-av', 'ui-skin-av2040', 'ui-skin-avex', 'ui-skin-avsx'];
 // 機種ごとの選択可能スキン（機能は同一・外見のみ変更）
 const UI_SKIN_CHOICES = {
-    fm7:        { def: 'fm7',  list: [['fm7', 'FM-7'], ['new7', 'FM-new7']] },
+    fm7:        { def: 'fm7',  list: [['fm7', 'FM-7'], ['new7', 'FM-NEW7']] },
     fm77av40ex: { def: 'avex', list: [['avex', 'FM77AV40EX'], ['avsx', 'FM77AV40SX']] },
 };
 // スキン選択の無い機種の見た目グループ
@@ -5806,11 +5792,11 @@ function applyUiSkin() {
     const skin = uiCurrentSkin();
     document.body.classList.remove(...UI_SKIN_CLASSES);
     document.body.classList.add('ui-skin-' + skin);
-    // FM-7 / FM-new7 スキンだけは、画面下に上面帯 (#hwTowerBand)、右列に外付けユニット
+    // FM-7 / FM-NEW7 スキンだけは、画面下に上面帯 (#hwTowerBand)、右列に外付けユニット
     // (#hwTower) を置くレイアウト（CSS の body.hw-right で切り替え）
     document.body.classList.toggle('hw-right', skin === 'fm7' || skin === 'new7');
 
-    // FM-7 / FM-new7 の機種名の表示。
+    // FM-7 / FM-NEW7 の機種名の表示。
     const towerModel = document.getElementById('hwTowerModel');
     if (towerModel) towerModel.textContent = skin === 'new7' ? 'FM-NEW7' : 'FM-7';
 
@@ -5819,23 +5805,23 @@ function applyUiSkin() {
     const lip  = document.getElementById('hwLipCaption');
     if (np && note && lip) {
         if (skin === 'fm77') {
-            // 下段左の注記は出さない（実機の前面に無い文言。帯は横溝が全幅に走る）
+            // 下段左の注記は出さない（帯は横溝が全幅に走る）
             np.textContent = 'FM-77';
             lip.textContent = '';
             note.textContent = '';
         } else if (skin === 'avex' || skin === 'avsx') {
-            // EX グループ（FM77AV20EX / FM77AV40EX、AV40SX スキン）:
+            // EX グループ（FM77AV20EX、FM77AV40EX / FM77AV40SX スキン）:
             // 薄型スリムバー意匠。銘板のみ機種名を変える
             np.textContent = skin === 'avsx' ? 'FM77AV40SX'
                            : (machine === 'fm77av20ex' ? 'FM77AV20EX' : 'FM77AV40EX');
-            note.textContent = '';   // 右上の注記は出さない（実機に無い文言）
+            note.textContent = '';   // 右上の注記は出さない
             lip.textContent = '';
         } else if (skin === 'av' || skin === 'av2040') {
             // 黒筐体 AV 意匠。av = フルハイト 2D（初代のみ）、
             // av2040 = ハーフハイト 2DD（ベイ形状は CSS 側 machine-av20up）
             np.textContent = UI_NAMEPLATES[machine] || 'FM77AV';
             lip.textContent = '';
-            note.textContent = '';   // 右上の注記は出さない（実機に無い文言）
+            note.textContent = '';   // 右上の注記は出さない
         }
     }
     // 前面下段の音量ラベル: 初代 AV のみ「音量バランス」、以降は「音量・バランス」
@@ -6003,7 +5989,7 @@ function setScaleMode(mode, persist = true) {
 
 // ---- ハードウェアパネルの結線 --------------------------------------------
 {
-    // 電源（実機意匠のスイッチ → 既存 Power トグルへ委譲）
+    // 電源（パネルのスイッチ → 既存 Power トグルへ委譲）
     for (const id of ['hwTowerPower', 'hwBarPowerLeft', 'hwBarPowerRight']) {
         const el = document.getElementById(id);
         if (el) el.addEventListener('click', () => powerToggle.click());
@@ -6097,7 +6083,7 @@ function setScaleMode(mode, persist = true) {
 
 // ---- 起動モード (Boot Mode) のハードウェア意匠 ---------------------
 // 設定パネルの bootMode ラジオ（非表示・委譲先）を唯一の状態源とし、
-// FM-7 (FM-7/new7 スキン) の DIP スイッチ・FM-77 の BOOT ボタン・FM77AV 系の BASIC/DOS
+// FM-7 (FM-7 / FM-NEW7 スキン) の DIP スイッチ・FM-77 の BOOT ボタン・FM77AV 系の BASIC/DOS
 // ボタンはいずれもラジオへ委譲する。実行中の切替可否も既存挙動
 // （実行中はロック）に従う。
 function hwCurrentBootMode() {

@@ -3,13 +3,7 @@
 // =============================================================================
 // HFE floppy-image support (HFE v1 bit-stream floppy image format)
 //
-// Floppy-drive emulator hardware feeds the drive a raw
-// MFM bit-cell stream taken from an .hfe file.  Unlike a sector image (.d77),
-// an HFE preserves the *physical* track: gaps, sync marks and — crucially —
-// the total track length.  A hand-authored track whose MFM length overruns the
-// nominal bytes-per-side will pass a sector CRC check yet fail to boot on the
-// real machine, because the index pulse arrives before the controller finishes
-// the track.
+// HFE v1 のトラック情報を読み込み、トラック長を検査する。
 //
 // This module:
 //   * parses HFE v1 (format signature "HXCPICFE"),
@@ -17,8 +11,7 @@
 //   * validates those lengths against the nominal bytes/side derived from the
 //     bit rate and spindle RPM (the check that catches "over-length" media),
 //   * MFM-decodes the stream into sectors so the image can actually be booted,
-//   * and can MFM-encode/build an HFE (used by the headless tests and for any
-//     future D77 -> HFE export).
+//   * and can MFM-encode/build an HFE.
 //
 // Bit order follows the HFE format convention: within each stored byte the
 // least significant bit is the first bit in time.
@@ -268,7 +261,7 @@ export function nominalBytesPerSide(bitRate, rpm) {
 
 // ---------------------------------------------------------------------------
 // Validate per-side track lengths.  Over-length tracks are the ones that pass
-// sector CRC yet fail to boot on real hardware (the index pulse cuts the track
+// sector CRC yet fail to boot (the index pulse cuts the track
 // short), so they are flagged.  Returns an array of warning objects.
 // ---------------------------------------------------------------------------
 export function validateHFETrackLengths(parsed, opts = {}) {

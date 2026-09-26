@@ -16,7 +16,7 @@
   <!-- CPU ボックス -->
   <rect x="110" y="160" width="240" height="60" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
   <text x="230" y="185" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">メイン CPU（MC6809）</text>
-  <text x="230" y="207" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">F-BASIC・プログラムの実行</text>
+  <text x="230" y="207" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">BASIC・プログラムの実行</text>
 
   <rect x="490" y="160" width="240" height="60" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
   <text x="610" y="185" font-family="sans-serif" font-size="15" font-weight="bold" fill="#8250df" text-anchor="middle">サブ CPU（MC6809）</text>

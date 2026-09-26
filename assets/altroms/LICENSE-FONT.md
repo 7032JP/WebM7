@@ -16,11 +16,9 @@ this project's own work under the MIT License (see LICENSE).
   Author      : Yasuyuki Furukawa
   Distributor : The Electronic Font Open Laboratory (/efont/)
   Source      : http://openlab.ring.gr.jp/efont/dist/shinonome/shinonome-0.9.11p1.tar.bz2
-  License     : Public domain, as declared in the upstream LICENSE (copied in
-                section 4). Because copyright cannot be abandoned under
-                Japanese law, the declaration is made by the authors listed in
-                the upstream AUTHORS stating that they will not exercise their
-                rights. The license permits modification, conversion to other
+  License     : Public domain. The upstream LICENSE declares that this
+                material is provided as public domain; the declaration itself
+                is in section 4. It permits modification, conversion to other
                 formats, embedding and redistribution, with no warranty.
 
   素材名      : 東雲フォントファミリー 16 ドット 漢字ゴシック体 (shnmk16)
@@ -28,10 +26,9 @@ this project's own work under the MIT License (see LICENSE).
   原作者      : 古川泰之 氏
   一次配布元  : The Electronic Font Open Laboratory (/efont/)
   取得元      : 上記 URL
-  ライセンス  : パブリックドメイン。上流の LICENSE (第 4 節に写しを置く) が
-                宣言するもので、日本では著作権の放棄が制度上できないため、
-                上流の AUTHORS に列挙された作者が権利を行使しないと宣言する
-                形を採っています。改造・他フォーマットへの変換・組込み・
+  ライセンス  : パブリックドメイン。上流の LICENSE は、本素材をパブリック
+                ドメインとして提供すると宣言しています。宣言の原文は第 4 節
+                を参照してください。改造・他フォーマットへの変換・組込み・
                 再配布が許され、無保証です。
 
 --------------------------------------------------------------------------
@@ -96,11 +93,6 @@ this project's own work under the MIT License (see LICENSE).
     - the layout rule implementation and the conversion script that build
       the ROM images from the font (scripts/genkanji.py).
 
-  What this project does with the font -- removing 107 code positions,
-  converting the BDF into the ROM image format, embedding the glyphs, and
-  redistributing the modified BDF and its products -- is within the
-  permission the upstream license grants in writing.
-
   同梱の BDF は roms/kanji.rom と roms/kanji2.rom の字形 (グリフ) の入力
   です。そこから採った字形はパブリックドメインのままで、MIT License は
   適用されません。この 2 本の ROM イメージを再配布されるときは、字形の
@@ -111,10 +103,6 @@ this project's own work under the MIT License (see LICENSE).
       符号位置の一覧は docs/LEGAL.md §9.2)
     - フォントから ROM イメージを組み上げる配置規則の実装と変換スクリプト
       (scripts/genkanji.py)
-
-  本プロジェクトが本素材に対して行っているのは、107 符号位置の除去・BDF
-  から ROM イメージ形式への変換・字形の組込み・改変した BDF とその生成物の
-  再配布で、いずれも上流のライセンスが明文で認める範囲に含まれます。
 
 --------------------------------------------------------------------------
 4. Upstream license text / 上流のライセンス文

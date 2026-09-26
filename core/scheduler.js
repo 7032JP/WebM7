@@ -3,15 +3,7 @@
 /**
  * FM-7 Event Scheduler
  *
- * Cycle-accurate dual-CPU event scheduler for FM-7.
- *
- * Main CPU: 6809 @ 1.794 MHz effective (nominal 2 MHz minus memory waits)
- * Sub  CPU: 6809 @ 2.000 MHz — its own clock, not a 1:1 ratio with main
- * FM77AV family only: MMR/TWR lower the *main* effective clock further
- *
- * Key periodic events:
- *   Timer IRQ  - fires every ~2034.5 us (alternating 2034/2035)
- *   VSync      - fires every 16667 us (60 Hz NTSC)
+ * デュアル CPU と周期イベントの実行を管理する。サブ CPU はクロック比に応じて実行する。
  */
 
 // Main and sub CPU clocks differ. Every machine (FM-7, FM-77, FM77AV family)
@@ -289,9 +281,9 @@ export class Scheduler {
      *
      * Execution proceeds instruction-by-instruction on the main CPU.
      * After each main CPU instruction the sub CPU is run until it has
-     * consumed at least as many total cycles (1:1 ratio), unless it is
-     * halted.  After each main instruction, all scheduler events are
-     * ticked by the number of cycles just consumed.
+     * caught up with its cycle budget (main cycles times the clock ratio),
+     * unless it is halted.  After each main instruction, all scheduler
+     * events are ticked by the number of cycles just consumed.
      *
      * @param {number} microseconds - target wall-time to simulate
      * @returns {number} actual microseconds executed
@@ -311,8 +303,7 @@ export class Scheduler {
             this.subCyclesTarget += mainElapsed * SUB_CYCLE_RATIO;
 
             // --- Sub CPU: catch up to its own cycle budget ---
-            // Real HW: sub runs at 2.0 MHz while main effective is 1.794 MHz,
-            // so sub does ~11.5% more cycles per wall-time unit than main.
+            // サブ CPU の実行量はクロック比 (SUB_CYCLE_RATIO) で決める。
             if (!this.subHalted && this.subCPU) {
                 while (this.subCyclesTotal < this.subCyclesTarget) {
                     const subElapsed = this.subCPU.exec();

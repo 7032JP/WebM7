@@ -39,6 +39,6 @@
 
   <!-- 注意書き -->
   <rect x="40" y="280" width="800" height="60" rx="8" fill="#fff8c5" stroke="#bc4c00" stroke-width="1.5"/>
-  <text x="440" y="305" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00" text-anchor="middle">書き込みはブラウザ内のみ — PC 本体の D77 ファイルは変更されません</text>
-  <text x="440" y="327" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">PC へ書き出すのは Disk Images の Save ボタンだけです（別名保存を推奨）</text>
+  <text x="440" y="305" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00" text-anchor="middle">変更はブラウザ内に保持されます — PC へ保存するには Save または Library の Exp で書き出す</text>
+  <text x="440" y="327" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">元のファイルを残す場合は別名で保存してください</text>
 </svg>
