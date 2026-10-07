@@ -1,18 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 7032 / Naomitsu Tsugiiwa
 // FM-7 / FM77AV / FM77AV40 Display System for Web Simulator
-// Handles VRAM (3 bitplanes, up to 3 pages), TTL/analog palette, sub CPU memory, and RGBA frame rendering (output goes to a frame sink; the browser UI attaches a canvas-backed sink).
-// Includes full FM77AV ALU (MB61VH010/011), hardware line drawing engine, and 262,144-color mode.
-
-//
-// Sub CPU memory map:
-//   $0000-$3FFF  VRAM Blue plane   (16KB)
-//   $4000-$7FFF  VRAM Red plane    (16KB)
-//   $8000-$BFFF  VRAM Green plane  (16KB)
-//   $C000-$D37F  Sub CPU work RAM  (0x1380 bytes)
-//   $D380-$D3FF  Shared RAM (handled externally in fm7.js)
-//   $D400-$D40F  I/O registers (FM-7)
-//   $D410-$D42F  I/O registers (FM77AV extended: ALU + line drawer)
+// Handles VRAM, TTL/analog palette, sub CPU memory, and RGBA frame rendering (output goes to a frame sink).
+// Includes the FM77AV ALU, the line drawing engine, and the 262,144-color mode.
+// Shared RAM is handled in fm7.js.
 
 const VRAM_SIZE       = 0xC000;  // 48KB per page, 3 planes
 const PLANE_SIZE      = 0x4000;  // 16KB per plane
@@ -97,9 +88,10 @@ export class Display {
         this._vramBuf2 = new ArrayBuffer(VRAM_SIZE);
         this.vramPage2 = new Uint8Array(this._vramBuf2);
 
-        // VRAM pages 3-5: back-buffer planes for AV40EX/SX 2-page 400-line and
-        // 2-page 262K/4096-color modes. Mirror vram/vramPage1/vramPage2 layout
-        // but are used only when activeVramPage/displayVramPage === 1.
+        // VRAM pages 3-5: back block planes for AV40EX/SX 2-page 400-line and
+        // 2-page 262K/4096-color modes. Same layout as vram/vramPage1/vramPage2.
+        // blockDisplay selects the block to render; blockActive selects the write
+        // target in the 400-line and 262K-color modes.
         this._vramBuf3 = new ArrayBuffer(VRAM_SIZE);
         this.vramPage3 = new Uint8Array(this._vramBuf3);
         this._vramBuf4 = new ArrayBuffer(VRAM_SIZE);
@@ -110,7 +102,7 @@ export class Display {
         // Temporary buffer for VRAM scroll rotation (32KB for 400-line planes)
         this._scrollBuf = new Uint8Array(PLANE_SIZE_400);
 
-        // Sub CPU work RAM: $C000-$D37F (5KB) + $D500-$D7FF (768 bytes, FM77AV only)
+        // Sub CPU work RAM: $C000-$D37F (4992 bytes) + $D500-$D7FF (768 bytes, FM77AV only)
         this._workBuf = new ArrayBuffer(0x1680);  // 0x1380 + 0x0300
         this.workRam = new Uint8Array(this._workBuf);
 
@@ -132,14 +124,14 @@ export class Display {
         // VRAM offset register (scroll offset within each plane)
         // FM77AV: separate offset per page
         this.vramOffset = [0, 0];       // [page0, page1] - register value
-        this.crtcOffset = [0, 0];       // [page0, page1] - applied scroll offset
-        this._vramOffsetCount = [0, 0]; // Counter: scroll executes on even count
+        this.appliedScrollOffset = [0, 0]; // [page0, page1] - scroll offset already applied to VRAM
+        this._scrollWriteCount = [0, 0];   // $D40E/$D40F write counter: scroll executes on even count
         this.vramOffsetFlag = false;    // Extended VRAM offset (bit 2 of $D430)
 
         // FM77AV VRAM page control
         this.activeVramPage = 0;    // Sub CPU writes to this page (0 or 1)
         this.displayVramPage = 0;   // Renderer reads from this page (0 or 1)
-        this.displayMode = DISPLAY_MODE_640;  // 640x200 or 320x200
+        this.displayMode = DISPLAY_MODE_640;  // current display mode (DISPLAY_MODE_*)
         this._mode320Flag = false;  // Tracks $FD12 bit6 independently from displayMode
 
         // FM77AV40EX/SX VRAM block select ($D433 bits 0/4)
@@ -151,7 +143,7 @@ export class Display {
         this.blockDisplay = 0;
 
         // FM77AV40EX hardware window ($D438-$D43F). Pixel rectangle [x1,x2) × [y1,y2)
-        // — inside the window the renderer reads from the *other* block
+        // — in 640x400 mode, inside the window the renderer reads from the *other* block
         // (back if blockDisplay=0, front if blockDisplay=1). X aligned on 8 px.
         this.windowX1 = 0;
         this.windowX2 = 0;
@@ -159,12 +151,8 @@ export class Display {
         this.windowY2 = 0;
         this.windowOpen = false;
 
-        // Diagnostic ring buffer for scroll register / display state events.
-        // Tags: D40E, D40F, SCROLL, APG, DPG, MODE, D430, PAL_B/R/G, FD37
-        // DISABLED BY DEFAULT — set fm7.display.enableScrollTrace = true to
-        // start capturing. Allocating an event object per hot-path I/O write
-        // (e.g. D430 inside a tight loop) causes severe GC pressure.
-        // Inspect via fm7.display.dumpScrollTrace() in browser console.
+        // Optional diagnostic trace of scroll / display state events
+        // (off by default; see dumpScrollTrace()).
         this.enableScrollTrace = false;
         this._scrollTraceSize = 65536;
         this._scrollTrace = new Array(this._scrollTraceSize);
@@ -178,7 +166,7 @@ export class Display {
         this.isAV40 = false;
 
         // FM77AV40: VRAM bank select ($D42F) for 262,144-color / 400-line mode
-        this.subramVramBank = 0;  // 0-2 (bank 3 does not exist)
+        this.vramBankSelect = 0;  // 0-2 (bank 3 does not exist)
 
         // Multi-page register: bit mask controlling which planes are active
         // bit 0 = blue (plane 0), bit 1 = red (plane 1), bit 2 = green (plane 2)
@@ -193,12 +181,12 @@ export class Display {
                                       //   bit 6: compare-write mode
                                       //   bit 5: NOT-equal write (with bit 6)
                                       //   bits 2-0: operation mode
-        this.aluColor     = 0;       // $D411: ALU color (bits 2-0 = BGR)
+        this.aluColor     = 0;       // $D411: ALU color (bit 0 = B, bit 1 = R, bit 2 = G)
         this.aluMask      = 0;       // $D412: ALU mask (1=preserve original bit)
-        this.aluCmpStat   = 0;       // $D413: compare result status (read)
-        this.aluCmpDat    = new Uint8Array(8);  // $D413-$D41A: compare data (write)
+        this.aluCompareStatus   = 0;       // $D413: compare result status (read)
+        this.aluCompareData    = new Uint8Array(8);  // $D413-$D41A: compare data (write)
         this.aluDisable   = 0x00;    // $D41B: plane disable (bit=1 disables ALU on that plane)
-        this.aluTileDat   = new Uint8Array(3);  // $D41C-$D41E: tile patterns per plane
+        this.aluTileData   = new Uint8Array(3);  // $D41C-$D41E: tile patterns per plane
 
         // ---------------------------------------------------------------
         //  Line drawing engine registers ($D420-$D42B)
@@ -212,30 +200,27 @@ export class Display {
         this.lineY1       = 0;       // $D42A-$D42B: Y1 coordinate (9-bit)
 
         // Internal line drawing state
-        this._lineAddrOld = 0xFFFF;  // Previous VRAM address during line draw
+        this._linePrevAddr = 0xFFFF;  // Previous VRAM address during line draw
         this._lineMask    = 0xFF;    // Current line drawing mask byte
         this._lineCount   = 0;       // Bytes processed during line draw
-        this._lineCountSub = 0;      // Sub-byte counter for busy time
+        this._lineBusyRemainder = 0;  // Busy-time remainder carried over to the next line
         this._lineBusyMicros = 0;    // BUSY timer countdown (microseconds); cleared by fm7.js
 
-        // MISC register ($D430) readback value (maintained by fm7.js)
+        // MISC register ($D430) last written value (maintained by fm7.js)
         this.miscReg = 0;
 
         // CRT and VRAM access flags (sub CPU I/O side effects)
         // CRT 表示は $D408 の読みで点灯、書き込みで消灯する。
         // リセットとサブ CPU のリセット ($FD13) でも消灯する。
-        // vramaFlag: サブ CPU 側の VRAM アクセス許可 ($D409 読みで許可・書きで
+        // vramAccessEnabled: サブ CPU 側の VRAM アクセス許可 ($D409 読みで許可・書きで
         // 禁止)。表示の点灯・消灯とは独立で、描画には関与しない。
         this.crtOn = false;
-        this.vramaFlag = false;
+        this.vramAccessEnabled = false;
         // insLedOn: キーボードの INS LED ($D40D 読みで点灯・書きで消灯、
         // リセットとサブ CPU のリセットで消灯)。
         this.insLedOn = false;
-        // $D405 bit 0: cycle-steal mode. When set, the sub CPU is released
-        // from the CRT's VRAM bus contention during active scan. Introduced
-        // with the FM-77; the FM-7 has no such switch, so fm7.js only lets
-        // the register through on machines where hasCycleStealControl is
-        // true. Default false = contention active, i.e. FM-7 behaviour.
+        // $D405 bit 0: cycle-steal mode. Only machines where
+        // hasCycleStealControl is true expose this register (see fm7.js).
         this.cycleStealMode = false;
 
         // Dirty tracking (50 bands = 400 lines / 8; 200-line modes use first 25)
@@ -259,8 +244,7 @@ export class Display {
 
     /**
      * Make sure the current frame has the requested size. A new frame (from
-     * the sink) forces a full redraw, exactly as a canvas re-initialisation
-     * did before the frame sink was introduced.
+     * the sink) forces a full redraw.
      */
     _acquireFrame(w, h) {
         const frame = this.frameSink.acquireFrame(w, h);
@@ -299,16 +283,16 @@ export class Display {
 
     /** Get the VRAM array for the active (write) page */
     _getActiveVram() {
-        // In 262K / 400-line mode, subramVramBank selects plane bank (0-2),
+        // In 262K / 400-line mode, vramBankSelect selects plane bank (0-2),
         // blockActive ($D433 bit0, AV40EX/SX 2-page mode) selects front/back block.
         if (this.displayMode === DISPLAY_MODE_262K || this.displayMode === DISPLAY_MODE_400) {
             if (this.blockActive === 1) {
-                if (this.subramVramBank === 2) return this.vramPage5;
-                if (this.subramVramBank === 1) return this.vramPage4;
+                if (this.vramBankSelect === 2) return this.vramPage5;
+                if (this.vramBankSelect === 1) return this.vramPage4;
                 return this.vramPage3;
             }
-            if (this.subramVramBank === 2) return this.vramPage2;
-            if (this.subramVramBank === 1) return this.vramPage1;
+            if (this.vramBankSelect === 2) return this.vramPage2;
+            if (this.vramBankSelect === 1) return this.vramPage1;
             return this.vram;
         }
         return this.activeVramPage === 0 ? this.vram : this.vramPage1;
@@ -320,15 +304,7 @@ export class Display {
     }
 
     /**
-     * Mark the display dirty-band for a raw plane-region byte offset, honouring
-     * the differing geometry of the 200-line display modes:
-     *   640x200 8-color : 80 bytes/line, physical-rotation scroll (offset already
-     *                     applied to VRAM contents, so raw offset == screen line)
-     *   320x200 4096    : 40 bytes/line, 0x2000-byte sub-plane, physical-rotation
-     *                     scroll (raw sub-plane offset == screen line)
-     *   320x200 262K    : 40 bytes/line, 0x2000-byte sub-plane, read-time per-bank
-     *                     scroll offset — invert it to recover the screen line
-     * The renderer applies the inverse of this mapping, so both must agree.
+     * Mark the affected display region for redraw.
      * @param {number} rawOffset - byte offset within a 0x4000 plane region
      */
     _markVramLineDirty(rawOffset) {
@@ -339,7 +315,7 @@ export class Display {
             const sub = rawOffset & 0x1FFF;
             // Bank 1 scrolls by vramOffset[1]; banks 0/2 share vramOffset[0]
             // (matches _render320x200_262k's ofsB0/ofsB1/ofsB2).
-            const ofs = (this.subramVramBank === 1) ? this.vramOffset[1] : this.vramOffset[0];
+            const ofs = (this.vramBankSelect === 1) ? this.vramOffset[1] : this.vramOffset[0];
             screenLine = (((sub - ofs + 0x2000) & 0x1FFF) / BYTES_PER_LINE_320) | 0;
         } else {
             screenLine = (rawOffset / BYTES_PER_LINE) | 0;
@@ -356,7 +332,7 @@ export class Display {
     /**
      * Read a byte from VRAM for ALU operations on a specific plane (bank).
      * Respects the multi-page access mask. Returns 0xFF if the plane is masked.
-     * @param {number} offset - byte offset within a plane (0..0x3FFF)
+     * @param {number} offset - byte offset within a plane (masked to the plane size of the current mode)
      * @param {number} plane - plane number (0=blue, 1=red, 2=green)
      * @returns {number} byte value
      */
@@ -378,7 +354,7 @@ export class Display {
     /**
      * Write a byte to VRAM for ALU operations on a specific plane (bank).
      * Respects the multi-page access mask. Skips write if plane is masked.
-     * @param {number} offset - byte offset within a plane (0..0x3FFF)
+     * @param {number} offset - byte offset within a plane (masked to the plane size of the current mode)
      * @param {number} plane - plane number (0=blue, 1=red, 2=green)
      * @param {number} dat - byte value to write
      */
@@ -414,15 +390,14 @@ export class Display {
     }
 
     /**
-     * ALU write sub-routine with compare-write support.
      * ALU write with compare-write mode support.
      * If compare-write mode (bit 6 of aluCommand) is active, the write
-     * is masked by the compare status register (aluCmpStat).
+     * is masked by the compare status register (aluCompareStatus).
      * @param {number} offset - byte offset within a plane
      * @param {number} plane - plane number
      * @param {number} dat - data to write
      */
-    _aluWriteSub(offset, plane, dat) {
+    _aluWriteWithCompare(offset, plane, dat) {
         // Check if compare-write mode is active
         if ((this.aluCommand & 0x40) === 0) {
             // Normal write
@@ -436,19 +411,18 @@ export class Display {
 
         if (this.aluCommand & 0x20) {
             // NOT-equal write: write where compare did NOT match
-            temp = existing & this.aluCmpStat;
-            dat = dat & (~this.aluCmpStat & 0xFF);
+            temp = existing & this.aluCompareStatus;
+            dat = dat & (~this.aluCompareStatus & 0xFF);
         } else {
             // Equal write: write where compare DID match
-            temp = existing & (~this.aluCmpStat & 0xFF);
-            dat = dat & this.aluCmpStat;
+            temp = existing & (~this.aluCompareStatus & 0xFF);
+            dat = dat & this.aluCompareStatus;
         }
 
         this._aluWritePlane(offset, plane, (temp | dat) & 0xFF);
     }
 
     // ---------------------------------------------------------------
-    //  ALU operation implementations
     //  ALU operation implementations
     // ---------------------------------------------------------------
 
@@ -476,14 +450,14 @@ export class Display {
                 dat = (dat & (~this.aluMask & 0xFF)) | (mask & this.aluMask);
 
                 // Write with compare-write support
-                this._aluWriteSub(addr, plane, dat);
+                this._aluWriteWithCompare(addr, plane, dat);
             }
             bit <<= 1;
         }
     }
 
     /**
-     * ALU PROHIBIT operation (command 1): preserves masked bits only.
+     * ALU prohibit operation (command 1): preserves masked bits only.
      * Effectively clears unmasked bits while keeping masked bits.
      */
     _aluProhibit(addr) {
@@ -496,7 +470,7 @@ export class Display {
             if (!(this.aluDisable & bit)) {
                 const mask = this._aluReadPlane(addr, plane);
                 const dat = mask & this.aluMask;
-                this._aluWriteSub(addr, plane, dat);
+                this._aluWriteWithCompare(addr, plane, dat);
             }
             bit <<= 1;
         }
@@ -518,7 +492,7 @@ export class Display {
                 dat |= mask;
                 // Apply mask bits
                 dat = (dat & (~this.aluMask & 0xFF)) | (mask & this.aluMask);
-                this._aluWriteSub(addr, plane, dat);
+                this._aluWriteWithCompare(addr, plane, dat);
             }
             bit <<= 1;
         }
@@ -539,7 +513,7 @@ export class Display {
                 const mask = this._aluReadPlane(addr, plane);
                 dat &= mask;
                 dat = (dat & (~this.aluMask & 0xFF)) | (mask & this.aluMask);
-                this._aluWriteSub(addr, plane, dat);
+                this._aluWriteWithCompare(addr, plane, dat);
             }
             bit <<= 1;
         }
@@ -560,7 +534,7 @@ export class Display {
                 const mask = this._aluReadPlane(addr, plane);
                 dat ^= mask;
                 dat = (dat & (~this.aluMask & 0xFF)) | (mask & this.aluMask);
-                this._aluWriteSub(addr, plane, dat);
+                this._aluWriteWithCompare(addr, plane, dat);
             }
             bit <<= 1;
         }
@@ -580,7 +554,7 @@ export class Display {
                 const mask = this._aluReadPlane(addr, plane);
                 let dat = (~mask) & 0xFF;
                 dat = (dat & (~this.aluMask & 0xFF)) | (mask & this.aluMask);
-                this._aluWriteSub(addr, plane, dat);
+                this._aluWriteWithCompare(addr, plane, dat);
             }
             bit <<= 1;
         }
@@ -588,7 +562,7 @@ export class Display {
 
     /**
      * ALU TILE operation: write tile pattern data to planes.
-     * Each plane gets its own tile byte from aluTileDat[plane].
+     * Each plane gets its own tile byte from aluTileData[plane].
      */
     _aluTile(addr) {
         if (this.aluCommand & 0x40) {
@@ -598,22 +572,22 @@ export class Display {
         let bit = 0x01;
         for (let plane = 0; plane < 3; plane++) {
             if (!(this.aluDisable & bit)) {
-                let dat = this.aluTileDat[plane];
+                let dat = this.aluTileData[plane];
                 // Apply mask
                 const mask = this._aluReadPlane(addr, plane);
                 dat = (dat & (~this.aluMask & 0xFF)) | (mask & this.aluMask);
-                this._aluWriteSub(addr, plane, dat);
+                this._aluWriteWithCompare(addr, plane, dat);
             }
             bit <<= 1;
         }
     }
 
     /**
-     * ALU COMPARE operation: compare VRAM colors against compare registers.
+     * ALU compare operation: compare VRAM colors against compare registers.
      * For each of the 8 pixel positions in the byte, extract the 3-bit color
      * from the 3 planes, then check if that color matches any of the 8
      * compare data registers (that are enabled with bit 7 = 0).
-     * Result bits are set in aluCmpStat.
+     * Result bits are set in aluCompareStatus.
      */
     _aluCompare(addr) {
         // Read all three planes
@@ -638,8 +612,8 @@ export class Display {
             let matched = false;
             for (let j = 0; j < 8; j++) {
                 // bit 7 = 0 means this slot is active
-                if ((this.aluCmpDat[j] & 0x80) === 0) {
-                    if ((this.aluCmpDat[j] & disMask) === (color & disMask)) {
+                if ((this.aluCompareData[j] & 0x80) === 0) {
+                    if ((this.aluCompareData[j] & disMask) === (color & disMask)) {
                         matched = true;
                         break;
                     }
@@ -653,7 +627,7 @@ export class Display {
             bitPos >>= 1;
         }
 
-        this.aluCmpStat = result;
+        this.aluCompareStatus = result;
     }
 
     /**
@@ -661,7 +635,7 @@ export class Display {
      * Called from the line drawing engine.
      * Uses the line drawing mask (_lineMask) instead of aluMask.
      */
-    _aluLineExec(addr) {
+    _aluExecLineByte(addr) {
         if (addr >= 0x8000) {
             this._lineMask = 0xFF;
             return;
@@ -683,18 +657,6 @@ export class Display {
     }
 
     /**
-     * Execute ALU operation triggered by VRAM read/write.
-     * Called when ALU is enabled (bit 7 of aluCommand) and sub CPU
-     * reads or writes VRAM.
-     */
-    _aluExtrb(addr) {
-        if (!(this.aluCommand & 0x80)) {
-            return;
-        }
-        this._dispatchAluOp(addr);
-    }
-
-    /**
      * Dispatch to the correct ALU operation based on command bits 2-0.
      */
     _dispatchAluOp(addr) {
@@ -712,17 +674,15 @@ export class Display {
     }
 
     // ---------------------------------------------------------------
-    //  Hardware Line Drawing Engine
-    //  Hardware line drawing engine using Bresenham's algorithm
+    //  Hardware line drawing engine (Bresenham's algorithm)
     // ---------------------------------------------------------------
 
     /**
      * Plot a single pixel during line drawing.
      * Accumulates a mask byte and triggers ALU execution when
      * the address changes to the next byte.
-     * Plot a pixel during line drawing, accumulating mask bytes.
      */
-    _linePset(x, y) {
+    _linePlotPixel(x, y) {
         // ALU must be enabled for line drawing
         if (!(this.aluCommand & 0x80)) {
             return;
@@ -744,9 +704,9 @@ export class Display {
         addr = (addr + this.lineOffset) & planeMask;
 
         // If address changed from previous pixel, flush the ALU for the old address
-        if (this._lineAddrOld !== addr) {
-            this._aluLineExec(this._lineAddrOld);
-            this._lineAddrOld = addr;
+        if (this._linePrevAddr !== addr) {
+            this._aluExecLineByte(this._linePrevAddr);
+            this._linePrevAddr = addr;
         }
 
         // Apply line style: only set pixel if current style bit is 1
@@ -763,7 +723,6 @@ export class Display {
     /**
      * Execute hardware line drawing using Bresenham's algorithm.
      * Triggered by writing to $D42B (Y1 low byte).
-     * Execute hardware line drawing using Bresenham's algorithm.
      */
     _lineDrawExec() {
         let x1 = this.lineX0;
@@ -773,7 +732,7 @@ export class Display {
 
         // Initialize line drawing state
         this._lineCount = 0;
-        this._lineAddrOld = 0xFFFF;
+        this._linePrevAddr = 0xFFFF;
         this._lineMask = 0xFF;
 
         // Calculate deltas and step directions
@@ -797,18 +756,18 @@ export class Display {
 
         if (dx === 0 && dy === 0) {
             // Single point
-            this._linePset(x1, y1);
+            this._linePlotPixel(x1, y1);
         } else if (dx === 0) {
             // Vertical line
             for (;;) {
-                this._linePset(x1, y1);
+                this._linePlotPixel(x1, y1);
                 if (y1 === y2) break;
                 y1 += uy;
             }
         } else if (dy === 0) {
             // Horizontal line
             for (;;) {
-                this._linePset(x1, y1);
+                this._linePlotPixel(x1, y1);
                 if (x1 === x2) break;
                 x1 += ux;
             }
@@ -816,7 +775,7 @@ export class Display {
             // Shallow line (DX >= DY)
             let r = dx >> 1;
             for (;;) {
-                this._linePset(x1, y1);
+                this._linePlotPixel(x1, y1);
                 if (x1 === x2) break;
                 x1 += ux;
                 r -= dy;
@@ -829,7 +788,7 @@ export class Display {
             // Steep line (DX < DY)
             let r = dy >> 1;
             for (;;) {
-                this._linePset(x1, y1);
+                this._linePlotPixel(x1, y1);
                 if (y1 === y2) break;
                 y1 += uy;
                 r -= dx;
@@ -841,16 +800,14 @@ export class Display {
         }
 
         // Flush the last byte's ALU operation
-        this._aluLineExec(this._lineAddrOld);
+        this._aluExecLineByte(this._linePrevAddr);
 
-        // Calculate busy time (1 byte = 1/16 microsecond)
-        // We set lineBusy but since we execute instantly in JS,
-        // we'll track the count for status reads
+        // Update the line drawing busy state.
         let busyTime = this._lineCount >> 4;
-        this._lineCountSub += (this._lineCount & 0x0F);
-        if (this._lineCountSub >= 0x10) {
+        this._lineBusyRemainder += (this._lineCount & 0x0F);
+        if (this._lineBusyRemainder >= 0x10) {
             busyTime++;
-            this._lineCountSub &= 0x0F;
+            this._lineBusyRemainder &= 0x0F;
         }
 
         if (busyTime > 0) {
@@ -873,7 +830,7 @@ export class Display {
             if (this.isAV && (this.aluCommand & 0x80)) {
                 this._dispatchAluOp(addr);
             }
-            if (this.isAV && (this.multiPage & (1 << this.subramVramBank))) {
+            if (this.isAV && (this.multiPage & (1 << this.vramBankSelect))) {
                 return 0xFF;
             }
             return this._getActiveVram()[addr];
@@ -890,7 +847,8 @@ export class Display {
             return 0xFF;
         }
 
-        // No scroll offset applied - scroll is renderer-only
+        // No scroll offset applied here: scrolling rotates the VRAM contents
+        // (see _vramScroll); only 262K mode applies the offset in the renderer.
         const vram = this._getActiveVram();
         return vram[addr];
     }
@@ -906,7 +864,7 @@ export class Display {
                 this._dispatchAluOp(addr);
                 return;
             }
-            if (this.multiPage & (1 << this.subramVramBank)) return;
+            if (this.multiPage & (1 << this.vramBankSelect)) return;
             const vram = this._getActiveVram();
             if (vram[addr] !== value) {
                 vram[addr] = value;
@@ -931,7 +889,7 @@ export class Display {
             return;
         }
 
-        // Normal write - no scroll offset (scroll is renderer-only)
+        // Normal write - no scroll offset applied here (see readVRAM)
         if (this.multiPage & (1 << plane)) {
             return;
         }
@@ -945,7 +903,7 @@ export class Display {
     }
 
     // ---------------------------------------------------------------
-    //  Sub CPU memory read/write  ($0000 - $D40F)
+    //  Sub CPU memory read/write  ($0000 - $D42B)
     // ---------------------------------------------------------------
 
     read(addr) {
@@ -1005,7 +963,7 @@ export class Display {
             case 0xD409:
                 // VRAM アクセス許可 (読みで許可)。表示の点灯・消灯 (crtOn) とは
                 // 独立で、画面に描くかどうかには関与しない。
-                this.vramaFlag = true;
+                this.vramAccessEnabled = true;
                 return { value: 0xFF };
             case 0xD40A:
                 return { value: 0xFF, sideEffect: 'busyOff' };
@@ -1014,7 +972,7 @@ export class Display {
                 return { value: 0xFF };
             case 0xD40E:
             case 0xD40F:
-                // ハードウェアの仕様では書き込み専用。読みは $FF。
+                // 読みは $FF を返す。
                 return { value: 0xFF };
         }
 
@@ -1024,7 +982,7 @@ export class Display {
                 case 0xD410: return { value: this.aluCommand };
                 case 0xD411: return { value: this.aluColor };
                 case 0xD412: return { value: this.aluMask };
-                case 0xD413: return { value: this.aluCmpStat };
+                case 0xD413: return { value: this.aluCompareStatus };
                 case 0xD41B: return { value: this.aluDisable };
             }
             // $D414-$D41A: compare data (write-only, read returns 0xFF)
@@ -1043,7 +1001,7 @@ export class Display {
 
         // FM77AV40: $D42F — VRAM bank select (read)
         if (addr === 0xD42F && this.isAV40) {
-            return { value: 0xFC | (this.subramVramBank & 3) };
+            return { value: 0xFC | (this.vramBankSelect & 3) };
         }
 
         return { value: 0xFF };
@@ -1065,7 +1023,7 @@ export class Display {
                 return {};
             case 0xD409:
                 // VRAM アクセス禁止 (書きで禁止)。crtOn には触れない。
-                this.vramaFlag = false;
+                this.vramAccessEnabled = false;
                 return {};
             case 0xD40A:
                 return { sideEffect: 'busyOn' };
@@ -1158,13 +1116,13 @@ export class Display {
 
             // $D413-$D41A: compare data registers
             if (addr >= 0xD413 && addr <= 0xD41A) {
-                this.aluCmpDat[addr - 0xD413] = value;
+                this.aluCompareData[addr - 0xD413] = value;
                 return {};
             }
 
             // $D41C-$D41E: tile pattern registers
             if (addr >= 0xD41C && addr <= 0xD41E) {
-                this.aluTileDat[addr - 0xD41C] = value;
+                this.aluTileData[addr - 0xD41C] = value;
                 return {};
             }
 
@@ -1175,7 +1133,7 @@ export class Display {
         if (addr === 0xD42F && this.isAV40) {
             const bank = value & 0x03;
             if (bank < 3) {
-                this.subramVramBank = bank;
+                this.vramBankSelect = bank;
             }
             return {};
         }
@@ -1194,7 +1152,7 @@ export class Display {
 
     writePalette(index, value) {
         index &= 7;
-        // MB15021 stores 4 bits; only lower 3 are used for R/G/B rendering.
+        // Keep 4 bits; only the lower 3 are used for R/G/B rendering.
         value &= 0x0F;
         if (this.palette[index] !== value) {
             this.palette[index] = value;
@@ -1224,8 +1182,8 @@ export class Display {
             flag: this.vramOffsetFlag,
             ofs0: this.vramOffset[0],
             ofs1: this.vramOffset[1],
-            crt0: this.crtcOffset[0],
-            crt1: this.crtcOffset[1],
+            crt0: this.appliedScrollOffset[0],
+            crt1: this.appliedScrollOffset[1],
         };
         if (extra) Object.assign(e, extra);
         this._scrollTrace[this._scrollTraceIdx] = e;
@@ -1265,9 +1223,7 @@ export class Display {
     /** Write VRAM offset low byte ($D40F) */
     _updateVramOffsetLow(value) {
         const pg = this.activeVramPage;
-        // FM-7 Type-C: only bits 7-5 of low byte are used (mask $E0)
-        // FM77AV with fine VRAM offset control: full 8 bits
-        // FM77AV without flag: same $E0 mask as FM-7
+        // Apply the low byte with the precision allowed by the machine and mode.
         if (!this.isAV || !this.vramOffsetFlag) {
             value &= 0xE0;
         }
@@ -1279,34 +1235,26 @@ export class Display {
     }
 
     /**
-     * Scroll counter: execute VRAM rotation only on even count.
-     * $D40E and $D40F are always written as a pair. The counter
-     * ensures scroll executes once per pair, not on each write.
-     * レジスタの組への書込みごとにスクロールを適用する。
+     * Apply the scroll once per register pair write.
      */
     _scrollCountUp(pg) {
-        this._vramOffsetCount[pg]++;
-        if ((this._vramOffsetCount[pg] & 1) === 0) {
+        this._scrollWriteCount[pg]++;
+        if ((this._scrollWriteCount[pg] & 1) === 0) {
             // Pass raw difference as WORD (16-bit), masking done in _vramScroll
-            const diff = (this.vramOffset[pg] - this.crtcOffset[pg]) & 0xFFFF;
+            const diff = (this.vramOffset[pg] - this.appliedScrollOffset[pg]) & 0xFFFF;
             this._vramScroll(diff);
-            this.crtcOffset[pg] = this.vramOffset[pg];
+            this.appliedScrollOffset[pg] = this.vramOffset[pg];
             this._fullDirty = true;
         }
     }
 
     /**
-     * Physically rotate VRAM data by 'offset' bytes (active page only).
-     * After rotation, VRAM[0] = screen top. Renderer always reads from 0.
+     * Apply a scroll of 'offset' to the active page according to the display mode.
      */
     _vramScroll(offset) {
         this._pushScrollTrace('SCROLL', { diff: offset & 0xFFFF });
 
-        // 400-line: 400 ライン時は対象領域を回転する。VRAM そのものを回転するので、
-        // CPU アクセスとレンダラーはどちらも変換なしで読む。The active byte-parity field (even/odd bytes form two independent
-        // scroll fields, selected by activeVramPage) is rotated within each 32KB
-        // plane of the active block. The offset counts in field units, so the
-        // byte span is offset*2; wrap is within the 0x8000 plane.
+        // 400-line mode.
         if (this.displayMode === DISPLAY_MODE_400) {
             const span = (offset & 0x3FFF) * 2;
             if (span !== 0) {
@@ -1365,33 +1313,10 @@ export class Display {
 
     /** Get the display page's VRAM offset (for rendering) */
     getDisplayVramOffset() {
-        // 200-line and 4096-color modes physically rotate VRAM at scroll time,
-        // so the renderer reads from offset 0. 400-line / 262K modes apply the
-        // offset at read time (see _transformAddr).
+        // 200-line, 4096-color and 400-line modes physically rotate VRAM at
+        // scroll time, so the renderer reads from offset 0. 262K mode applies
+        // its per-bank offset inside _render320x200_262k.
         return 0;
-    }
-
-    /**
-     * Compute the physical VRAM read address for a given logical byte address,
-     * given the current display mode and scroll offset. The offset wraps within
-     * the plane/sub-plane boundary; upper bits (plane/sub-plane selector) are
-     * preserved.
-     * @param {number} addr - logical byte address (includes plane base offset)
-     * @param {number} vramOffset - 14-bit scroll offset ($D40E/$D40F)
-     * @returns {number} physical address into the plane/sub-plane
-     */
-    _transformAddr(addr, vramOffset) {
-        switch (this.displayMode) {
-            case DISPLAY_MODE_640:   // 640x200 8-color: 16KB plane wrap
-                return (addr & ~0x3FFF) | ((addr + vramOffset) & 0x3FFF);
-            case DISPLAY_MODE_320:   // 320x200 4096-color: 8KB sub-plane wrap
-                return (addr & ~0x1FFF) | ((addr + vramOffset) & 0x1FFF);
-            case DISPLAY_MODE_262K:  // 320x200 262K-color: 8KB sub-plane wrap
-                return (addr & ~0x1FFF) | ((addr + vramOffset) & 0x1FFF);
-            case DISPLAY_MODE_400:   // 640x400 8-color: 32KB plane wrap, offset *2
-                return (addr & ~0x7FFF) | ((addr + vramOffset * 2) & 0x7FFF);
-        }
-        return addr;
     }
 
     // ---------------------------------------------------------------
@@ -1429,12 +1354,7 @@ export class Display {
     // ---------------------------------------------------------------
 
     rebuildAnalogPalette(analogPalette) {
-        // Palette entry format (matches FM77AV hardware index layout):
-        //   bits 8-11: G level (written via $FD34)
-        //   bits 4-7:  R level (written via $FD33)
-        //   bits 0-3:  B level (written via $FD32)
-        // The renderer builds pixel indices with the same layout
-        // (G in high bits, R in middle, B in low bits).
+        // Convert analog palette entries to rendering colors.
         for (let i = 0; i < 4096; i++) {
             const entry = analogPalette[i];
             const g4 = (entry >> 8) & 0x0F;
@@ -1461,7 +1381,7 @@ export class Display {
      * Render the visible screen into the current frame (see `frameSink`).
      * Only the dirty bands are converted unless `force` is set; each written
      * rectangle is handed to the sink through present().
-     * @param {boolean} [force] - redraw the whole frame
+     * @param {boolean} [force] - redraw the whole frame (ignored while the CRT is off)
      */
     render(force = false) {
         if (!this.crtOn) {
@@ -1516,13 +1436,12 @@ export class Display {
             const yEnd = Math.min(yStart + 8, SCREEN_HEIGHT);
 
             for (let y = yStart; y < yEnd; y++) {
-                // VRAM is physically rotated so [0] = screen top
                 const lineBase = y * BYTES_PER_LINE;
                 const pixelRow = y * SCREEN_WIDTH;
 
                 for (let byteX = 0; byteX < BYTES_PER_LINE; byteX++) {
                     const byteAddr = lineBase + byteX;
-                    // multiPage bits 4-6: display mask (1=plane hidden)
+                    // Apply the display mask.
                     const bByte = (this.multiPage & 0x10) ? 0 : blue [BLUE_BASE  + byteAddr];
                     const rByte = (this.multiPage & 0x20) ? 0 : red  [RED_BASE   + byteAddr];
                     const gByte = (this.multiPage & 0x40) ? 0 : green[GREEN_BASE + byteAddr];
@@ -1574,22 +1493,15 @@ export class Display {
         }
 
         const pixels = this._pixelBuf;
-        // 4096-color 2-page (AV40/AV40EX/SX) selects front/back via blockDisplay ($D433 bit4).
+        // 4096-color 2-page (AV40EX/SX): blockDisplay selects the front/back block.
         const page0 = this.blockDisplay === 1 ? this.vramPage3 : this.vram;
         const page1 = this.blockDisplay === 1 ? this.vramPage4 : this.vramPage1;
         const pal = this._resolvedAnalogPalette;
 
-        // FM77AV 320x200, 4096-color mode:
-        // 40 bytes per line, 8 pixels per byte, each pixel doubled on 640-wide display
-        // 12 sub-planes of 0x2000 bytes each, spread across both VRAM pages
-        // NOTE: displayVramPage has NO effect in 320x200 mode — both pages are
-        // always read simultaneously to form the 12-bit colour index.
-        // VRAM is physically rotated by _vramScroll, so [0] = screen top.
+        // FM77AV 320x200, 4096-color mode. Both pages are read together to
+        // form the 12-bit colour index (displayVramPage is not used in this mode).
 
-        // Build display mask from multiPage bits 4-6:
-        //   bit 4 set → B display masked → bits 0-3 of palette idx forced to 0
-        //   bit 5 set → R display masked → bits 4-7 forced to 0
-        //   bit 6 set → G display masked → bits 8-11 forced to 0
+        // Build the display mask.
         let idxMask = 0xFFF;
         if (this.multiPage & 0x10) idxMask &= ~0x00F;
         if (this.multiPage & 0x20) idxMask &= ~0x0F0;
@@ -1677,24 +1589,18 @@ export class Display {
         }
 
         const pixels = this._pixelBuf;
-        // 262,144-color mode uses 3 banks for bit-precision; AV40EX/SX can also
-        // select front/back via blockDisplay ($D433 bit4, 2-page 262K).
+        // 262,144-color mode uses 3 banks; on AV40EX/SX blockDisplay selects
+        // the front/back block.
         const page0 = this.blockDisplay === 1 ? this.vramPage3 : this.vram;
         const page1 = this.blockDisplay === 1 ? this.vramPage4 : this.vramPage1;
         const page2 = this.blockDisplay === 1 ? this.vramPage5 : this.vramPage2;
-        // Per-bank scroll offset (no physical rotation): extends 4096-color
-        // pattern (bank0/1 → offset[0]/[1]) with bank 2 sharing offset[0].
-        // Wrap within 8KB sub-plane boundary.
+        // Scroll offset is applied per bank when reading (bank 2 uses the
+        // same offset as bank 0).
         const ofsB0 = this.vramOffset[0];
         const ofsB1 = this.vramOffset[1];
         const ofsB2 = this.vramOffset[0];
 
-        // 262,144-color mode: 18 sub-planes (6 per channel), 320x200
-        // Each channel has 6 bits -> 64 levels, mapped to 0-255 via LUT
-        // Sub-plane layout per bank (each sub-plane = 0x2000 bytes):
-        //   bank0 (page0): B5,B4 (Blue[0x0000]), R5,R4 (Red[0x4000]), G5,G4 (Green[0x8000])
-        //   bank1 (page1): B3,B2 (Blue[0x0000]), R3,R2 (Red[0x4000]), G3,G2 (Green[0x8000])
-        //   bank2 (page2): B1,B0 (Blue[0x0000]), R1,R0 (Red[0x4000]), G1,G0 (Green[0x8000])
+        // 262,144-color mode: 320x200, 6 bits per channel.
 
         for (let band = 0; band < 25; band++) {
             if (!needFull && !this._dirtyBands[band]) continue;
@@ -1712,7 +1618,7 @@ export class Display {
                     const a1 = (logical + ofsB1) & 0x1FFF;
                     const a2 = (logical + ofsB2) & 0x1FFF;
 
-                    // Read 18 sub-plane bytes (6 per channel, 2 per bank)
+                    // Read the sub-plane bytes for this position.
                     const b5 = page0[0x0000 + a0], b4 = page0[0x2000 + a0];
                     const b3 = page1[0x0000 + a1], b2 = page1[0x2000 + a1];
                     const b1 = page2[0x0000 + a2], b0 = page2[0x2000 + a2];
@@ -1726,7 +1632,7 @@ export class Display {
                     const g1 = page2[0x8000 + a2], g0 = page2[0xA000 + a2];
 
                     for (let bit = 7; bit >= 0; bit--) {
-                        // 6-bit value per channel (bit 5 = MSB from page0 sub0)
+                        // Assemble the 6-bit value of each channel.
                         const rv = (((r5 >> bit) & 1) << 5) | (((r4 >> bit) & 1) << 4) |
                                    (((r3 >> bit) & 1) << 3) | (((r2 >> bit) & 1) << 2) |
                                    (((r1 >> bit) & 1) << 1) |  ((r0 >> bit) & 1);
@@ -1737,7 +1643,7 @@ export class Display {
                                    (((b3 >> bit) & 1) << 3) | (((b2 >> bit) & 1) << 2) |
                                    (((b1 >> bit) & 1) << 1) |  ((b0 >> bit) & 1);
 
-                        // 6-bit to 8-bit: (val << 2) | (val >> 4) gives uniform 0-255
+                        // Convert the color components to the rendering format.
                         const r8 = (rv << 2) | (rv >> 4);
                         const g8 = (gv << 2) | (gv >> 4);
                         const b8 = (bv << 2) | (bv >> 4);
@@ -1781,8 +1687,7 @@ export class Display {
         }
 
         const pixels = this._pixelBuf;
-        // 400-line: 3 planes in separate VRAM banks, 32KB each.
-        // blockDisplay ($D433 bit4) selects front (0) / back (1) block on AV40EX/SX.
+        // 400-line mode; blockDisplay selects the front/back block on AV40EX/SX.
         const frontB = this.vram,      frontR = this.vramPage1, frontG = this.vramPage2;
         const backB  = this.vramPage3, backR  = this.vramPage4, backG  = this.vramPage5;
         const primB = this.blockDisplay === 1 ? backB : frontB;
@@ -1792,10 +1697,7 @@ export class Display {
         const altR  = this.blockDisplay === 1 ? frontR : backR;
         const altG  = this.blockDisplay === 1 ? frontG : backG;
         const pal   = this._resolvedPalette;
-        // Scroll is realised by physically rotating VRAM at scroll time
-        // (see _vramScroll, 400-line branch), so the renderer reads raw linear
-        // addresses (logical == on-screen position). No read-time offset.
-        // Hardware window ($D438-$D43F): inside the rectangle, swap to alt block.
+        // Hardware window: inside the rectangle, read from the other block.
         const winOpen = this.windowOpen;
         const winFx = this.windowX1 >> 3;
         const winLx = this.windowX2 >> 3;
@@ -1880,16 +1782,16 @@ export class Display {
 
     /**
      * Reset ALU and line drawing engine to power-on state.
-     * Called when sub CPU is reset via $FD13.
+     * Called when the sub CPU is reset.
      */
     resetALU() {
         this.aluCommand = 0;
         this.aluColor = 0;
         this.aluMask = 0;
-        this.aluCmpStat = 0;
-        this.aluCmpDat.fill(0x80);
+        this.aluCompareStatus = 0;
+        this.aluCompareData.fill(0x80);
         this.aluDisable = 0x00;
-        this.aluTileDat.fill(0);
+        this.aluTileData.fill(0);
 
         this.lineBusy = false;
         this._lineBusyMicros = 0;
@@ -1899,10 +1801,10 @@ export class Display {
         this.lineY0 = 0;
         this.lineX1 = 0;
         this.lineY1 = 0;
-        this._lineAddrOld = 0xFFFF;
+        this._linePrevAddr = 0xFFFF;
         this._lineMask = 0xFF;
         this._lineCount = 0;
-        this._lineCountSub = 0;
+        this._lineBusyRemainder = 0;
     }
 
     /**
@@ -1913,13 +1815,12 @@ export class Display {
         this.clearWorkRam();
         this.resetPalette();
         this.vramOffset = [0, 0];
-        this.crtcOffset = [0, 0];
-        this._vramOffsetCount = [0, 0];
+        this.appliedScrollOffset = [0, 0];
+        this._scrollWriteCount = [0, 0];
         this.vramOffsetFlag = false;
-        // リセット時は表示を消灯し、サブ CPU が $D408 を読むと点灯する
-        // (コンストラクタの説明を参照)。
+        // リセット時は表示を消灯する。
         this.crtOn = false;
-        this.vramaFlag = false;
+        this.vramAccessEnabled = false;
         this.insLedOn = false;
         this.cycleStealMode = false;
         this.frameCount = 0;
@@ -1935,7 +1836,7 @@ export class Display {
         this.displayMode = DISPLAY_MODE_640;
         this._mode320Flag = false;
         this.multiPage = 0;
-        this.subramVramBank = 0;
+        this.vramBankSelect = 0;
 
         // Reset ALU and line drawing engine
         this.resetALU();

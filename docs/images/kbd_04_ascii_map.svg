@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 888 610" width="888" height="610">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 888 644" width="888" height="644">
   <title>英語配列 (ASCII / US 101/104) の物理キーと FM-7 キーの対応図</title>
   <defs>
     <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
     </marker>
   </defs>
-  <rect x="0" y="0" width="888" height="610" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
+  <rect x="0" y="0" width="888" height="644" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
   <text x="444" y="32" font-family="sans-serif" font-size="18" fill="#1f2328" text-anchor="middle" font-weight="bold">英語配列（ASCII / US 101/104）との対応</text>
   <text x="444" y="54" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">お使いのキーボードのどのキーが FM-7 のどのキーになるか</text>
   <text x="444" y="72" font-family="sans-serif" font-size="11" fill="#8c959f" text-anchor="middle">上段＝物理キーの刻印 / 下段＝割り当たる FM-7 キー（「—」は割当なし）</text>
@@ -229,26 +229,26 @@
   <rect x="726" y="356" width="66" height="50" rx="5" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2"/>
   <text x="759" y="372" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">Menu</text>
   <text x="759" y="393" font-family="sans-serif" font-size="12" fill="#8c959f" text-anchor="middle">—</text>
-  <rect x="796" y="356" width="66" height="50" rx="5" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2"/>
+  <rect x="796" y="356" width="66" height="50" rx="5" fill="#fbefff" stroke="#8250df" stroke-width="1.2"/>
   <text x="829" y="372" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">Ctrl</text>
-  <text x="829" y="393" font-family="sans-serif" font-size="12" fill="#8c959f" text-anchor="middle">—</text>
+  <text x="829" y="394" font-family="sans-serif" font-size="14" fill="#4c2889" text-anchor="middle" font-weight="bold">CTR</text>
   <rect x="26" y="430" width="18" height="13" rx="3" fill="#ffebe9" stroke="#cf222e" stroke-width="1"/>
   <text x="49" y="440" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">BREAK</text>
   <rect x="98" y="430" width="18" height="13" rx="3" fill="#dafbe1" stroke="#1a7f37" stroke-width="1"/>
   <text x="121" y="440" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">PF1〜PF10</text>
   <rect x="194.2" y="430" width="18" height="13" rx="3" fill="#ffffff" stroke="#8c959f" stroke-width="1"/>
-  <text x="217.2" y="440" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">文字キー (英数・記号・カナ)</text>
-  <rect x="385" y="430" width="18" height="13" rx="3" fill="#fbefff" stroke="#8250df" stroke-width="1"/>
-  <text x="408" y="440" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">修飾・モード (SHF / CTR / CAP / GRP / カナ)</text>
-  <rect x="690.1999999999998" y="430" width="18" height="13" rx="3" fill="#fff8c5" stroke="#9a6700" stroke-width="1"/>
-  <text x="713.1999999999998" y="440" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">FM77AV 以降のみ</text>
+  <text x="217.2" y="440" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">文字キーなど</text>
+  <rect x="300" y="430" width="18" height="13" rx="3" fill="#fbefff" stroke="#8250df" stroke-width="1"/>
+  <text x="323" y="440" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">修飾・モード (SHF / CTR / CAP / GRP / カナ)</text>
   <rect x="26" y="450" width="18" height="13" rx="3" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1"/>
   <text x="49" y="460" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">FM-7 では使わないキー</text>
   <rect x="26" y="472" width="836" height="70" rx="6" fill="#ffebe9" stroke="#cf222e" stroke-width="1"/>
   <text x="38" y="488" font-family="sans-serif" font-size="11" fill="#7a1420" text-anchor="start" font-weight="bold">この配列では物理キーが無い FM-7 キー</text>
   <text x="38" y="506" font-family="sans-serif" font-size="11" fill="#7a1420" text-anchor="start">・]  … 日本語配列のホーム段の ] キーに当たる物理キーがありません（キーカスタマイズで割り当てます）</text>
   <text x="38" y="522" font-family="sans-serif" font-size="11" fill="#7a1420" text-anchor="start">・_  … Ctrl + / で代わりに入力できます（キーカスタマイズでの割当も可能）</text>
-  <text x="38" y="538" font-family="sans-serif" font-size="11" fill="#7a1420" text-anchor="start">・無変換 / 変換 … FM77AV の 3 分割スペースの左右のキー（キーカスタマイズで割り当てます）</text>
+  <text x="38" y="538" font-family="sans-serif" font-size="11" fill="#7a1420" text-anchor="start">・無変換 / 変換 … FM77AV 以降の 3 分割スペースの左右のキー（キーカスタマイズで割り当てます）</text>
   <text x="26" y="568" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ Esc キーは既定で BRK（BREAK）、バッククォートの位置は ESC です。Pause も常に BREAK として使えます。</text>
   <text x="26" y="585" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ カナ の ON / OFF は右 Alt キーで切り替えます。</text>
+  <text x="26" y="602" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ ASCII 方式では、Ctrl を押しながら英字キーを押すと、制御コード（Ctrl + C など）が入力されます。</text>
+  <text x="26" y="619" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ 図で ^ に当たるキーは、現在、ASCII 方式では =、Shift を押しながらでは + が入力されます。</text>
 </svg>

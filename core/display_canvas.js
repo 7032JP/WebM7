@@ -5,8 +5,8 @@
 //
 //   The core renders RGBA pixels into a frame obtained from Display.frameSink.
 //   CanvasFrameSink hands the core an ImageData created on the canvas's 2D
-//   context, so the core writes straight into the canvas back buffer and each
-//   present() updates the changed rectangle with putImageData.
+//   context; the core writes into that ImageData and each present() transfers
+//   the changed rectangle to the canvas with putImageData.
 // =============================================================================
 import { SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_HEIGHT_400, DISPLAY_MODE_400 } from './display.js';
 
@@ -61,7 +61,7 @@ export function renderToCanvas(display, canvas, force = false) {
 
 /**
  * Render at native resolution into an OffscreenCanvas, then draw it onto
- * `canvas` doubled in height (line-doubled 200-line modes). The display's
+ * `canvas` doubled in height. The display's
  * previous sink is restored afterwards.
  */
 export function renderDoubled(display, canvas, force = false) {

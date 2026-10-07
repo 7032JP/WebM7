@@ -1,6 +1,6 @@
 # MIT License（本プロジェクトの成果物）
 
-適用範囲: 代替 ROM のソースコードとビルド済みバイナリ、ビルド補助スクリプト、ドキュメント、および `roms/kanji.rom` / `roms/kanji2.rom` に含まれる独自字形。同梱フォントの由来とライセンスは [LICENSE-FONT.md](LICENSE-FONT.md) を参照してください。
+適用範囲: 代替 ROM のソースコードとビルド済みバイナリ、ビルド補助スクリプト、ドキュメント、および `roms/kanji.rom` の独自字形と、`roms/kanji.rom` / `roms/kanji2.rom` を組み上げる配置規則の実装と変換スクリプト。両 ROM に含まれる同梱フォント由来の字形は対象外で、その由来とライセンスは [LICENSE-FONT.md](LICENSE-FONT.md) を参照してください。
 
 ```
 MIT License

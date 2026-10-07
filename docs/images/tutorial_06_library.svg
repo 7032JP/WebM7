@@ -18,7 +18,7 @@
   <rect x="40" y="70" width="200" height="90" rx="8" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>
   <text x="140" y="98" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328" text-anchor="middle">PC 本体のファイル</text>
   <text x="140" y="122" font-family="sans-serif" font-size="13" fill="#57606a" text-anchor="middle">.d77 / .t77</text>
-  <text x="140" y="144" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">（取り込み後は変更されない）</text>
+  <text x="140" y="144" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">（自動では書き換えられません）</text>
 
   <line x1="240" y1="115" x2="316" y2="115" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
   <text x="278" y="105" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">取り込み</text>
@@ -32,8 +32,9 @@
   <text x="356" y="164" font-family="sans-serif" font-size="13" fill="#1f2328">WORK.D77　＋2D で新規作成</text>
   <rect x="344" y="182" width="232" height="34" rx="6" fill="#ffffff" stroke="#8250df"/>
   <text x="356" y="204" font-family="sans-serif" font-size="13" fill="#1f2328">PROG.T77　[Tape]</text>
-  <text x="460" y="244" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">各項目: 論理FMT / Exp / Ren / Dup / Del</text>
-  <text x="460" y="264" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">＋2D / ＋2DD で空ディスク作成</text>
+  <text x="460" y="236" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">各項目: Exp / Ren / Dup / Del</text>
+  <text x="460" y="252" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">（ディスクは 論理FMT も）</text>
+  <text x="460" y="270" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">＋2D / ＋2DD で空ディスク作成</text>
 
   <!-- 挿入矢印 -->
   <line x1="600" y1="115" x2="676" y2="105" stroke="#1a7f37" stroke-width="2" marker-end="url(#ahg)"/>
@@ -57,10 +58,10 @@
 
   <!-- 説明帯 -->
   <rect x="40" y="310" width="800" height="64" rx="8" fill="#f6f8fa" stroke="#8250df" stroke-width="1.5"/>
-  <text x="60" y="336" font-family="sans-serif" font-size="13" fill="#1f2328">・棚での操作も BASIC からの書き込み（SAVE 等）も、すべてブラウザ内で完結します</text>
-  <text x="60" y="360" font-family="sans-serif" font-size="13" fill="#1f2328">・ドライブ側の変更は ⬆Commit を押したときだけ棚へ反映（未反映はオレンジの [Drive0*] 表示）</text>
+  <text x="60" y="336" font-family="sans-serif" font-size="13" fill="#1f2328">・棚での変更も BASIC からのディスクへの書き込み（SAVE 等）も、ブラウザ内に保持されます</text>
+  <text x="60" y="360" font-family="sans-serif" font-size="13" fill="#1f2328">・ドライブ側の変更は ⬆Commit、または差し替え・取り出し時の確認で棚へ反映（Save より先に行います）</text>
 
   <rect x="40" y="390" width="800" height="64" rx="8" fill="#fff8c5" stroke="#bc4c00" stroke-width="1.5"/>
   <text x="60" y="416" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00">変更はブラウザ内に保持されます。PC へ保存するには Save または Library の Exp で書き出してください。</text>
-  <text x="60" y="440" font-family="sans-serif" font-size="13" fill="#1f2328">元のファイルを残す場合は別名で保存してください。</text>
+  <text x="60" y="440" font-family="sans-serif" font-size="13" fill="#1f2328">テープへの録音は 録音→.t77 / 録音→.wav で保存します。元のファイルを残す場合は別名で保存してください。</text>
 </svg>

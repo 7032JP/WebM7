@@ -12,20 +12,15 @@
 //     bit rate and spindle RPM (the check that catches "over-length" media),
 //   * MFM-decodes the stream into sectors so the image can actually be booted,
 //   * and can MFM-encode/build an HFE.
-//
-// Bit order follows the HFE format convention: within each stored byte the
-// least significant bit is the first bit in time.
 // =============================================================================
 
 const HFE_SIGNATURE = 'HXCPICFE';
 
-// Sync marks expressed as 16-cell MFM patterns (first-in-time = most
-// significant bit of the listed value).
-const SYNC_A1 = 0x4489; // data 0xA1 with one suppressed clock (IDAM/DAM sync)
+// Sync mark as a 16-cell MFM pattern.
+const SYNC_A1 = 0x4489;
 
 // ---------------------------------------------------------------------------
-// CRC-16/CCITT (poly 0x1021, init 0xFFFF) over the byte sequence including the
-// three A1 sync bytes and the address/data mark.
+// Sector CRC.
 // ---------------------------------------------------------------------------
 function crc16(bytes) {
     let crc = 0xFFFF;
@@ -64,8 +59,7 @@ function bitOf(bytes, idx) {
 }
 
 // ---------------------------------------------------------------------------
-// MFM encode one data byte (MSB-first) onto a BitWriter, maintaining the
-// running "previous data bit" needed for clock generation.
+// MFM encode one data byte.
 // ---------------------------------------------------------------------------
 function encodeByte(bw, value, state) {
     for (let i = 7; i >= 0; i--) {
@@ -78,10 +72,7 @@ function encodeByte(bw, value, state) {
 }
 
 // ---------------------------------------------------------------------------
-// Build a single side's MFM bitstream for a list of sectors in IBM System 34
-// (double-density) track layout.  `padTo` (bytes) pads the trailing gap so the
-// track reaches a target physical length — used by tests to synthesise both
-// well-formed and deliberately over-length tracks.
+// Build a single side's track bitstream from a list of sectors.
 // ---------------------------------------------------------------------------
 export function encodeMFMTrack(sectors, opts = {}) {
     const bw = new BitWriter();
@@ -91,7 +82,7 @@ export function encodeMFMTrack(sectors, opts = {}) {
 
     gapByte(opts.gap0 ?? 80);            // post-index gap (Gap 4a)
     sync00(12);                          // sync
-    // (IAM omitted — FM-7 sector reads only need IDAM/DAM)
+    // (IAM omitted)
 
     for (const s of sectors) {
         gapByte(opts.gap1 ?? 22);        // Gap 1 / Gap 3
@@ -148,7 +139,7 @@ export function buildHFE(trackSides, opts = {}) {
     const bitRate = opts.bitRate ?? 250;
     const rpm = opts.rpm ?? 300;
 
-    // Interleave the two sides in 256-byte blocks.
+    // Lay out both sides' track data in HFE form.
     const trackBlocks = [];
     for (const [s0, s1] of trackSides) {
         const lenPerSide = Math.max(s0.length, s1.length);
@@ -161,7 +152,6 @@ export function buildHFE(trackSides, opts = {}) {
         trackBlocks.push({ block, len: lenPerSide * 2 }); // len = both sides
     }
 
-    // Layout: header block (512) + LUT block (512) + track data blocks.
     const lutOffsetBlocks = 1;
     let cursorBlocks = 2; // after header + LUT
     const lut = [];
@@ -178,10 +168,10 @@ export function buildHFE(trackSides, opts = {}) {
     bytes[8] = 0;            // format revision
     bytes[9] = numTracks;
     bytes[10] = numSides;
-    bytes[11] = 0x00;        // ISOIBM_MFM_ENCODING
+    bytes[11] = 0x00;        // MFM encoding
     view.setUint16(12, bitRate, true);
     view.setUint16(14, rpm, true);
-    bytes[16] = 0x07;        // GENERIC_SHUGART_DD_FLOPPYMODE
+    bytes[16] = 0x07;        // double-density floppy mode
     bytes[17] = 0xFF;
     view.setUint16(18, lutOffsetBlocks, true);
 
@@ -253,16 +243,15 @@ export function parseHFE(buffer) {
 
 // ---------------------------------------------------------------------------
 // Nominal MFM bytes per side for the given bit rate / RPM.
-//   250 kbps @ 300 RPM -> 250000 * 0.2 / 8 = 6250 bytes.
 // ---------------------------------------------------------------------------
 export function nominalBytesPerSide(bitRate, rpm) {
     return Math.round((bitRate * 1000) * (60 / rpm) / 8);
 }
 
 // ---------------------------------------------------------------------------
-// Validate per-side track lengths.  Over-length tracks are the ones that pass
-// sector CRC yet fail to boot (the index pulse cuts the track
-// short), so they are flagged.  Returns an array of warning objects.
+// Validate per-side track lengths against the nominal capacity and flag
+// tracks that are over or under length.
+// Returns an array of warning objects.
 // ---------------------------------------------------------------------------
 export function validateHFETrackLengths(parsed, opts = {}) {
     const warnings = [];
@@ -271,9 +260,7 @@ export function validateHFETrackLengths(parsed, opts = {}) {
     const overSlack = opts.overSlack ?? 16;   // bytes of jitter tolerated
     const underSlack = opts.underSlack ?? 64;
     for (let t = 0; t < parsed.tracks.length; t++) {
-        // HFE stores two flux cells per MFM data bit, so the MFM byte length
-        // per side is half the stored bitstream length.  Compare that against
-        // the nominal MFM capacity (e.g. 6250 bytes for 250 kbps @ 300 RPM).
+        // Compare the track length against the nominal capacity.
         const len = Math.round(parsed.tracks[t].lenPerSide / 2);
         if (len > nominal + overSlack) {
             warnings.push({
@@ -327,13 +314,10 @@ export function decodeMFMTrack(bytes) {
         filled++;
         if (filled < 16 || syncWindow !== SYNC_A1) continue;
 
-        // Found one A1.  The cell just consumed (index i) leaves `i` pointing
-        // at the cell after the 16-cell sync — i.e. the next clock cell.
-        // Skip any further A1 syncs, then read the mark byte.
+        // Found an A1 sync; `i` points at the cell after it.  Read the next
+        // byte as the mark.  If it is another A1 sync it is ignored and the
+        // search resumes.
         let pos = i;
-        // Consume additional A1 syncs (decoded value 0xA1 each, 16 cells).
-        // We simply attempt to read the mark; encoders emit exactly 3 syncs,
-        // and the third's trailing cells already advanced `i`, so read here.
         const mark = readBytes(pos, 1);
         const markByte = mark.bytes[0];
         pos = mark.next;
@@ -367,9 +351,7 @@ export function decodeMFMTrack(bytes) {
                     density: 0x00,
                     status: (pendingId.crcOk && crcOk) ? 0x00 : 0x10, // 0x10 = CRC error
                     // Physical slot on the track (order the data fields appear
-                    // in the MFM stream). Captures interleave/skew so the
-                    // rotational-latency model sees the real media layout,
-                    // matching the D77 loader (fdc.js parseD77 physIdx).
+                    // in the MFM stream), used by the rotational-latency model.
                     physIdx: sectors.length,
                 });
             }

@@ -3,18 +3,10 @@
 /**
  * FM-7 CMT (Cassette Magnetic Tape) Controller
  *
- * T77 tape image format (standard layout):
- *   Header: 16 bytes (magic string, see T77_HEADER; no terminator)
- *   Data:   2-byte pulse widths (bit15=polarity, bit14-0=width),
- *           big-endian in the standard layout. The loader auto-detects
- *           byte order so legacy little-endian exports keep loading.
- *           A 17-byte header variant (magic + lone null terminator, odd
- *           file length) is also accepted for legacy files.
- *   Gap:    0x0000 = silence/gap marker (not end-of-tape)
+ * Supports T77 tape images: a header (see T77_HEADER) followed by 2-byte
+ * pulse widths. The loader detects the byte order automatically.
  *
- * FM-7 cassette I/O (main CPU):
- *   $FD00 write bit 1: motor control (1=ON, 0=OFF)
- *   $FD02 read  bit 7: read data (current signal level from tape)
+ * FM-7 cassette I/O (main CPU): motor control and read-data level.
  */
 
 const T77_HEADER = "XM7 TAPE IMAGE 0";
@@ -24,7 +16,7 @@ const T77_HEADER_SIZE = 16;
 // (in CPU cycles via _scale) and WAV sample counts.
 const CMT_CPU_HZ = 1794000;
 // Canonical scale used when capturing writes into T77 pulse widths
-// (T77 width unit ≈ 16 CPU cycles, matching the read-side default).
+// (T77 width unit ≈ 16 CPU cycles).
 const T77_SAVE_SCALE = 16;
 const T77_MAX_WIDTH = 0x7FFF; // 15-bit width field
 
@@ -48,9 +40,9 @@ export class CMT {
         this._lastDiagPulse = 0;
 
         // --- Write capture (recording) ---
-        // Cassette WRITE data ($FD00 bit 0) transitions are captured into a
-        // T77-style pulse list while the motor is ON. Always armed; cleared
-        // by clearRecording()/eject().
+        // Write-signal transitions are captured into a T77-style pulse list
+        // while the motor is ON. Always armed; cleared by clearRecording()
+        // (eject() keeps the buffer).
         this._recording = true;
         this._recPulses = [];   // captured pulses (uint16: bit15 polarity + width)
         this._recCycles = 0;    // CPU cycles elapsed at current write level
@@ -87,28 +79,26 @@ export class CMT {
         }
 
         // Locate the pulse stream. The standard layout starts it right after
-        // the 16-byte magic (even file length). A legacy 17-byte header
-        // (magic + lone null terminator) makes the total length odd — step
+        // the 16-byte magic (even file length). A 17-byte header
+        // (magic + one null terminator) makes the total length odd — step
         // past the terminator so the stream stays 2-byte aligned.
         const allBytes = new Uint8Array(buffer);
         let dataOffset = T77_HEADER_SIZE;
         if ((buffer.byteLength & 1) !== 0) dataOffset++;
-        // Skip leading 0x0000 gap records in whole 2-byte units. Scanning
-        // byte-wise here could eat the first byte of a real pulse (e.g. a
-        // BE width that is a multiple of 256) and shift the whole stream by
-        // one byte; whole-record skipping structurally rules that out.
+        // Skip leading 0x0000 gap records in whole 2-byte units so a real
+        // pulse is never split.
         while (dataOffset + 2 <= buffer.byteLength &&
                allBytes[dataOffset] === 0x00 && allBytes[dataOffset + 1] === 0x00) {
             dataOffset += 2;
         }
-        console.log(`[CMT] Header: ${dataOffset} bytes (${dataOffset - T77_HEADER_SIZE} bytes of terminator/gap skipped)`);
+        console.log(`[CMT] T77 header read`);
 
         const dataSize = buffer.byteLength - dataOffset;
         const numPulses = (dataSize / 2) | 0;
         const view = new DataView(buffer, dataOffset);
 
         // Auto-detect byte order: try both BE and LE, pick the one
-        // that gives more values in the expected range (20-100)
+        // that gives more plausible pulse widths.
         const littleEndian = this._detectByteOrder(view, numPulses);
 
         // Read ALL pulses — 0x0000 is a gap marker, NOT end-of-tape.
@@ -140,7 +130,7 @@ export class CMT {
     _detectByteOrder(view, numPulses) {
         let beInRange = 0, leInRange = 0;
         const sampleCount = Math.min(numPulses, 10000);
-        // Sample from middle of file (skip potential silence/gaps at start)
+        // Sample up to 10000 pulses, starting at most 30% into the file
         const start = Math.min(Math.floor(numPulses * 0.3), Math.max(0, numPulses - sampleCount));
         for (let i = start; i < start + sampleCount && i < numPulses; i++) {
             const be = view.getUint16(i * 2, false) & 0x7FFF;
@@ -149,14 +139,13 @@ export class CMT {
             if (le >= 5 && le <= 200) leInRange++;
         }
         const isLE = leInRange > beInRange;
-        console.log(`[CMT] Byte order: BE=${beInRange}/${sampleCount} LE=${leInRange}/${sampleCount} → ${isLE ? 'LE' : 'BE'}`);
+        console.log(`[CMT] T77 format detected`);
         return isLE;
     }
 
     /**
-     * Detect scale factor from the two dominant pulse width clusters.
-     * Target: 2400Hz half-period ≈ 416 CPU cycles (scale≈16).
-     * At 1.794MHz with scale 16: short=416cy, long=768cy.
+     * Detect the scale factor (CPU cycles per width unit) from the
+     * short-pulse cluster of the width distribution.
      */
     _detectScale(validCount) {
         if (validCount < 100) return 16;
@@ -169,14 +158,9 @@ export class CMT {
         }
         if (widths.length < 100) return 16;
 
-        // Bimodal detection: build a histogram, find the two dominant clusters
-        // (2400Hz and 1200Hz half-periods at ~2:1 ratio). Picks the smaller
-        // cluster (short = 2400Hz) and computes scale = 416 / short_peak.
-        // Robust to skewed distributions (e.g. mostly-long-pulse SAVE captures
-        // where percentile-based detection collapses both clusters together).
+        // Estimate the playback scale from the pulse width distribution.
         const hist = new Array(200).fill(0);
         for (const w of widths) hist[w]++;
-        // Find peaks: bucket count > both neighbors and > some threshold.
         const peaks = [];
         const minPeak = Math.max(20, widths.length * 0.02);
         for (let w = 5; w < 200; w++) {
@@ -211,8 +195,7 @@ export class CMT {
         const longCluster = (widths[Math.floor(widths.length * 0.60)] +
                              widths[Math.floor(widths.length * 0.80)]) / 2;
 
-        console.log(`[CMT] Scale: ${scale.toFixed(4)} (short=${shortCluster.toFixed(0)}→${(shortCluster*scale).toFixed(0)}cy, ` +
-            `long=${longCluster.toFixed(0)}→${(longCluster*scale).toFixed(0)}cy, ratio=${(longCluster/shortCluster).toFixed(2)})`);
+        console.log(`[CMT] Tape timing detected`);
         return scale;
     }
 
@@ -236,8 +219,8 @@ export class CMT {
                 lines.push(`  [${i}] ${pol} w=${w} (${(w * this._scale)|0}cy)`);
             }
         }
-        // One-line summary always; the per-pulse dump is dev-only (set _dbgPulseDump=true).
-        const summary = `[CMT] T77: ${validCount} pulses, ${isLE ? 'LE' : 'BE'}, scale=${this._scale.toFixed(4)}`;
+        // One-line summary; the per-pulse dump is optional.
+        const summary = `[CMT] T77 loaded`;
         console.log(this._dbgPulseDump ? `${summary}\n${lines.join('\n')}` : summary);
     }
 
@@ -284,13 +267,13 @@ export class CMT {
 
         if (this._pulses && this._pos >= this._pulses.length) {
             this._eot = true;
-            console.log(`[CMT] End of tape (consumed=${this._pulsesConsumed}, trans=${this._transitions})`);
+            console.log(`[CMT] End of tape`);
         }
 
         if (this._pulsesConsumed % 100000 === 0 && this._pulsesConsumed > 0 &&
             this._pulsesConsumed !== this._lastDiagPulse) {
             this._lastDiagPulse = this._pulsesConsumed;
-            console.log(`[CMT] progress: pos=${this._pos}/${this._validPulseCount} trans=${this._transitions} level=${this._level}`);
+            console.log(`[CMT] progress: ${this._pos}/${this._validPulseCount}`);
         }
     }
 
@@ -305,7 +288,7 @@ export class CMT {
         const writeBit = (value & 0x01);   // cassette WRITE data (recording)
 
         if (newMotor && !this._motor) {
-            console.log(`[CMT] Motor ON (pos=${this._pos}/${this._validPulseCount}, scale=${this._scale.toFixed(4)})`);
+            console.log(`[CMT] Motor ON`);
             if (this._loaded && this._pulses && this._pos < this._pulses.length) {
                 this._level = (this._pulses[this._pos] & 0x8000) ? 1 : 0;
             }
@@ -315,7 +298,7 @@ export class CMT {
                 this._recLevel = writeBit;
             }
         } else if (!newMotor && this._motor) {
-            console.log(`[CMT] Motor OFF (pos=${this._pos}, consumed=${this._pulsesConsumed}, trans=${this._transitions}, reads=${this._readBitCalls})`);
+            console.log(`[CMT] Motor OFF`);
             // Flush the pending pulse at motor stop.
             if (this._recording) this._emitRecPulse(this._recLevel, this._recCycles);
             this._recCycles = 0;
@@ -336,7 +319,7 @@ export class CMT {
      */
     _emitRecPulse(level, cycles) {
         let w = Math.round(cycles / T77_SAVE_SCALE);
-        if (w < 1) return;                    // ignore sub-unit glitches
+        if (w < 1) return;                    // drop widths that round to zero
         const polarity = level ? 0x8000 : 0;
         while (w > T77_MAX_WIDTH) {
             this._recPulses.push(polarity | T77_MAX_WIDTH);
@@ -355,7 +338,7 @@ export class CMT {
     }
 
     /**
-     * @returns {number} number of captured write pulses (incl. pending).
+     * @returns {number} approximate number of captured write pulses (incl. pending).
      * Reports 0 while no actual write-data transition has been captured:
      * motor-only runs (LOAD, MOTOR idling) accumulate silence, and counting
      * that as a recording would let the UI save a data-less tape file.
@@ -401,7 +384,7 @@ export class CMT {
         let stats = '';
         if (this._loaded) {
             stats = `consumed=${this._pulsesConsumed} transitions=${this._transitions} reads=${this._readBitCalls}`;
-            console.log(`[CMT] Tape rewound (${stats})`);
+            console.log(`[CMT] Tape rewound`);
         }
         this._pos = 0;
         this._cycleCount = 0;
@@ -424,8 +407,8 @@ export class CMT {
 
     /**
      * Serialize captured write pulses to a T77 tape image in the standard
-     * layout: 16-byte magic header, one leading 0x0000 gap record (customary
-     * in real-world files), then big-endian uint16 pulses.
+     * layout: 16-byte magic header, one leading 0x0000 gap record, then
+     * big-endian uint16 pulses.
      * @param {number[]} [pulses] override pulse list (defaults to recording)
      * @returns {ArrayBuffer}
      */
@@ -446,8 +429,8 @@ export class CMT {
 
     /**
      * Render a pulse list to a mono 8-bit PCM WAV file (square-wave carrier).
-     * Exposed via the Save .wav button; round-trips cleanly back through
-     * loadWAV (verified to decode to the same blocks).
+     * Used by the .wav export of the recording; the output can be loaded
+     * back with loadWAV.
      *
      * @param {number} [sampleRate=48000]
      * @param {number[]} [pulses] override pulse list (defaults to recording)
@@ -471,9 +454,7 @@ export class CMT {
         }
         // --- Close the final pulse -------------------------------------
         // Demodulation measures full cycles between rising edges, so the
-        // stream must end with one final rising edge; without it the last
-        // half-cycle never closes and the final bit of the last byte (the
-        // closing block's checksum) is lost — LOAD then waits forever.
+        // stream must end with one final rising edge or the last bit is lost.
         if (arr.length > 0) {
             const last = arr[arr.length - 1];
             if (last & 0x8000) {
@@ -517,8 +498,8 @@ export class CMT {
     /**
      * Load a WAV file as cassette media. Supports PCM 8-bit unsigned and
      * 16-bit signed, mono or multi-channel (channel 0 is used). The audio
-     * waveform is thresholded into a binary level stream and run-length
-     * encoded into the same pulse representation used for T77 playback.
+     * waveform is converted into the same pulse representation used for
+     * T77 playback (two decoders; see the selection below).
      *
      * @returns {boolean}
      */
@@ -573,15 +554,7 @@ export class CMT {
             return dv.getInt16(p, true) / 256;
         };
 
-        // --- FSK demodulate → re-encode clean pulses --------------------
-        // Real tape recordings carry analog defects — drifting amplitude,
-        // dropouts, noise — that defeat any single slice threshold and flip
-        // bits ("Device I/O error"). Rather than feed the raw sliced waveform
-        // to the BIOS, fully demodulate it: split the recording into signal
-        // regions, recover the bit stream from full-cycle periods (robust to
-        // half-cycle asymmetry), frame it into bytes, repair leader noise, and
-        // re-emit a CLEAN carrier with canonical pulse widths — the same shape
-        // a pristine tape image has. The BIOS then reads an ideal signal.
+        // First-channel samples on a 16-bit scale, shared by both decoders.
         const smp = new Int16Array(frames);
         for (let f = 0; f < frames; f++) {
             const p = dataOff + f * frameBytes;
@@ -589,27 +562,18 @@ export class CMT {
         }
 
         // Two decoders, picked automatically. Full FSK demodulation produces a
-        // pristine re-encoded carrier and rescues noisy/uneven recordings, but
-        // only when it can frame real data blocks. Cleaner tapes that the demod
-        // can't frame (different block layout, etc.) decode fine by adaptive
-        // slicing. Demod wins when it frames data blocks covering most of the
-        // bytes it recovered; otherwise fall back to the slicer.
+        // clean re-encoded carrier and rescues noisy/uneven recordings; adaptive
+        // slicing keeps every region's signal as recorded.
         const dbg = {};
         const demodPulses = this._wavDemodToPulses(smp, sampleRate, dbg);
         const slicePulses = this._wavSlice(smp, sampleRate);
         const sliceQ = this._wavPulsesToBytes(slicePulses);
 
-        // Both decoders self-verify via block checksums; pick the cleaner one.
-        // Fewest bad blocks wins, ties go to the demod (canonical carrier). If
-        // neither framed any block, the raw sliced signal is the safer choice.
-        //
-        // Exception: the demod re-encodes only regions that frame standard
-        // blocks, so a tape whose bulk is raw (un-framed) data — e.g. a small
-        // loader that then reads the main program as a custom block — would be
-        // truncated by the demod (it drops the big raw region and the load
-        // stops partway). When the demod re-encoded far fewer bytes than it
-        // actually recovered, the slice (which keeps every region's signal)
-        // is the complete one.
+        // Both decoders self-verify via block checksums. The checks below run in
+        // this order: the encoded-size check (falls back to the slicer when the
+        // demod output is much smaller than the decoded data); the demod when neither
+        // yields a checksum-OK block; fewest bad blocks; then most OK blocks
+        // (ties go to the demod).
         const demodTruncated = dbg.encodedBytes < dbg.bytes * 0.5;
         let useDemod;
         if (demodTruncated && sliceQ.ok > 0) useDemod = false;
@@ -624,19 +588,19 @@ export class CMT {
             this._pulses = Uint16Array.from(demodPulses);
             this._scale = this._detectScale(this._pulses.length);
             this._wavQuality = { mode: 'demod', okBlocks: dbg.okBlocks, badBlocks: dbg.badBlocks };
-            mode = `demod ${dbg.okBlocks}ok/${dbg.badBlocks}bad (slice ${sliceQ.ok}/${sliceQ.bad})`;
+            mode = `${dbg.okBlocks} blocks OK, ${dbg.badBlocks} BAD`;
         } else {
             this._pulses = Uint16Array.from(slicePulses);
             this._scale = CMT_CPU_HZ / sampleRate;  // 1 width unit = 1 sample frame
             this._wavQuality = { mode: 'slice', okBlocks: sliceQ.ok, badBlocks: sliceQ.bad };
-            mode = `slice ${sliceQ.ok}ok/${sliceQ.bad}bad (demod ${dbg.okBlocks}/${dbg.badBlocks})`;
+            mode = `${sliceQ.ok} blocks OK, ${sliceQ.bad} BAD`;
         }
         this._validPulseCount = this._pulses.length;
         this._loaded = this._pulses.length > 0;
         if (this._loaded) this._level = (this._pulses[0] & 0x8000) ? 1 : 0;
 
-        console.log(`[CMT] WAV: ${frames} frames @${sampleRate}Hz/${bits}bit/${channels}ch ` +
-            `→ ${this._pulses.length} pulses, scale=${this._scale.toFixed(3)} [${mode}]`);
+        console.log(`[CMT] WAV: ${sampleRate}Hz/${bits}bit/${channels}ch ` +
+            `[${mode}]`);
         return this._loaded;
     }
 
@@ -644,8 +608,7 @@ export class CMT {
     // WAV FSK demodulation → clean re-encoded pulse train
     // ------------------------------------------------------------------
 
-    // Canonical re-encoded half-cycle widths (T77 width units, ~9µs each):
-    //   short = 2400 Hz half-cycle (data bit 0), long = 1200 Hz (data bit 1).
+    // Half-cycle widths of the re-encoded carrier (short = bit 0, long = bit 1).
     static get _TICK_SHORT() { return 23; }
     static get _TICK_LONG() { return 46; }
 
@@ -653,13 +616,12 @@ export class CMT {
      * Full pipeline: channel-0 samples (16-bit scale) → clean pulse list.
      * @param {Int16Array} smp
      * @param {number} rate sample rate (Hz)
-     * @param {object} dbg out: {regions, bytes, dataBlocks}
+     * @param {object} dbg out: decode statistics (regions, bytes, block counts)
      * @returns {number[]} uint16 pulse list (bit15 polarity + width)
      */
     _wavDemodToPulses(smp, rate, dbg) {
         const n = smp.length;
-        // --- Signal regions: 50ms RMS blocks above a noise floor, merged
-        //     across gaps < 100ms. Isolates carrier from silence/dropouts. ---
+        // --- Detect signal regions (carrier vs. silence/dropouts) ---
         const block = Math.max(1, Math.floor(rate / 20));
         const RMS_TH = 500;            // 16-bit-scale noise floor
         const regions = [];
@@ -682,11 +644,8 @@ export class CMT {
         }
 
         // --- Decode each region in order ---------------------------------
-        // A region that frames standard blocks is re-encoded as a clean carrier.
-        // A region that carries raw, un-framed data (e.g. a loader's main
-        // program) has no blocks to validate — so its signal is passed through
-        // by slicing it directly and converting widths to canonical tick units,
-        // keeping it in sequence so a multi-part load isn't truncated.
+        // Framed regions are re-encoded as a clean carrier; un-framed regions
+        // are regenerated in sequence (see _wavRawRegionPulses).
         const threshold = 625e-6 * rate;   // full-cycle 1200↔2400 Hz boundary
         const parts = [];                  // ordered: {bytes} | {raw}
         let totalBytes = 0, totalBlocks = 0, okBlocks = 0, badBlocks = 0;
@@ -719,7 +678,7 @@ export class CMT {
                 encodedBytes += p.bytes.length;
                 for (let i = 0; i < p.bytes.length; i++) this._wavEncodeByte(p.bytes[i], pulses);
             } else {
-                encodedBytes += Math.floor(p.raw.length / 4);   // approx byte count
+                encodedBytes += Math.floor(p.raw.length / 4);   // rough size estimate
                 for (let i = 0; i < p.raw.length; i++) pulses.push(p.raw[i]);
             }
         }
@@ -734,11 +693,11 @@ export class CMT {
     }
 
     /**
-     * Fallback decoder: adaptive-threshold level slicing. Tracks the signal
+     * Slice decoder: adaptive-threshold level slicing. Tracks the signal
      * centre with a one-pole low-pass (recentres drifting/asymmetric half-
-     * cycles) and auto-calibrates the hysteresis band by sweeping the whole
-     * file and keeping the threshold with the fewest single-half-cycle glitches.
-     * Widths stay in sample-frame units (scale = CPU_HZ / sampleRate).
+     * cycles) and auto-calibrates the hysteresis band by trying several bands
+     * and keeping the one whose blocks validate best.
+     * Widths stay in sample-frame units (scale = CMT_CPU_HZ / sampleRate).
      * @param {Int16Array} smp  @param {number} rate
      * @returns {number[]} uint16 pulse list
      */
@@ -747,7 +706,7 @@ export class CMT {
         const win = Math.max(4, Math.round(rate / 1200));
         const alpha = 1 / win;
         const boundary = rate / 3200;          // 2400↔1200 Hz half-period
-        const gapW = rate * 1.5 / 1000;        // ≥1.5ms = gap
+        const gapW = rate * 1.5 / 1000;        // >1.5ms = gap
 
         const STEP = Math.max(1, Math.floor(n / 100000));
         let base = n > 0 ? smp[0] : 0, sumSq = 0, statN = 0;
@@ -786,8 +745,7 @@ export class CMT {
 
         // Auto-calibrate the hysteresis by virtual read: slice at each band,
         // decode the pulses to bytes and keep the band whose blocks validate
-        // best (most checksum-OK, bad heavily penalised). Glitch count alone
-        // picked loadable-but-imperfect bands on some tapes.
+        // best (most checksum-OK, bad heavily penalised).
         const HF = [0.18, 0.25, 0.32, 0.35, 0.40, 0.50, 0.62, 0.75, 0.90];
         let best = null, bestScore = -Infinity;
         for (const hf of HF) {
@@ -891,8 +849,9 @@ export class CMT {
 
     /**
      * Repair bit errors that fall in leader/gap sections (between data blocks)
-     * by forcing them back to 0xFF, while leaving real block content intact.
-     * Blocks begin with the 0x01 0x3C marker; the byte after carries the length.
+     * by forcing them back to 0xFF.
+     * Blocks begin with the 0x01 0x3C marker, followed by a type byte and a
+     * length byte.
      */
     _wavCleanLeaders(decoded) {
         // Strip pre-leader garbage before the first run of three 0xFF.
@@ -925,10 +884,8 @@ export class CMT {
     }
 
     /**
-     * Virtual read: walk the byte stream's blocks and verify each block's
-     * checksum (the byte after the body equals (type+len+Σbody) mod 256).
-     * A correctly-decoded tape has zero bad blocks; any bad block means the
-     * BIOS will hit a Device I/O error there.
+     * Walk the byte stream and verify the checksum of each complete block
+     * of type 0x00 or 0x01. Returns the number of good and bad blocks.
      * @returns {{ok:number, bad:number}}
      */
     _wavVerifyBlocks(d) {
@@ -1016,7 +973,7 @@ export class CMT {
         addBit(1); addBit(1);                              // 2 stop bits
     }
 
-    /** Append a run of silence (gap) pulses of the given duration. */
+    /** Append a run of silence (gap) pulses (seconds converted at 9 us per width unit). */
     _wavSilence(seconds, pulses) {
         let ticks = Math.floor(seconds / 9e-6);
         while (ticks > T77_MAX_WIDTH) { pulses.push(T77_MAX_WIDTH); ticks -= T77_MAX_WIDTH; }

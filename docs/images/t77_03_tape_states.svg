@@ -11,7 +11,7 @@
   <!-- S0 -->
   <rect x="40" y="90" width="170" height="64" rx="8" fill="#f6f8fa" stroke="#8c959f" stroke-width="1.5"/>
   <text x="125" y="116" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328" text-anchor="middle">未セット</text>
-  <text x="125" y="138" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">LED 消灯・表示 --</text>
+  <text x="125" y="138" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">停止中は LED 消灯・表示 --</text>
 
   <!-- S1 -->
   <rect x="290" y="90" width="190" height="64" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
@@ -30,7 +30,8 @@
 
   <!-- S0 -> S1 -->
   <line x1="210" y1="122" x2="288" y2="122" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <text x="249" y="112" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">.t77 をセット</text>
+  <text x="249" y="112" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">.t77 / .wav</text>
+  <text x="249" y="140" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">をセット</text>
 
   <!-- S1 <-> S2 -->
   <line x1="480" y1="104" x2="568" y2="104" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
@@ -39,16 +40,21 @@
   <text x="524" y="158" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">モーター OFF</text>
 
   <!-- S2 -> S3 -->
-  <line x1="685" y1="154" x2="685" y2="248" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <text x="697" y="206" font-family="sans-serif" font-size="11" fill="#57606a">最後まで再生</text>
+  <line x1="630" y1="154" x2="630" y2="248" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="622" y="222" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="end">最後まで再生</text>
 
-  <!-- S3 -> S1 (REW) -->
+  <!-- S3 -> S2 (REW, motor on) -->
+  <line x1="700" y1="250" x2="700" y2="156" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="708" y="208" font-family="sans-serif" font-size="11" fill="#57606a">REW（モーター ON）</text>
+
+  <!-- S3 -> S1 (REW, motor off) -->
   <path d="M570,282 L385,282 L385,156" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <text x="395" y="274" font-family="sans-serif" font-size="11" fill="#57606a">REW（pos=0 に巻き戻し）</text>
+  <text x="395" y="274" font-family="sans-serif" font-size="11" fill="#57606a">REW（モーター OFF）</text>
+  <text x="395" y="298" font-family="sans-serif" font-size="11" fill="#57606a">どちらも位置は先頭へ戻る</text>
 
   <!-- S1 self loop REW -->
   <path d="M330,154 C330,196 440,196 440,158" fill="none" stroke="#8c959f" stroke-width="1.2" marker-end="url(#ah)"/>
-  <text x="333" y="208" font-family="sans-serif" font-size="11" fill="#8c959f">REW（位置 0 へ）</text>
+  <text x="448" y="200" font-family="sans-serif" font-size="11" fill="#8c959f">REW（位置 0 へ）</text>
 
   <!-- S1 -> S0 (Eject) -->
   <path d="M340,90 L340,58 L125,58 L125,88" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>

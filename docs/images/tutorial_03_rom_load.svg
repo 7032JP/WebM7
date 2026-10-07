@@ -35,5 +35,5 @@
   <!-- 結果 -->
   <rect x="220" y="302" width="440" height="60" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
   <text x="440" y="328" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">各 ROM の横が「OK」になれば読み込み成功</text>
-  <text x="440" y="350" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">ROM はブラウザに保存され、次回から自動復元（Clear Saved で消去）</text>
+  <text x="440" y="350" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">ROM はブラウザに保存され、次回から自動復元（Clear ROMs で消去）</text>
 </svg>

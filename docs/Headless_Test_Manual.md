@@ -1,6 +1,6 @@
 # WebM7 ヘッドレステスト マニュアル
 
-WebM7 のシミュレータコアは、ブラウザなしで **Node.js から直接** 動かせます。コア（`core/` のエンジン部）はブラウザの API（`document` / `window` / Web Audio / Canvas）を一切参照しないので、スタブを用意することなく CPU・メモリ・FDC・キーボード・表示ロジックをそのまま実行できます。
+WebM7 のシミュレータコアは、ブラウザなしで **Node.js から直接** 動かせます。
 
 この仕組みを使うと、次のような自動テストが書けます。
 
@@ -8,13 +8,13 @@ WebM7 のシミュレータコアは、ブラウザなしで **Node.js から直
 - 任意のフレームの画面を画像（PPM）として書き出し、表示結果を目視・差分比較する
 - キー入力を流し込んで操作を再現し、期待した動作になるか確かめる
 
-本書は、その書き方とコア API をまとめたものです。本書だけで完結するように書いてありますので、上から順に読めばそのまま動かせます。
+本書は、その書き方とコア API をまとめたものです。
 
 ---
 
 ## 1. ヘッドレスとは
 
-「ヘッドレス（headless）」とは、**画面（head）なしでプログラムを動かすこと**です。WebM7 は本来ブラウザで動くシミュレータですが、その心臓部であるシミュレータコア（`core/`）は「画面に絵を出す」「音を鳴らす」部分と切り離して作られています。そのため、ブラウザの代わりに Node.js でコアだけを動かす、ということができます。
+「ヘッドレス（headless）」とは、**画面（head）なしでプログラムを動かすこと**です。WebM7 は本来ブラウザで動くシミュレータですが、ブラウザの代わりに Node.js でシミュレータコア（`core/`）だけを動かすことができます。
 
 ![図: ブラウザ実行とヘッドレス実行の対比](images/headless_01_browser_vs_headless.svg)
 
@@ -22,7 +22,7 @@ WebM7 のシミュレータコアは、ブラウザなしで **Node.js から直
 
 ヘッドレステストで、ブラウザと共通のコア処理を検証できます。ブラウザ固有の入出力はブラウザで確認してください（第10章参照）。
 
-テスト 1 本の全体の流れは次のとおりです。本書の章立てもこの順番に対応しています。
+テスト 1 本の全体の流れは次のとおりです。
 
 ![図: ヘッドレステスト 1 本の流れ](images/headless_02_test_flow.svg)
 
@@ -32,7 +32,7 @@ WebM7 のシミュレータコアは、ブラウザなしで **Node.js から直
 
 ## 2. 前提環境
 
-- **Node.js**（ES Modules 対応バージョン。新しめの LTS を推奨）
+- **Node.js**（ES Modules 対応。v22 以降の LTS を推奨）
 - WebM7 のソース一式（`core/` ディレクトリ。エンジン部だけを読み込みます）
 - 同梱の互換 ROM イメージ、またはご自身で用意した ROM イメージ（第4章）
 - 必要に応じてディスクイメージ（`.d77` など）やテープイメージ（`.t77` / `.wav`）
@@ -56,26 +56,12 @@ clone 直後のディレクトリ構成は次のとおりです。シミュレ�
 WebM7/
 ├── core/                  ← 共有エンジン（テストはここを読み込む）
 │   ├── index.js           公開 API の窓口（FM7 / 機種定数を再エクスポート）
-│   ├── fm7.js             システム統合クラス（メモリマップ・I/O・スケジューラ連携）
-│   ├── cpu6809.js         MC6809 CPU
-│   ├── scheduler.js       タイミング制御（デュアル CPU 同期）
-│   ├── fdc.js             フロッピーディスクコントローラ（D77/2D/HFE）
-│   ├── keyboard.js        キーボード入力
-│   ├── display.js         画面描画（VRAM・パレット・ライン描画）
-│   ├── cmt.js             カセットテープ（T77/WAV）
-│   ├── …                  hfe.js / opn.js / psg.js（以上がエンジン部。ブラウザ API 非依存）
-│   └── …                  fm7_browser.js / display_canvas.js / audio_output.js / softkbd.js /
-│                          cgrom_glyph.js / fdd_sound.js / audio-worklet-processor.js
-│                          （ブラウザ結合部。ヘッドレスでは読み込みません）
+│   └── …                  エンジン部とブラウザ結合部（ブラウザ結合部はヘッドレスでは読み込みません）
 ├── assets/
-│   └── altroms/           同梱の互換 ROM セット（LICENSE / SHA256SUMS 等を含む）
-├── css/                   スタイルシート
-├── icons/                 PWA アイコン
+│   └── altroms/           同梱の互換 ROM セット
 ├── docs/                  ドキュメント（本書を含む）
 ├── index.html             ブラウザのメイン画面・UI
-├── manifest.webmanifest   PWA マニフェスト
-├── sw.js                  サービスワーカー
-├── CHANGELOG.md  LICENSE  LICENSE-*.md
+└── …
 ```
 
 > ヘッドレステストでは `core/` のエンジン部を読み込みます。ROM と必要なメディアイメージは第4章の手順で指定してください。テスト用のディレクトリやスクリプトは含まれていませんので、下記のとおり**ご自身で作成**します。
@@ -113,13 +99,13 @@ node test/your_test.mjs
 cd test && node your_test.mjs
 ```
 
-> ディスクイメージは clone した中には含まれません。ROM は独立実装の互換 ROM セットが `assets/altroms/` に同梱されています（漢字系 ROM を含む。第4章参照）。パスはスクリプト内で各自の環境に合わせて指定します。
+> ディスクイメージは clone した中には含まれません。ROM は第4章を参照してください。パスはスクリプト内で各自の環境に合わせて指定します。
 
 ---
 
 ## 4. ROM の用意
 
-シミュレータの起動には ROM イメージが必要です。WebM7 には独立実装の互換 ROM セット（MIT License）を `assets/altroms/` に同梱しており、漢字系 ROM（漢字 ROM `kanji.rom` / `kanji2.rom`・辞書 ROM `dicrom.rom`）を含む基本 ROM はそのまま使えます。純正 ROM は同梱・配信しません。**互換 ROM セットに含まれない ROM を使う場合は、ご自身で適法に用意し、任意のフォルダに置いてください。**テストスクリプトでは、そのフォルダを定数にして読み込みます。漢字系 ROM の字形の条件は `LICENSE-Shinonome.md` を参照してください。
+シミュレータの起動には ROM イメージが必要です。WebM7 には独立実装の互換 ROM セット（本体は MIT License。第三者素材由来の漢字字形は対象外）を `assets/altroms/` に同梱しており、漢字系 ROM（漢字 ROM `kanji.rom` / `kanji2.rom`・辞書 ROM `dicrom.rom`）を含む基本 ROM はそのまま使えます。純正 ROM は同梱・配信しません。**互換 ROM セットに含まれない ROM を使う場合は、ご自身で適法に用意し、任意のフォルダに置いてください。**テストスクリプトでは、そのフォルダを定数にして読み込みます。漢字系 ROM の字形の条件は `LICENSE-Shinonome.md` を参照してください。
 
 必要な ROM は機種により異なります。読み込みメソッドと、本書のサンプルコードで使う**ファイル名の例**は次のとおりです（ファイル名は各自の ROM に合わせてください。同梱互換 ROM の BASIC は `7tbasic3.rom` です）。
 
@@ -129,24 +115,20 @@ cd test && node your_test.mjs
 | DOS ブート ROM | `loadBootROM()` | `boot_dos.rom` | 512 バイト | FM-7 系（Boot Mode: DOS で必須） |
 | BASIC ブート ROM | `loadBootBasROM()` | `boot_bas.rom` | 512 バイト | FM-7 系（Boot Mode: BASIC で必須） |
 | サブシステム ROM (Type-C) | `loadSubROM()` | `subsys_c.rom` | 約 10KB | 全機種（常に必須。サブ CPU 用） |
-| イニシエータ ROM | `loadInitiateROM()` | `initiate.rom` | 8KB | FM77AV 系（起動に必須） |
-| サブシステム ROM (Type-A) | `loadSubROM_A()` | `subsys_a.rom` | 8KB | FM77AV 系 |
-| サブシステム ROM (Type-B) | `loadSubROM_B()` | `subsys_b.rom` | 8KB | FM77AV 系 |
+| イニシエータ ROM | `loadInitiateROM()` | `initiate.rom` | 8KB | FM77AV 系（必須） |
+| サブシステム ROM (Type-A) | `loadSubROM_A()` | `subsys_a.rom` | 8KB | FM77AV 系（必須） |
+| サブシステム ROM (Type-B) | `loadSubROM_B()` | `subsys_b.rom` | 8KB | FM77AV 系（必須） |
 | CG ROM | `loadCGROM()` | `subsyscg.rom` | 最大 8KB | FM77AV 系（必須） |
-| 漢字 ROM（第1水準） | `loadKanjiROM()` | `kanji.rom` | 128KB | FM-7 では任意（漢字表示用）、FM77AV 以降は必須 |
+| 漢字 ROM（第1水準） | `loadKanjiROM()` | `kanji.rom` | 128KB | FM-7 系では任意（漢字表示用）、FM77AV 系では必須 |
 | 漢字 ROM（第2水準） | `loadKanji2ROM()` | `kanji2.rom` | 128KB | FM77AV40EX/SX（必須） |
 | 辞書 ROM | `loadDicromROM()` | `dicrom.rom` | 256KB | FM77AV40EX/SX（必須） |
-| 拡張サブ ROM | `loadExtSubROM()` | `extsub.rom` | 48KB | FM77AV40EX（必須） |
+| 拡張サブ ROM | `loadExtSubROM()` | `extsub.rom` | 48KB | FM77AV40EX/SX（必須） |
 
-機種ごとに読み込むべき ROM の目安は次のとおりです（ブラウザ WebM7 本体の必須／任意の区分と同じです）。
+表の「必須」は、その機種の ROM 構成に含まれるという意味です（ブラウザの WebM7 の ROM Files パネルのバッジと同じ区分です）。
 
-- **FM-7** … BASIC ROM＋サブシステム Type-C＋Boot Mode に対応するブート ROM（BASIC なら BASIC ブート ROM、DOS なら DOS ブート ROM）が必須です。
-- **FM77AV / FM77AV20 / FM77AV20EX / FM77AV40 / FM77AV40EX/SX** … BASIC ROM・サブシステム Type-C に加えてイニシエータ ROM・サブシステム Type-A / Type-B・CG ROM・漢字 ROM（第1水準）が必須です（ブート ROM（DOS / BASIC）は不要です）。
-- **FM77AV40EX/SX** … さらに漢字 ROM（第2水準）・辞書 ROM・拡張サブ ROM が必須です。
+![図: 機種と ROM のマトリクス](images/headless_03_rom_matrix.svg)
 
-![図: 機種と必要 ROM のマトリクス](images/headless_03_rom_matrix.svg)
-
-機種ごとの必須 ROM・任意 ROM を色分けしたマトリクスです。緑がその機種で必ず読み込むもの（ブート ROM は選択した Boot Mode に対応する方）、橙は用途に応じて読み込むものです。
+機種ごとの ROM を色分けしたマトリクスです。緑が機種の ROM 構成に含まれる ROM（必須）です。橙は任意の ROM、「―」はその機種では不要な ROM です。
 
 > ヘッドレス実行でも、選択した機種と起動モードに対応する ROM 一式を読み込んでください。
 
@@ -160,7 +142,7 @@ ROM やディスクイメージの置き場所は、スクリプトに絶対パ�
 
 ## 5. ブラウザ API スタブは不要
 
-コアのエンジン部はブラウザのグローバル（`document` / `window` / `AudioContext` / `requestAnimationFrame` 等）を参照しません。画面への描画や音の出力は `core/fm7_browser.js` などのブラウザ結合部が受け持ち、ヘッドレスではそれらを読み込まないため、**スタブを置く前処理は不要**です。`import` 文をファイル先頭に書いて構いません。
+コアのエンジン部はブラウザのグローバル（`document` / `window` / `AudioContext` / `requestAnimationFrame` 等）を参照しないため、**スタブを置く前処理は不要**です。`import` 文をファイル先頭に書いて構いません。
 
 ```javascript
 import { FM7 } from '../core/index.js';
@@ -179,41 +161,39 @@ import { readFileSync } from 'fs';
 // --- 1) コア読み込み（公開窓口の index.js 経由。スタブは不要） ---
 import { FM7 } from '../core/index.js';
 
-// --- 3) ROM フォルダ（各自のパスに置き換える） ---
+// --- 2) ROM フォルダ（各自のパスに置き換える） ---
 const ROM_DIR = process.env.WEBM7_ROM_DIR || './roms';
 const rom = (name) => new Uint8Array(readFileSync(`${ROM_DIR}/${name}`));
 
-// --- 4) インスタンス生成・ROM 読み込み・機種設定 ---
+// --- 3) インスタンス生成・ROM 読み込み・機種設定 ---
 const fm7 = new FM7();
 fm7.loadFBasicROM(rom('7tbasic3.rom'));   // ファイル名は各自の用意したものに合わせる
 fm7.loadBootROM(rom('boot_dos.rom'));
 fm7.loadBootBasROM(rom('boot_bas.rom'));
 fm7.loadSubROM(rom('subsys_c.rom'));
-fm7.setMachineType('fm7');                // 'fm7' | 'fm77av' | 'fm77av40' | 'fm77av40ex'
+fm7.setMachineType('fm7');                // 'fm7' | 'fm77' | 'fm77av' | 'fm77av20' | 'fm77av20ex' | 'fm77av40' | 'fm77av40ex'
 
-// --- 5) ディスク挿入（任意。ディスクなしなら ROM BASIC が起動します） ---
+// --- 4) ディスク挿入（任意。ディスクなしなら ROM BASIC が起動します） ---
 // const disk = readFileSync('./disk.d77');
 // fm7.fdc.loadDisk(0, new Uint8Array(disk).buffer);   // ドライブ 0 に挿入
 
-// --- 6) リセットして起動 ---
+// --- 5) リセットして起動 ---
 fm7.reset();
 
-// --- 7) 1 フレーム = 16667 マイクロ秒（60Hz）。600 フレーム実行して起動を待つ ---
+// --- 6) exec 1 回 = 16667 マイクロ秒（約 1/60 秒）を 1 フレームと数え、600 フレーム実行して起動を待つ ---
 const FRAME_US = 16667;
 const runFrames = (n) => { for (let i = 0; i < n; i++) fm7.scheduler.exec(FRAME_US); };
 runFrames(600);
 
-// --- 8) キー入力を流し込む（BASIC のプロンプト到達後） ---
+// --- 7) キー入力を流し込む（BASIC のプロンプト到達後） ---
 fm7.keyboard.queueText('PRINT 123\n');
 while (fm7.keyboard.autoTypePending) runFrames(1);
 runFrames(60);   // 最後のキーが処理されるまで少し余分に回す
 
-// --- 9) 状態を表示 ---
+// --- 8) 状態を表示 ---
 console.log(`Main PC = $${fm7.mainCPU.pc.toString(16)}`);
 console.log(`Sub  PC = $${fm7.subCPU.pc.toString(16)}`);
 ```
-
-> `ROM_DIR` とファイル名は、ご自身が用意した ROM の置き場所・名前に合わせて書き換えてください。本書はサンプルとして汎用的なパス・名前を示しています。
 
 ---
 
@@ -224,21 +204,24 @@ console.log(`Sub  PC = $${fm7.subCPU.pc.toString(16)}`);
 ```javascript
 const fm7 = new FM7();
 fm7.setMachineType('fm77av');   // 機種を設定（ROM 読み込み後・reset 前に）
-fm7.reset();                    // 全システムリセット。ブート経路を機種・メディアから自動判定
+fm7.reset();                    // 全システムリセット。起動経路は機種とブートモードで決まる（7.1.1 節）
 ```
 
-機種定数（`core/index.js` から re-export）:
+`setMachineType` が受け付ける機種の文字列（これ以外の文字列は `'fm7'` として扱います）:
 
-| 文字列 | 機種 |
-|---|---|
-| `'fm7'` | FM-7 |
-| `'fm77av'` | FM77AV |
-| `'fm77av40'` | FM77AV40 |
-| `'fm77av40ex'` | FM77AV40EX |
+| 文字列 | 機種 | `core/index.js` から re-export される定数 |
+|---|---|---|
+| `'fm7'` | FM-7 | `MACHINE_FM7` |
+| `'fm77'` | FM-77 | `MACHINE_FM77` |
+| `'fm77av'` | FM77AV | `MACHINE_FM77AV` |
+| `'fm77av20'` | FM77AV20 | `MACHINE_FM77AV20` |
+| `'fm77av20ex'` | FM77AV20EX | `MACHINE_FM77AV20EX` |
+| `'fm77av40'` | FM77AV40 | `MACHINE_FM77AV40` |
+| `'fm77av40ex'` | FM77AV40EX/SX | `MACHINE_FM77AV40EX` |
 
 #### 7.1.1 起動経路の指定（ブートモード）
 
-`reset()` が選ぶ起動経路は、機種と **ブートモード**（`'basic'` / `'dos'`）で決まります。ブラウザで機種別ハードウェアパネル（DIP スイッチ / BOOT ボタン / BASIC・DOS ボタン）から選ぶ起動モードに相当する設定は、ヘッドレスでは次のフィールドで行います（`reset()` の**前**に設定）。
+`reset()` が選ぶ起動経路は、機種と **ブートモード**（`'basic'` / `'dos'`）で決まります。ブラウザで機種別ハードウェアパネルから選ぶ起動モードに相当する設定は、ヘッドレスでは次のフィールドで行います（`reset()` の**前**に設定）。
 
 ```javascript
 fm7._bootModeOverride = 'basic';   // 'basic' または 'dos'
@@ -248,26 +231,24 @@ fm7.reset();
 
 | 機種 | ブートモード | 起動経路 |
 |---|---|---|
-| FM-7 | `'basic'` | BASIC ブート ROM（`loadBootBasROM()`）を実行します。 |
-| FM-7 | `'dos'` | DOS ブート ROM（`loadBootROM()`）を実行します。 |
+| FM-7 系 | `'basic'` | BASIC ブート ROM（`loadBootBasROM()`）を実行します。 |
+| FM-7 系 | `'dos'` | DOS ブート ROM（`loadBootROM()`）を実行します。 |
 | FM77AV 系 | どちらでも | イニシエータ ROM（`loadInitiateROM()`）を実行します。`_bootModeExplicit` を `true` にしない場合は、ドライブ 0 にディスクがあれば `'dos'`、無ければ `'basic'` として扱われます。 |
-
-FM-7 では選択するモードのブート ROM、FM77AV 系ではイニシエータ ROM を読み込んでおきます。選択した機種に合う ROM を指定してください。
 
 ### 7.2 実行（時間を進める）
 
 スケジューラにマイクロ秒を渡して、その分だけエミュレーションを進めます。
 
 ```javascript
-fm7.scheduler.exec(16667);   // 約 1 フレーム（60Hz = 16,667 マイクロ秒）進める
+fm7.scheduler.exec(16667);   // およそ 16,667 マイクロ秒（約 1/60 秒）進める
 fm7.scheduler.step();        // メイン CPU を 1 命令だけ実行（戻り値 = 消費サイクル数）
 ```
 
-FM-7 系はメイン CPU とサブ CPU の 2 つの MC6809 を持つデュアル CPU 構成です。スケジューラが両者の同期を保ちながら進めるため、テスト側は `exec()` を呼ぶだけでかまいません。
+FM-7 系・FM77AV 系のいずれも、メイン CPU とサブ CPU の 2 つの MC6809 を持つデュアル CPU 構成です。スケジューラが両者の同期を保ちながら進めるため、テスト側は `exec()` を呼ぶだけでかまいません。
 
 ![図: 2 つの CPU とスケジューラの関係](images/headless_05_dual_cpu_scheduler.svg)
 
-`exec(16667)` を 1 回呼ぶと、メイン CPU とサブ CPU の両方がそろって 1 フレーム（16,667 マイクロ秒 = 60Hz）ぶん進みます。
+`exec(16667)` を 1 回呼ぶと、シミュレータ内の時間がおよそ 16,667 マイクロ秒（約 1/60 秒）ぶん進みます（命令の区切りで止まるため、ちょうどにはなりません）。本書ではこの 1 回ぶんを便宜上「1 フレーム」と呼びます。画面の更新周期は表示モードで異なるため、この単位と画面の更新は 1 対 1 に対応しません。
 
 複数フレームを回すヘルパー例:
 
@@ -278,12 +259,12 @@ runFrames(300);
 
 ![図: フレーム実行ループのタイミングチャート](images/headless_06_frame_loop_timing.svg)
 
-`exec(16667)` を繰り返すほど実機時間が進みます。60 フレームで実機 1 秒、300 フレームで実機 5 秒ぶんです。
+`exec(16667)` を繰り返すほど実機時間が進みます。60 フレームで実機の約 1 秒、300 フレームで約 5 秒ぶんです。
 
 ### 7.3 ディスク
 
 ```javascript
-fm7.fdc.loadDisk(driveNum, arrayBuffer);   // driveNum: 0〜3、D77/2D/HFE を自動判別
+fm7.fdc.loadDisk(driveNum, arrayBuffer);   // driveNum: 0〜3、D77/2D/2DD/HFE を自動判別
 fm7.fdc.selectDisk(driveNum, diskIdx);     // 連結された複数ディスクから選択
 ```
 
@@ -291,7 +272,7 @@ fm7.fdc.selectDisk(driveNum, diskIdx);     // 連結された複数ディスク�
 
 ![図: ディスク挿入と FDC](images/headless_07_disk_fdc.svg)
 
-`loadDisk` で渡したイメージは形式（D77 / 2D / HFE）が自動判別されて指定ドライブに入ります。複数枚を連結した D77 では `selectDisk` で挿入中の 1 枚を切り替えます。
+`loadDisk` で渡したイメージは形式（D77 / 2D / 2DD / HFE）が自動判別されて指定ドライブに入ります。複数枚を連結した D77 では `selectDisk` で挿入中の 1 枚を切り替えます。
 
 ### 7.4 キー入力
 
@@ -305,11 +286,13 @@ fm7.keyboard.queueText('LOAD"PROG"\n', { charGap: 2, lineGap: 12 });
 - `charGap` … 通常キー間の間隔（フレーム数。既定 2）
 - `lineGap` … RETURN 後の間隔（フレーム数。既定 12。BASIC が前の行を処理する時間を確保します）
 
-`queueText` はキューに文字を積みます。送出はスケジューラが自動で行います。コア内部で、エミュレーション時間が 1 フレームぶん（16,667 マイクロ秒）進むごとにオートタイプが 1 回進むよう配線されているため、**テスト側は `scheduler.exec()` でフレームを回し続けるだけ**でキーが順に送られます。
+`queueText` はキューに文字を積みます。送出はスケジューラが自動で行うため、**テスト側は `scheduler.exec(16667)` を繰り返し呼ぶだけ**でキーが順に送られます。
+
+前のキーが読み取られ、指定の間隔（`charGap` / `lineGap`）が経つまでは、次のキーを送りません。
 
 ![図: queueText 自動送出のタイミングチャート](images/headless_08_queuetext_timing.svg)
 
-キューに積んだキーは、スケジューラが毎フレーム自動で進めるオートタイプにより `charGap`（既定 2 フレーム）間隔で送出され、RETURN の後だけ `lineGap`（既定 12 フレーム）待ちます。手動の tick は不要です。
+通常は既定値（`charGap: 2` / `lineGap: 12`）のままで構いません。極端に短くするとキーを取りこぼすことがあります。
 
 送出が終わったかどうかは `autoTypePending` で確認できます。
 
@@ -321,9 +304,9 @@ runFrames(60);   // 最後のキーが BASIC に処理されるまで少し余�
 
 - `autoTypePending` … 送出待ちのキーが残っていれば真
 - `clearAutoType()` … 送出待ちのキューを破棄する
-- `autoTypeTick(elapsedUs)` … オートタイプを手動で進める低レベルメソッド。スケジューラが自動で呼ぶため通常は不要です（追加で呼ぶと送出ペースがその分速まります）
+- `autoTypeTick(elapsedUs, canRelease = true)` … オートタイプを手動で進める低レベルメソッド。スケジューラが自動で呼ぶため通常は不要です（追加で呼ぶと送出ペースがその分速まります）。第 2 引数を偽にすると、その回は送出しません
 
-なお、オートタイプは「前のキーが消費されてから次を送る」自動ペース制御つきです。それでも、起動直後など**入力受付前に送ると取りこぼす**ことがあるため、BASIC の `OK`（Ready）プロンプト到達を待ってから送ってください（先にフレームを十分回しておきます）。
+なお、起動直後など**入力受付前に送ると取りこぼす**ことがあるため、BASIC の `Ready` プロンプト到達を待ってから送ってください（先にフレームを十分回しておきます）。
 
 **(b) 単発キーコード送出 `_pushKey`（低レベル API・上級者向け）**
 
@@ -335,7 +318,7 @@ fm7.keyboard._pushKey(0x0D);   // RETURN（カーソルキーやファンクシ�
 
 ### 7.5 ジョイスティック入力
 
-ジョイスティックは通常ブラウザの Gamepad API から読み取られ、そのポーリングは描画ループの中でだけ動きます。ヘッドレスでは描画ループが回らないためポーリングも走りません。そこで、プログラムから方向・トリガを直接与えるための公開 API を使います。
+ヘッドレスでは、プログラムから方向・トリガを直接与えるための公開 API を使います。
 
 **(a) 状態の設定 `setJoystickState`（推奨）**
 
@@ -359,7 +342,7 @@ fm7.setJoystickState(0, 0xF7);   // bit3(右)だけ 0 ＝右
 | `trigger1` | bit4 | `0xEF` |
 | `trigger2` | bit5 | `0xDF` |
 
-押している状態は次に変更するまで保持されます（描画ループが無いため上書きされません）。設定値は OPN のポート（`$FD15`／`$FD16`）経由でプログラムから読み戻されます。
+押している状態は、次に変更するまで保持されます。`reset()` では全解放に戻ります。FM-7 / FM-77 では FM 音源カードが既定で無効のため、先に `fm7.setFMCard(true)` で有効にしてください（FM77AV 系では常に有効です）。
 
 **(b) 解放 `clearJoystickState`**
 
@@ -368,7 +351,7 @@ fm7.clearJoystickState(0);   // ポート1を全解放（0xFF）へ
 fm7.clearJoystickState();    // 引数省略で両ポートを解放
 ```
 
-入力を与えたら、対象プログラムが読み取れるよう `scheduler.exec()` でフレームを進めてください。押しっぱなし・離しの表現は、設定→数フレーム実行→解放、の順で書けます。
+入力を与えたら、対象プログラムが読み取れるよう `scheduler.exec(16667)` でフレームを進めてください。押しっぱなし・離しの表現は、設定→数フレーム実行→解放、の順で書けます。
 
 ```javascript
 fm7.setJoystickState(0, { trigger1: true });   // 押す
@@ -399,19 +382,19 @@ runFrames(3);
 
 ## 8. 画面のキャプチャ（PPM 出力）
 
-`display.render()` は画面を RGBA のフレームバッファへ描きます。ブラウザではこのフレームが Canvas の `ImageData` に直結していますが、ヘッドレスではコアが自前で持つメモリ上のフレーム（`display.frame`）に描かれるので、Canvas のシムを用意する必要はありません。受け取った RGB を **PPM (P6)** として書き出すと、画像ビューア（ImageMagick・GIMP 等）で確認できます。
+`display.render()` は画面を RGBA のフレームバッファ（`display.frame`）へ描きます。Canvas のシムを用意する必要はありません。受け取った RGB を **PPM (P6)** として書き出すと、画像ビューア（ImageMagick・GIMP 等）で確認できます。
 
 流れは次のとおりです。
 
 ![図: 画面キャプチャの流れ](images/headless_10_ppm_capture.svg)
 
-`render(true)` で全面を描画し、`display.frame` の `width` / `height` / `data`（RGBA、左上から順）を読み出して PPM (P6) に変換します。幅・高さは表示モード（640×200 / 640×400）に応じて `render()` が決めます。
+`render(true)` で現在の画面を描画し、`display.frame` の `width` / `height` / `data`（RGBA、左上から順）を読み出して PPM (P6) に変換します。
 
 ```javascript
 import { writeFileSync } from 'fs';
 
 function savePPM(fm7, path) {
-    fm7.display.render(true);                  // 引数 true = 強制再描画（全面）
+    fm7.display.render(true);                  // 引数 true = 全面を描き直す指定
     const img = fm7.display.frame;             // { width, height, data: Uint8ClampedArray (RGBA) }
     const W = img.width, H = img.height;       // サイズは frame から取るのが確実
     const header = `P6\n${W} ${H}\n255\n`;
@@ -429,7 +412,7 @@ function savePPM(fm7, path) {
 
 // 使用例
 runFrames(180);
-savePPM(fm7, './out/frame_180.ppm');
+savePPM(fm7, './frame_180.ppm');
 ```
 
 > 出力先は任意です。`test/out/` のように作業ディレクトリ内へまとめると整理しやすいです。PPM はそのままでも開けますが、`magick frame.ppm frame.png` などで PNG に変換すると扱いやすくなります。
@@ -461,12 +444,11 @@ fm7.cmt.loadWAV(new Uint8Array(readFileSync('./tape.wav')).buffer);   // WAV 形
 
 ## 10. 既知の制約・注意点
 
-- **ブラウザ結合部は読み込まない** … `core/index.js` が公開するのはエンジン部だけです。`fm7_browser.js` / `display_canvas.js` / `audio_output.js` / `softkbd.js` などはブラウザ専用で、Node.js から読み込むと `document` 等が無いため失敗します。
-- **`setMachineType` → `reset` の順** … 機種を設定し ROM を読み込んでから `reset()` します。`reset()` がブート経路を機種・メディアから判定します。
+- **ブラウザ結合部は読み込まない** … `core/index.js` が公開するのはエンジン部だけです。ブラウザ結合部（`fm7_browser.js` など）はブラウザ専用で、Node.js では動きません。ヘッドレス実行では `core/index.js` を読み込んでください。
+- **`setMachineType` → `reset` の順** … ROM を読み込み、`setMachineType` で機種を設定してから `reset()` します。起動経路は機種とブートモードで決まります（7.1.1 節）。
 - **テープの動作確認** … 制限と確認方法は第9章を参照してください。
-- **オートタイプは受付開始を待ってから** … `queueText` 後はフレームを回し続ければ自動送出されますが、ROM ローダ実行中など入力受付前に送ると取りこぼすことがあります。`OK`（Ready）プロンプト到達を待ってから送ってください。
+- **オートタイプは受付開始を待ってから** … 入力受付前に送ると取りこぼすことがあります。BASIC の `Ready` プロンプト到達を待ってから送ってください。
 - **画面サイズは表示モードで変わる** … 幅・高さは `render()` 後に確定します。PPM 書き出しは `display.frame` の `width` / `height` を使ってください（第8章のサンプルはそうなっています）。
-- **リセット後の NMI 受け付け開始条件** … MC6809 はリセット後、S をプログラムで設定するまで NMI を受け付けません。自作のコードを動かす場合は、リセット直後に `LDS #imm` で S を設定してください。
 
 ---
 

@@ -10,8 +10,8 @@
 
   <!-- ヘッダー -->
   <rect x="24" y="48" width="832" height="58" rx="8" fill="#fff8c5" stroke="#bc4c00" stroke-width="1.5"/>
-  <text x="440" y="70" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">ヘッダー — 機種タブ ／ スキン ／ 能力バッジ（→ 1-1・1-2）</text>
-  <text x="440" y="92" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">WebM7 ロゴ ｜ FM-7 / FM-77 / FM77AV / FM77AV20 / FM77AV40 / FM77AV20EX / FM77AV40EX ｜ スキン ｜ 機能バッジ・RAM / VRAM ｜ 機種比較</text>
+  <text x="440" y="70" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">ヘッダー — 機種タブ ／ スキン ／ 機能バッジ（→ 1-1・1-2）</text>
+  <text x="440" y="92" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">WebM7 ロゴ ｜ FM-7 / FM-77 / FM77AV / FM77AV20 / FM77AV40 / FM77AV20EX / FM77AV40EX ｜ 機能バッジ・RAM / VRAM ｜ 機種比較 ｜ スキン</text>
 
   <!-- 左カラム -->
   <rect x="24" y="118" width="520" height="396" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
@@ -19,7 +19,7 @@
 
   <!-- Screen -->
   <rect x="56" y="156" width="456" height="140" rx="8" fill="#1f2328" stroke="#0969da" stroke-width="1.5"/>
-  <text x="284" y="216" font-family="sans-serif" font-size="16" font-weight="bold" fill="#7ee787" text-anchor="middle">Screen（640×200）</text>
+  <text x="284" y="216" font-family="sans-serif" font-size="16" font-weight="bold" fill="#7ee787" text-anchor="middle">Screen</text>
   <text x="284" y="242" font-family="sans-serif" font-size="13" fill="#d0d7de" text-anchor="middle">クリックするとキー入力が渡ります</text>
 
   <!-- 表示倍率トグル -->
@@ -28,7 +28,7 @@
 
   <!-- ツールバー1行目 -->
   <rect x="56" y="344" width="456" height="46" rx="8" fill="#ddf4ff" stroke="#0969da"/>
-  <text x="284" y="364" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="middle">音量 ／ ステータスバー（2 段） ／ Pause ・ 📷 ・ FULL</text>
+  <text x="284" y="364" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="middle">音量 ／ ステータスバー（2 段） ／ Pause ・ 📷</text>
   <text x="284" y="382" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">LED・キー状態・ドライブ・fps・解像度（→ 9 章）</text>
 
   <!-- ツールバー2行目 -->
@@ -71,5 +71,5 @@
 
   <!-- フッター -->
   <rect x="24" y="530" width="832" height="40" rx="8" fill="#ddf4ff" stroke="#0969da"/>
-  <text x="440" y="555" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">画面最下部: 「マニュアル」「チュートリアル」「テープ操作」「ヘッドレステスト」「ライセンス等」「更新履歴」のリンク</text>
+  <text x="440" y="555" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">画面最下部: 「マニュアル」「チュートリアル」「キーボード」「テープ操作」「ヘッドレステスト」「ライセンス等」「更新履歴」のリンク</text>
 </svg>

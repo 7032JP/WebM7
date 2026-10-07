@@ -11,7 +11,7 @@
   <!-- スケジューラ -->
   <rect x="290" y="50" width="260" height="52" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
   <text x="420" y="72" font-family="monospace" font-size="15" font-weight="bold" fill="#0969da" text-anchor="middle">scheduler.exec(16667)</text>
-  <text x="420" y="92" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">16,667 マイクロ秒 = 1 フレーム（60Hz）</text>
+  <text x="420" y="92" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">約 16667 マイクロ秒（本書での 1 フレーム）</text>
 
   <!-- CPU ボックス -->
   <rect x="110" y="160" width="240" height="60" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
@@ -27,7 +27,7 @@
   <text x="420" y="140" font-family="sans-serif" font-size="13" fill="#57606a" text-anchor="middle">同期を保ちながら交互に少しずつ実行</text>
 
   <!-- タイムライン -->
-  <text x="80" y="262" font-family="sans-serif" font-size="13" fill="#1f2328">1 フレーム（16,667 マイクロ秒）の中身のイメージ:</text>
+  <text x="80" y="262" font-family="sans-serif" font-size="13" fill="#1f2328">1 フレームの中身のイメージ:</text>
   <rect x="80" y="274" width="85" height="32" fill="#dafbe1" stroke="#1a7f37"/>
   <rect x="165" y="274" width="85" height="32" fill="#fbefff" stroke="#8250df"/>
   <rect x="250" y="274" width="85" height="32" fill="#dafbe1" stroke="#1a7f37"/>
@@ -44,8 +44,8 @@
   <text x="547" y="295" font-family="sans-serif" font-size="12" fill="#8250df" text-anchor="middle">サブ</text>
   <text x="632" y="295" font-family="sans-serif" font-size="12" fill="#1a7f37" text-anchor="middle">メイン</text>
   <text x="717" y="295" font-family="sans-serif" font-size="12" fill="#8250df" text-anchor="middle">サブ</text>
-  <text x="80" y="328" font-family="sans-serif" font-size="12" fill="#57606a">0 マイクロ秒</text>
-  <text x="760" y="328" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="end">16,667 マイクロ秒</text>
+  <text x="80" y="328" font-family="sans-serif" font-size="12" fill="#57606a">開始</text>
+  <text x="760" y="328" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="end">終了</text>
 
-  <text x="420" y="368" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">exec(16667) を 1 回呼ぶと、両方の CPU がそろって 1 フレームぶん進みます</text>
+  <text x="420" y="368" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">exec(16667) を 1 回呼ぶと、シミュレータ内の時間が約 1 フレームぶん進みます</text>
 </svg>

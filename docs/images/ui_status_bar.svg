@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" width="800" height="460">
-  <title>ステータスバー 2 段目の読み方。ドライブのアクセス LED と DMAC、FDC の状態、2D / 2DD、MMR、NO STEAL、画面モードと色数</title>
+  <title>ステータスバー 2 段目の表示部分の読み方（右端の Pause と画面保存のボタンは省略）。ドライブのアクセス LED と DMAC、FDC の状態、2D / 2DD、MMR、NO STEAL、フレームレート、画面モードと色数</title>
   <defs>
     <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
@@ -7,50 +7,51 @@
   </defs>
   <!-- ステータスバー 2 段目 -->
   <rect x="10" y="92" width="780" height="40" rx="6" fill="#1f2328" stroke="#57606a" stroke-width="1.5"/>
-  <circle cx="45" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
-  <text x="57" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">Drv1</text>
-  <circle cx="105" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
-  <text x="117" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">DMAC</text>
-  <circle cx="180" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
-  <text x="192" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">Drv0</text>
-  <circle cx="240" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
-  <text x="252" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">DMAC</text>
-  <text x="312" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">T:00 S:01 READ</text>
-  <rect x="444" y="101" width="36" height="22" rx="11" fill="none" stroke="#f6f8fa" stroke-width="1.5"/>
-  <text x="462" y="117" font-family="sans-serif" font-size="14" fill="#ffffff" text-anchor="middle">2D</text>
-  <line x1="496" y1="100" x2="496" y2="124" stroke="#57606a" stroke-width="1.5"/>
-  <circle cx="512" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
-  <text x="524" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">MMR</text>
-  <line x1="574" y1="100" x2="574" y2="124" stroke="#57606a" stroke-width="1.5"/>
-  <circle cx="590" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
-  <text x="602" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">NO STEAL</text>
-  <line x1="682" y1="100" x2="682" y2="124" stroke="#57606a" stroke-width="1.5"/>
-  <text x="692" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">640x200 8色</text>
+  <circle cx="27" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="39" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">Drv1</text>
+  <circle cx="87" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="99" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">DMAC</text>
+  <circle cx="155" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="167" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">Drv0</text>
+  <circle cx="215" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="227" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">DMAC</text>
+  <text x="280" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">T:0 S:1 READ</text>
+  <rect x="403" y="101" width="36" height="22" rx="11" fill="none" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="421" y="117" font-family="sans-serif" font-size="14" fill="#ffffff" text-anchor="middle">2D</text>
+  <line x1="448" y1="100" x2="448" y2="124" stroke="#57606a" stroke-width="1.5"/>
+  <circle cx="462" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="474" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">MMR</text>
+  <line x1="516" y1="100" x2="516" y2="124" stroke="#57606a" stroke-width="1.5"/>
+  <circle cx="530" cy="112" r="5" fill="#57606a" stroke="#f6f8fa" stroke-width="1.5"/>
+  <text x="542" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">NO STEAL</text>
+  <line x1="621" y1="100" x2="621" y2="124" stroke="#57606a" stroke-width="1.5"/>
+  <text x="630" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">60 fps</text>
+  <text x="682" y="117" font-family="sans-serif" font-size="14" fill="#ffffff">640x200 / 8色</text>
 
   <!-- 番号と引き出し線 -->
-  <circle cx="112" cy="40" r="12" fill="#0969da"/>
-  <text x="112" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
-  <line x1="106" y1="50" x2="47" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <line x1="118" y1="50" x2="178" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <circle cx="172" cy="184" r="12" fill="#0969da"/>
-  <text x="172" y="189" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
-  <line x1="166" y1="174" x2="107" y2="135" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <line x1="178" y1="174" x2="238" y2="135" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <circle cx="370" cy="40" r="12" fill="#0969da"/>
-  <text x="370" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
-  <line x1="370" y1="52" x2="370" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <circle cx="462" cy="184" r="12" fill="#0969da"/>
-  <text x="462" y="189" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
-  <line x1="462" y1="172" x2="462" y2="135" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <circle cx="535" cy="40" r="12" fill="#0969da"/>
-  <text x="535" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
-  <line x1="535" y1="52" x2="535" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <circle cx="640" cy="184" r="12" fill="#0969da"/>
-  <text x="640" y="189" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">6</text>
-  <line x1="640" y1="172" x2="640" y2="135" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <circle cx="738" cy="40" r="12" fill="#0969da"/>
-  <text x="738" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">7</text>
-  <line x1="738" y1="52" x2="738" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="91" cy="40" r="12" fill="#0969da"/>
+  <text x="91" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
+  <line x1="85" y1="50" x2="29" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="97" y1="50" x2="153" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="151" cy="184" r="12" fill="#0969da"/>
+  <text x="151" y="189" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
+  <line x1="145" y1="174" x2="89" y2="135" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="157" y1="174" x2="213" y2="135" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="335" cy="40" r="12" fill="#0969da"/>
+  <text x="335" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
+  <line x1="335" y1="52" x2="335" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="421" cy="184" r="12" fill="#0969da"/>
+  <text x="421" y="189" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
+  <line x1="421" y1="172" x2="421" y2="135" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="482" cy="40" r="12" fill="#0969da"/>
+  <text x="482" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
+  <line x1="482" y1="52" x2="482" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="570" cy="184" r="12" fill="#0969da"/>
+  <text x="570" y="189" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">6</text>
+  <line x1="570" y1="172" x2="570" y2="135" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <circle cx="731" cy="40" r="12" fill="#0969da"/>
+  <text x="731" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">7</text>
+  <line x1="731" y1="52" x2="731" y2="89" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
 
   <!-- 凡例 -->
   <rect x="10" y="215" width="780" height="235" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
@@ -74,5 +75,5 @@
   <text x="58" y="402" font-family="sans-serif" font-size="14" fill="#1f2328">NO STEAL: サイクルスチールが解除された状態で点灯</text>
   <circle cx="36" cy="428" r="12" fill="#0969da"/>
   <text x="36" y="433" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">7</text>
-  <text x="58" y="433" font-family="sans-serif" font-size="14" fill="#1f2328">画面モード / 色数</text>
+  <text x="58" y="433" font-family="sans-serif" font-size="14" fill="#1f2328">画面モード / 色数（左隣にフレームレート fps の表示）</text>
 </svg>

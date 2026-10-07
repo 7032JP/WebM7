@@ -15,9 +15,10 @@ Copyright (c) 2026 7032 / Naomitsu Tsugiiwa
 MIT License は次の成果物に適用されます。
 
 - JavaScript / HTML / CSS のソースコード（`core/`、`index.html`、`sw.js`、
-  `css/` 等。ただし下記「ライセンスの案内」の表に挙げる第三者のコード・素材を除く）
+  `css/` 等。ただし下記「ライセンスの案内」の表に挙げる第三者のコード・素材と、
+  「MIT License の対象外の要素」に挙げる要素を除く）
 - 本プロジェクトが作成したドキュメント（`README.md`、`HOWTO.md`、
-  `CHANGELOG.md`、`docs/` 配下）と図（`docs/images/`）
+  `CHANGELOG.md`、`docs/` 配下、`assets/altroms/README.md`）と図（`docs/images/`）
 - アイコン（`icons/`）、マニフェスト、テクスチャ（`assets/granite.png`）
 
 ## ライセンスの案内
@@ -30,7 +31,7 @@ MIT License は次の成果物に適用されます。
 | --- | --- | --- |
 | 本プロジェクトの成果物（JavaScript / HTML / CSS、文書、図、アイコン、テクスチャ） | MIT License（[`LICENSE`](LICENSE)） | 本書 |
 | FM 音源の移植部（`core/opn.js` の FM 合成部） | fmgen の利用条件（原文 `core/fmgen_readme.txt`） | [`LICENSE-fmgen.md`](LICENSE-fmgen.md) |
-| 同梱の互換 ROM セット（`assets/altroms/`） | MIT License（別配布物。原文 `assets/altroms/LICENSE`） | [`LICENSE-AltROMs.md`](LICENSE-AltROMs.md) |
+| 同梱の互換 ROM セット（`assets/altroms/`。本プロジェクトが添えた `README.md` を除く） | MIT License（別配布物。原文 `assets/altroms/LICENSE`） | [`LICENSE-AltROMs.md`](LICENSE-AltROMs.md) |
 | 漢字フォント素材（互換 ROM セット内の `kanji.rom` / `kanji2.rom` に含まれる第三者素材由来の字形） | パブリックドメインとして提供（上流の宣言。原文 `assets/altroms/LICENSE-FONT.md` 第 4 節） | [`LICENSE-Shinonome.md`](LICENSE-Shinonome.md) |
 
 ## MIT License の対象外の要素
@@ -44,4 +45,4 @@ GitHub と X のロゴは各権利者の商標であり、公式ページへの�
 
 ## 商標
 
-機種名・製品名は対応対象を示すために使用しています。本プロジェクトは各メーカーの公式製品ではなく、富士通株式会社とは一切関係ありません。
+機種名・製品名は対応対象を示すために使用しています。本プロジェクトは各メーカーの承認を受けたものではありません。

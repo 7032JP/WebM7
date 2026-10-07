@@ -2,11 +2,11 @@
 // Copyright (c) 2026 7032 / Naomitsu Tsugiiwa
 // =============================================================================
 // M7 エミュレーション・コア 公開API
-//   WebM7 などの View はここから core を取り込む。
-//   (個別ファイルへの直接 import も可能だが、共有ビューはこの窓口を使う)
+//   ヘッドレス実行など、core を外から利用するコードはここから取り込む。
+//   (個別ファイルへの直接 import も可能。同梱のブラウザ UI は個別ファイルから取り込む)
 //   ブラウザ結合 (canvas / Web Audio / DOM) はブラウザ UI 側 (fm7_browser.js 等) にある。
 // =============================================================================
-export { FM7, MACHINE_FM7, MACHINE_FM77, MACHINE_FM77AV, MACHINE_FM77AV40, MACHINE_FM77AV40EX } from './fm7.js';
+export { FM7, MACHINE_FM7, MACHINE_FM77, MACHINE_FM77AV, MACHINE_FM77AV20, MACHINE_FM77AV20EX, MACHINE_FM77AV40, MACHINE_FM77AV40EX } from './fm7.js';
 export { FDC, D77Disk } from './fdc.js';
 export {
     GRPH_OVERRIDE, GRPH_SHIFT_OVERRIDE, GRPH_CURSOR,

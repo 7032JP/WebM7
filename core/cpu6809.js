@@ -2,8 +2,7 @@
 // Copyright (c) 2026 7032 / Naomitsu Tsugiiwa
 // =============================================================================
 // MC6809 CPU Simulator for FM-7 Web Simulator
-// MC6809 instruction set simulator
-// Complete, cycle-accurate 6809 instruction set
+// 6809 instruction set simulation with per-instruction cycle counts
 // =============================================================================
 
 // Condition Code Register bit masks
@@ -20,9 +19,9 @@ const CC_E = 0x80; // Entire flag
 const INTR_NMI     = 0x01;  // NMI request
 const INTR_FIRQ    = 0x02;  // FIRQ request
 const INTR_IRQ     = 0x04;  // IRQ request
-const INTR_NMI_ARMED = 0x08;  // NMI armed (set when S is loaded: LDS / LEAS / TFR,EXG with S as a destination)
+const INTR_NMI_ARMED = 0x08;  // NMI armed (set when S is loaded)
 const INTR_SYNC      = 0x10;  // SYNC wait state
-const INTR_CWAI      = 0x20;  // CWAI wait state
+const INTR_CWAI      = 0x20;  // CWAI has pushed the registers
 const INTR_HALT    = 0x40;  // CPU halted
 
 // TFR/EXG postbyte register code for S (see getRegValue / setRegValue)
@@ -101,9 +100,8 @@ const CYCLES_PAGE3 = [
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0  // Fx
 ];
 
-// Extra cycles for indexed addressing modes
+// Unused. addrIndexed() computes the indexed addressing cycles inline.
 const INDEXED_CYCLES = [
-//  Non-indirect  Indirect
     2, 3, 2, 3, 0, 1, 1, 0, 1, 4, 0, 4, 1, 5, 0, 0, // 0x00-0x0F
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5  // 0x10-0x1F
 ];
@@ -380,8 +378,8 @@ export class CPU6809 {
             } else if (this.intr & INTR_SYNC) {
                 this.intr &= ~INTR_SYNC;
                 this.cc &= ~CC_E;
-                this.pushWordS(this.pc);  // Push PC first (higher address)
-                this.pushByteS(this.cc);  // Push CC second (top of stack)
+                this.pushWordS(this.pc);
+                this.pushByteS(this.cc);
                 this.cycle = 10;
             } else {
                 this.cc &= ~CC_E;
@@ -417,14 +415,10 @@ export class CPU6809 {
             return true;
         }
 
-        // SYNC with no pending interrupt just waits
-        // CWAI with no pending interrupt just waits
+        // SYNC wait handling
         if (this.intr & INTR_SYNC) {
-            // Check if any interrupt is pending (even masked ones break SYNC)
             if (this.intr & (INTR_NMI | INTR_FIRQ | INTR_IRQ)) {
                 this.intr &= ~INTR_SYNC;
-                // If the interrupt is masked, just continue execution
-                // The interrupt service itself will be handled next exec()
             }
         }
 
@@ -530,10 +524,7 @@ export class CPU6809 {
                     this.cycle += indirect ? 8 : 5;
                 }
                 break;
-            case 0x0F: // Extended indirect [addr16]
-                // Only valid with indirect flag (postbyte $1F = [nn]).
-                // Non-indirect $0F is undefined on 6809 — do NOT fetch address.
-                // このアドレス指定はレジスタからの変位を 0 として扱う。
+            case 0x0F: // Extended indirect [addr16]; the non-indirect form is undefined
                 if (indirect) {
                     addr = this.fetchWord();
                     this.cycle += 5;
@@ -729,7 +720,6 @@ export class CPU6809 {
         if (val & 0x01) this.cc |= CC_C;
         const result = (val >> 1) & 0xFF;
         if (result === 0) this.cc |= CC_Z;
-        // N is always cleared for LSR
         return result;
     }
 
@@ -835,7 +825,7 @@ export class CPU6809 {
         this.d = result & 0xFFFF;
         this.cc &= ~(CC_Z | CC_C);
         if (result === 0) this.cc |= CC_Z;
-        if (this.b & 0x80) this.cc |= CC_C; // bit 7 of LSB
+        if (this.b & 0x80) this.cc |= CC_C;
         return result;
     }
 
@@ -900,7 +890,7 @@ export class CPU6809 {
         const offset = this.sign16(this.fetchWord());
         if (cond) {
             this.pc = (this.pc + offset) & 0xFFFF;
-            this.cycle += 1; // Extra cycle when branch taken
+            this.cycle += 1;
         }
     }
 
@@ -950,7 +940,6 @@ export class CPU6809 {
 
     opPSHS() {
         const postbyte = this.fetchByte();
-        // Push order: PC, U/S, Y, X, DP, B, A, CC (high bit first)
         if (postbyte & 0x80) { this.pushWordS(this.pc); this.cycle += 2; }
         if (postbyte & 0x40) { this.pushWordS(this.u);  this.cycle += 2; }
         if (postbyte & 0x20) { this.pushWordS(this.y);  this.cycle += 2; }
@@ -963,7 +952,6 @@ export class CPU6809 {
 
     opPULS() {
         const postbyte = this.fetchByte();
-        // Pull order: CC, A, B, DP, X, Y, U/S, PC (low bit first)
         if (postbyte & 0x01) { this.cc = this.pullByteS(); this.cycle += 1; }
         if (postbyte & 0x02) { this.a  = this.pullByteS(); this.cycle += 1; }
         if (postbyte & 0x04) { this.b  = this.pullByteS(); this.cycle += 1; }
@@ -1123,7 +1111,6 @@ export class CPU6809 {
                 const r2 = postbyte & 0x0F;
                 const v1 = this.getRegValue(r1);
                 const v2 = this.getRegValue(r2);
-                // If mixing 8/16 bit, 8-bit value goes to low byte, high byte = 0xFF
                 if (this.isReg8(r1) && !this.isReg8(r2)) {
                     this.setRegValue(r1, v2 & 0xFF);
                     this.setRegValue(r2, (0xFF00 | v1));
@@ -1134,8 +1121,7 @@ export class CPU6809 {
                     this.setRegValue(r1, v2);
                     this.setRegValue(r2, v1);
                 }
-                // Writing S (either side of the exchange) counts as setting the stack pointer,
-                // which enables NMI after reset just like LDS / LEAS.
+                // Writing S arms NMI
                 if (r1 === REG_S || r2 === REG_S) this.intr |= INTR_NMI_ARMED;
                 break;
             }
@@ -1150,8 +1136,7 @@ export class CPU6809 {
                     val = val & 0xFF;
                 }
                 this.setRegValue(r2, val);
-                // Transferring into S counts as setting the stack pointer,
-                // which enables NMI after reset just like LDS / LEAS.
+                // Writing S arms NMI
                 if (r2 === REG_S) this.intr |= INTR_NMI_ARMED;
                 break;
             }
@@ -1450,7 +1435,7 @@ export class CPU6809 {
             }
 
             // -----------------------------------------------------------------
-            // $80-$8F: Immediate 8-bit (A register)
+            // $80-$8F: Immediate operand, and BSR
             // -----------------------------------------------------------------
             case 0x80: this.a = this.opSUB8(this.a, this.fetchByte()); break;  // SUBA imm
             case 0x81: this.opCMP8(this.a, this.fetchByte()); break;           // CMPA imm
@@ -1475,7 +1460,7 @@ export class CPU6809 {
             // 0x8F: STX imm - illegal
 
             // -----------------------------------------------------------------
-            // $90-$9F: Direct 8-bit (A register)
+            // $90-$9F: Direct addressing
             // -----------------------------------------------------------------
             case 0x90: { const a = this.addrDirect(); this.a = this.opSUB8(this.a, this.read(a)); break; } // SUBA dir
             case 0x91: { const a = this.addrDirect(); this.opCMP8(this.a, this.read(a)); break; }          // CMPA dir
@@ -1500,7 +1485,7 @@ export class CPU6809 {
             case 0x9F: { const a = this.addrDirect(); const v = this.opST16(this.x); this.write16(a, v); break; } // STX dir
 
             // -----------------------------------------------------------------
-            // $A0-$AF: Indexed 8-bit (A register)
+            // $A0-$AF: Indexed addressing
             // -----------------------------------------------------------------
             case 0xA0: { const a = this.addrIndexed(); this.a = this.opSUB8(this.a, this.read(a)); break; } // SUBA idx
             case 0xA1: { const a = this.addrIndexed(); this.opCMP8(this.a, this.read(a)); break; }          // CMPA idx
@@ -1525,7 +1510,7 @@ export class CPU6809 {
             case 0xAF: { const a = this.addrIndexed(); const v = this.opST16(this.x); this.write16(a, v); break; } // STX idx
 
             // -----------------------------------------------------------------
-            // $B0-$BF: Extended 8-bit (A register)
+            // $B0-$BF: Extended addressing
             // -----------------------------------------------------------------
             case 0xB0: { const a = this.addrExtended(); this.a = this.opSUB8(this.a, this.read(a)); break; } // SUBA ext
             case 0xB1: { const a = this.addrExtended(); this.opCMP8(this.a, this.read(a)); break; }          // CMPA ext
@@ -1550,7 +1535,7 @@ export class CPU6809 {
             case 0xBF: { const a = this.addrExtended(); const v = this.opST16(this.x); this.write16(a, v); break; } // STX ext
 
             // -----------------------------------------------------------------
-            // $C0-$CF: Immediate 8-bit (B register)
+            // $C0-$CF: Immediate operand
             // -----------------------------------------------------------------
             case 0xC0: this.b = this.opSUB8(this.b, this.fetchByte()); break;  // SUBB imm
             case 0xC1: this.opCMP8(this.b, this.fetchByte()); break;           // CMPB imm
@@ -1570,7 +1555,7 @@ export class CPU6809 {
             // 0xCF: STU imm - illegal
 
             // -----------------------------------------------------------------
-            // $D0-$DF: Direct 8-bit (B register)
+            // $D0-$DF: Direct addressing
             // -----------------------------------------------------------------
             case 0xD0: { const a = this.addrDirect(); this.b = this.opSUB8(this.b, this.read(a)); break; } // SUBB dir
             case 0xD1: { const a = this.addrDirect(); this.opCMP8(this.b, this.read(a)); break; }          // CMPB dir
@@ -1590,7 +1575,7 @@ export class CPU6809 {
             case 0xDF: { const a = this.addrDirect(); const v = this.opST16(this.u); this.write16(a, v); break; } // STU dir
 
             // -----------------------------------------------------------------
-            // $E0-$EF: Indexed 8-bit (B register)
+            // $E0-$EF: Indexed addressing
             // -----------------------------------------------------------------
             case 0xE0: { const a = this.addrIndexed(); this.b = this.opSUB8(this.b, this.read(a)); break; } // SUBB idx
             case 0xE1: { const a = this.addrIndexed(); this.opCMP8(this.b, this.read(a)); break; }          // CMPB idx
@@ -1610,7 +1595,7 @@ export class CPU6809 {
             case 0xEF: { const a = this.addrIndexed(); const v = this.opST16(this.u); this.write16(a, v); break; } // STU idx
 
             // -----------------------------------------------------------------
-            // $F0-$FF: Extended 8-bit (B register)
+            // $F0-$FF: Extended addressing
             // -----------------------------------------------------------------
             case 0xF0: { const a = this.addrExtended(); this.b = this.opSUB8(this.b, this.read(a)); break; } // SUBB ext
             case 0xF1: { const a = this.addrExtended(); this.opCMP8(this.b, this.read(a)); break; }          // CMPB ext
@@ -1630,7 +1615,7 @@ export class CPU6809 {
             case 0xFF: { const a = this.addrExtended(); const v = this.opST16(this.u); this.write16(a, v); break; } // STU ext
 
             default:
-                // Illegal/undefined opcode - treat as NOP with 2 cycles
+                // Illegal/undefined opcode fallback
                 this.cycle = 2;
                 break;
         }
@@ -1736,8 +1721,8 @@ export class CPU6809 {
             case 0xFF: { const a = this.addrExtended(); const v = this.opST16(this.s); this.write16(a, v); break; } // STS ext
 
             default:
-                // Undefined page 2 opcode: real MC6809 executes the base
-                // page 1 instruction (the $10 prefix is simply consumed).
+                // Undefined page 2 opcode: handled as the base page 1
+                // instruction (the $10 prefix is consumed).
                 this._execPage1(opcode);
                 break;
         }

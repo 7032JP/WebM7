@@ -14,24 +14,16 @@
 //
 // 3 FM channels (4 operators each, phase modulation synthesis) plus
 // 3 SSG channels rendered through an embedded PSGCore (psg.js).
-// FM and SSG outputs are mixed together into the OPN's output port,
-// matching the way the real YM2203 sums both sections on a single output.
-//
-// FM synthesis internal clock = 1,228,800 Hz.
-// YM2203 external clock = 4.9152 MHz / 2 = 2,457,600 Hz on FM77AV.
-// On FM-7, CPU and OPN share the same clock domain so ratio = 1.0.
-// On FM77AV, OPN (2.4576 MHz) runs faster than CPU (2 MHz) → ratio = 1.2288.
+// FM and SSG outputs are mixed together into the OPN's output port.
+// Handles the timers and the audio synthesis. In FM77AV mode the timers
+// count at the timer reference clock; otherwise they count CPU cycles.
 // =============================================================================
 
 import { PSGCore } from './psg.js';
 
 const MASTER_CLOCK  = 1228800;
-const OPN_EXT_CLOCK_AV = 2457600;   // YM2203 synthesis clock path (preserved for pitch)
-const CPU_CLOCK_AV     = 2000000;   // FM77AV CPU clock (2 MHz)
-// Timer reference clock — YM2203 timer formula uses the external chip clock,
-// which on FM-7/77 hardware is 1.2288 MHz (half of our synthesis-side constant).
+// Timer reference clock.
 const OPN_TIMER_CLOCK_AV = 1228800;
-const OPN_CPU_RATIO_AV = OPN_TIMER_CLOCK_AV / CPU_CLOCK_AV;  // 0.6144
 const SAMPLE_RATE   = 44100;
 
 const NUM_CHANNELS  = 3;
@@ -66,8 +58,7 @@ const OUTPUT_SHIFT       = 3;
 const OUTPUT_SCALE       = 16384;
 const PI_CONST           = Math.PI;
 
-// Envelope quiet level: derived from YM2203 10-bit EG attenuation range.
-// The chip has 96dB dynamic range at 0.1dB per step, giving 960 as silence threshold.
+// Envelope level treated as silence.
 const ENV_QUIET_LEVEL   = 960;
 
 // OUTPUT_TO_ENV_SHIFT = (20 + PHASE_EXTRA_BITS) - 13 = 9
@@ -101,8 +92,7 @@ const KEY_SCALE_TABLE = new Uint8Array([
     28, 28, 28, 28, 28, 28, 28, 29, 30, 31, 31, 31, 31, 31, 31, 31,
 ]);
 
-// Detune values derived from YM2203 register specification (3-bit DT1 field)
-// Detune: (dt*32 + bn) -> detune value
+// Detune table: (dt*32 + bn) -> detune value
 const DETUNE_TABLE = new Int8Array([
       0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
       0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -127,15 +117,8 @@ const DETUNE_TABLE = new Int8Array([
 // ---------------------------------------------------------------------------
 
 // Envelope rate pattern: [rate][patternIdx & 7] -> EG increment
-// Generated programmatically from the YM2203 EG rate algorithm:
-//   Rates 0-3: no change; Rates 4-47: base increment 1 with pattern;
-//   Rates 48+: doubled increment per 4-rate group; Rates 60-63: max (16).
 function buildEnvRatePattern() {
-    // Base 8-step patterns indexed by rate%4:
-    //   0 -> 4 active: [1,0,1,0,1,0,1,0]
-    //   1 -> 5 active: [1,1,1,0,1,0,1,0]
-    //   2 -> 6 active: [1,1,1,0,1,1,1,0]
-    //   3 -> 7 active: [1,1,1,1,1,1,1,0]
+    // Build the envelope update tables.
     const basePatterns = [
         [1, 0, 1, 0, 1, 0, 1, 0],
         [1, 1, 1, 0, 1, 0, 1, 0],
@@ -177,16 +160,13 @@ function buildEnvRatePattern() {
 }
 const ENV_RATE_PATTERN = buildEnvRatePattern();
 
-// Envelope rate divider: rate/4 -> counter threshold
+// Envelope rate table: rate/4 -> counter decrement per tick
 // Powers of 2 from 2^0 to 2^10, clamped at 2047 for indices 11-15.
 const ENV_RATE_DIVIDER = Array.from({length: 16}, (_, i) =>
     i < 11 ? (1 << i) : 2047
 );
 
 // Attack curve: [rate][patternIdx & 7] -> shift amount (-1 = skip)
-// Generated from YM2203 attack rate algorithm:
-//   Rates 0-1: all -1 (no attack); Rates 2-47: shift 4 where pattern active, -1 otherwise;
-//   Rates 48-59: decreasing shift values with pattern; Rates 60-63: shift 0 (instant).
 function buildAttackTable() {
     const basePatterns = [
         [1, 0, 1, 0, 1, 0, 1, 0],
@@ -230,7 +210,7 @@ function buildAttackTable() {
 const ATTACK_CURVE_TABLE = buildAttackTable();
 
 // SSG-EG envelope control table
-// [ssg_type & 7][state][phase] -> [vector, offset]
+// [ssg_type & 7] -> [[vector per phase], [offset per phase]]
 const SSG_ENV_TABLE = [
     [[1, 1, 1], [0, 0, 0]],
     [[0, 1, 1], [0, 0, 0]],
@@ -246,12 +226,11 @@ const SSG_ENV_TABLE = [
 // Computed waveform and conversion tables (built once at module load)
 // ---------------------------------------------------------------------------
 
-// Sine table: log2(sin(x)) * 256, derived from standard FM synthesis mathematics
+// Logarithmic sine lookup table.
 // 1024 entries, output is index into expTable (as s*2 or s*2+1)
 const logSinTable = new Uint32Array(SINE_TABLE_SIZE);
 
-// Exponential table: 2^(1-x/256) * 2048, inverse log conversion
-// Log-to-linear, pairs of [positive, negative]
+// Log-to-linear lookup table, pairs of [positive, negative]
 const expTable = new Int32Array(LOG_TO_LIN_SIZE);
 
 // LFO modulation tables
@@ -289,12 +268,12 @@ function _clampHigh(a, b) { return a > b ? a : b; }
 
     // -- LFO tables (phase modulation and amplitude modulation) --
     const pmDepths = [
-        [0, 1/360, 2/360, 3/360, 4/360, 6/360, 12/360, 24/360],   // OPNA
-        [0, 1/480, 2/480, 4/480, 10/480, 20/480, 80/480, 140/480], // OPM
+        [0, 1/360, 2/360, 3/360, 4/360, 6/360, 12/360, 24/360],   // variant 0
+        [0, 1/480, 2/480, 4/480, 10/480, 20/480, 80/480, 140/480], // variant 1
     ];
     const amShifts = [
-        [31, 6, 4, 3], // OPNA
-        [31, 2, 1, 0], // OPM
+        [31, 6, 4, 3], // variant 0
+        [31, 2, 1, 0], // variant 1
     ];
 
     for (let variant = 0; variant < 2; variant++) {
@@ -391,7 +370,7 @@ class FMOperator {
         this.phaseDeltaLFO = 0;
 
         // Envelope Generator
-        this.synthVariant = 0;     // typeN=0
+        this.synthVariant = 0;
         this.keyNote = 0;
         this.envLevel = 0;
         this.envLevelNextThreshold = 0;
@@ -480,9 +459,6 @@ class FMOperator {
     }
 
     // Key on — only triggers on 0→1 transition.
-    // Repeated writes of the same key state to register $28 are ignored.
-    // Envelope restarts only from OFF or RELEASE phase; a key-on during
-    // ATTACK/DECAY/SUSTAIN preserves the current envelope position.
     keyOn() {
         if (!this.keyPressed) {
             this.keyPressed = true;
@@ -788,9 +764,8 @@ class FMOperator {
     }
 }
 
-// Carrier operators per algorithm ($B0-$B2 bits 0-2), as a bit mask over the
-// op[] indices used by FMChannel.compute(): the operators whose output is
-// summed into the channel result. Used only by the read-only level readout.
+// Carrier operators per algorithm, as a bit mask over the op[] indices.
+// Used only by the FM channel level readout.
 const FM_CARRIER_MASK = [0x08, 0x08, 0x08, 0x08, 0x0a, 0x0e, 0x0e, 0x0f];
 
 // ---------------------------------------------------------------------------
@@ -1023,10 +998,7 @@ export class OPN {
         // tick in _renderSamples().
         this._ssg = new PSGCore();
 
-        // SSG mix gain into the OPN output. PSGCore._mix() returns ~±0.5
-        // for full-volume 3-channel sum; we scale that into the same int16
-        // domain as the FM path before _scaleSample() is applied. Tuned so
-        // SSG and FM are roughly balanced at maximum volume.
+        // Gain for mixing the SSG output with the FM output.
         this._ssgMixGain = 16384;
 
         // F-number registers
@@ -1062,10 +1034,8 @@ export class OPN {
             new Int32Array(512),
         ];
 
-        // Timers — separate "loaded" vs "active" periods to match real hardware.
-        // On the YM2203, writing to timer registers changes the reload value
-        // but the current countdown continues until overflow. Only on overflow
-        // does the new period take effect.
+        // Timers keep separate "loaded" and "active" periods; the active
+        // period is recomputed from the reload value at each overflow.
         this._timerA = 0;
         this._timerB = 0;
         this._timerACount = 0;
@@ -1077,7 +1047,7 @@ export class OPN {
         this._timerAIRQ = false;
         this._timerBIRQ = false;
 
-        // Timer clock ratio: OPN_TIMER_CLOCK / CPU_clock.
+        // Timer clock ratio: OPN_TIMER_CLOCK_AV / CPU clock.
         // Recomputed in _recomputeTimerRatio() when CPU clock or AV mode changes.
         this._isAV = false;
         this._cpuHz = 0;
@@ -1120,9 +1090,8 @@ export class OPN {
     }
 
     /**
-     * Set FM77AV mode for OPN timer clock conversion.
-     * On FM77AV the YM2203 external clock (2.4576 MHz) differs from
-     * the CPU clock (2 MHz), requiring timer count scaling.
+     * Set FM77AV mode. The timer count is scaled by the ratio of the OPN
+     * timer clock to the CPU clock.
      */
     setAVMode(isAV) {
         this._isAV = isAV;
@@ -1137,8 +1106,8 @@ export class OPN {
     }
 
     _recomputeTimerRatio() {
-        // OPN timer clock on FM-7/77 hardware is 1.2288 MHz, independent of
-        // the CPU clock. Convert CPU cycles → OPN-timer cycles by rate ratio.
+        // In FM77AV mode, CPU cycles are converted to timer cycles by the clock
+        // ratio; otherwise they are counted as they are.
         if (this._isAV && this._cpuHz > 0) {
             this._timerClockRatio = OPN_TIMER_CLOCK_AV / this._cpuHz;
         } else {
@@ -1228,9 +1197,7 @@ export class OPN {
         this._timerAIRQ = false;
         this._timerBIRQ = false;
 
-        // BUSY flag countdown in CPU cycles.
-        // YM2203 holds status bit 7 = BUSY for ~83 φM cycles (φM = fclock/6).
-        // At 2.4576 MHz external, that's ~202 μs → ~405 CPU cycles @ 2 MHz.
+        // BUSY flag countdown in CPU cycles (set in writeReg()).
         this._busyCycles = 0;
 
         this._fnum = [0, 0, 0];
@@ -1266,12 +1233,10 @@ export class OPN {
         value &= 0xFF;
         this._regs[reg] = value;
 
-        // YM2203 asserts BUSY for ~83 external clock cycles after a register write.
-        // cpuCycles = 83 / _timerClockRatio (ratio = Fext / Fcpu).
-        // At Fext=1.2288 MHz, Fcpu=2 MHz → 83/0.6144 ≈ 135 CPU cycles ≈ 67 μs.
+        // BUSY is held for a short period after a register write.
         this._busyCycles = Math.round(83 / this._timerClockRatio);
 
-        // Timer registers — update reload value (takes effect on next overflow)
+        // Timer registers — update reload value (the active period is recomputed at overflow)
         if (reg === 0x24) {
             this._timerA = (this._timerA & 0x03) | (value << 2);
             // Reload period updated but NOT applied to current countdown
@@ -1319,10 +1284,7 @@ export class OPN {
         const c = addr & 3;
 
         switch (addr) {
-            // SSG registers (0x00-0x0F) — embedded PSGCore. R14/R15 are
-            // joystick port direction/data on FM-7/77 hardware; the host
-            // (fm7.js) intercepts those for joystick handling, but mirroring
-            // them into the SSG keeps the chip register file consistent.
+            // SSG registers (0x00-0x0F) are forwarded to the embedded PSGCore.
             case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
             case 8: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
                 this._ssg._writeReg(addr, data);
@@ -1428,8 +1390,7 @@ export class OPN {
         }
     }
 
-    // $27 bit7-6 is a 2-bit mode number: 00=normal, 01=ch3 special,
-    // 10=CSM, 11=undefined. Only exactly 10 is CSM.
+    // Only one value of the 2-bit ch3 mode field selects CSM.
     _isCSMMode() {
         return (this._regtc & 0xc0) === 0x80;
     }
@@ -1473,12 +1434,7 @@ export class OPN {
 
     /**
      * FM channel output level for channels 1-3, as 0.0-1.0.
-     * Which operators reach the output depends on the algorithm, so only the
-     * carriers are looked at. envOutput holds a carrier's current attenuation
-     * (total level plus envelope) shifted left by 3; one unit of the unshifted
-     * value is 1/1024 of the ~96 dB range, i.e. 64 units per 6 dB, so the
-     * amplitude is 2^(-att/64). Carriers are summed and clamped to 1.0.
-     * A key-off (envelope phase OFF) or muted channel reports 0.
+     * A muted channel reports 0; operators whose envelope is OFF are not counted.
      * @param {number[]} [out] optional 3-element array to fill (avoids garbage)
      */
     getFMChannelLevels(out = [0, 0, 0]) {
@@ -1532,7 +1488,6 @@ export class OPN {
         if (!(this._regtc & 0xc0)) {
             ch[2].setFrequency(this._fnum[2]);
         } else {
-            // Ch3 special mode: per-operator frequencies
             ch[2].op[0].setFrequency(this._fnum3[1]);
             ch[2].op[1].setFrequency(this._fnum3[2]);
             ch[2].op[2].setFrequency(this._fnum3[0]);
@@ -1544,8 +1499,6 @@ export class OPN {
         const ssg = this._ssg;
         const ssgGain = this._ssgMixGain;
 
-        // Always loop over all samples so the SSG advances in lock-step with
-        // the OPN sample clock, even when no FM channel is producing audio.
         for (let n = 0; n < nsamples; n++) {
             let fmSample = 0;
             if (fmActive) {
@@ -1561,8 +1514,7 @@ export class OPN {
                 this._rbuf[2][this._rcnt] = z << (OUTPUT_SHIFT + 3);
             }
 
-            // SSG always renders. generateSample() advances by one output
-            // sample's worth of SSG ticks and returns a float in ±0.5 range.
+            // SSG always renders; generateSample() returns one output sample.
             const ssgSample = (ssg.generateSample() * ssgGain) | 0;
 
             buffer[n] += this._scaleSample(fmSample + ssgSample);
@@ -1579,12 +1531,6 @@ export class OPN {
             if (this._busyCycles < 0) this._busyCycles = 0;
         }
 
-        // YM2203 Timer A/B periods in OPN external clock cycles.
-        // Timer A: 72 × (1024-N) OPN clocks  (YM2203 internal /72 prescaler)
-        // Timer B: 1152 × (256-N) OPN clocks  (YM2203 internal /1152 prescaler)
-        // OPN external clock (2.4576 MHz) is faster than CPU (2 MHz),
-        // so convert CPU cycles → OPN cycles before accumulating.
-        // Cached active periods: new register values take effect on overflow.
         const opnCycles = cpuCycles * this._timerClockRatio;
 
         if (this._timerAEn) {
@@ -1593,13 +1539,8 @@ export class OPN {
                 this._timerACount += opnCycles;
                 while (this._timerACount >= periodA) {
                     this._timerACount -= periodA;
-                    // $27 bit2 (timer A flag enable) masks the status flag
-                    // itself: while it is 0 the overflow does not set bit0.
-                    // Counting, reload and the CSM trigger below still run.
                     if (this._timerAIRQ) this._status |= 0x01;
-                    // CSM mode: Timer A overflow triggers key-on for FM ch3
                     this._handleCSMTrigger();
-                    // Reload: apply any pending timer value change
                     this._timerAPeriod = 12 * this._prescalerScale * (1024 - this._timerA);
                 }
             }
@@ -1611,7 +1552,6 @@ export class OPN {
                 this._timerBCount += opnCycles;
                 while (this._timerBCount >= periodB) {
                     this._timerBCount -= periodB;
-                    // $27 bit3 (timer B flag enable) masks the status flag.
                     if (this._timerBIRQ) this._status |= 0x02;
                     this._timerBPeriod = 192 * this._prescalerScale * (256 - this._timerB);
                 }

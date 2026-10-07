@@ -29,6 +29,7 @@
   <text x="720" y="98" font-family="sans-serif" font-size="15" font-weight="bold" fill="#bc4c00" text-anchor="middle">3. 電源 ON / リセット</text>
   <text x="720" y="124" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">止まっていれば電源スイッチを押す</text>
   <text x="720" y="144" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">動作中ならリセットを押す</text>
+  <text x="720" y="161" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">（起動モードの変更は電源を切ってから）</text>
 
   <line x1="720" y1="170" x2="720" y2="196" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
 
@@ -39,6 +40,6 @@
 
   <!-- 注意書き -->
   <rect x="40" y="280" width="800" height="60" rx="8" fill="#fff8c5" stroke="#bc4c00" stroke-width="1.5"/>
-  <text x="440" y="305" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00" text-anchor="middle">変更はブラウザ内に保持されます — PC へ保存するには Save または Library の Exp で書き出す</text>
+  <text x="440" y="305" font-family="sans-serif" font-size="13" font-weight="bold" fill="#bc4c00" text-anchor="middle">変更はブラウザ内に保持されます — PC へ保存するには Save で書き出す（Library は Commit してから Exp）</text>
   <text x="440" y="327" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">元のファイルを残す場合は別名で保存してください</text>
 </svg>

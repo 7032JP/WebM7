@@ -6,23 +6,17 @@
  * デュアル CPU と周期イベントの実行を管理する。サブ CPU はクロック比に応じて実行する。
  */
 
-// Main and sub CPU clocks differ. Every machine (FM-7, FM-77, FM77AV family)
-// shares the same base pair:
-//   Main CPU effective  = 1.794 MHz (nominal 2 MHz minus memory wait states)
-//   Sub  CPU            = 2.000 MHz
-// On the FM77AV family the main value is lowered further while MMR/TWR is
-// enabled; the sub value never changes.
-// Scheduler advances sub by `mainCycles × (SUB_CLOCK / MAIN_CLOCK)` each step.
-let CPU_CLOCK_HZ = 1794000;         // Main CPU effective clock
+// Main and sub CPU clocks are managed separately; the scheduler advances the
+// sub CPU by the clock ratio each step.
+let CPU_CLOCK_HZ = 1794000;         // Main CPU effective clock (default 1.794 MHz)
 let SUB_CLOCK_HZ = 2000000;         // Sub CPU clock (independent)
 let CYCLES_PER_MICROSECOND = CPU_CLOCK_HZ / 1000000;
 let SUB_CYCLE_RATIO = SUB_CLOCK_HZ / CPU_CLOCK_HZ;
 
 /**
  * Set main CPU clock speed. Called when the machine type changes and when
- * MMR/TWR shift the effective rate on the FM77AV family.
- * Sub CPU keeps its own rate (see setSubCPUClock) — MMR/TWR slowdown must not
- * propagate to the sub system.
+ * the MMR/TWR state changes the effective rate.
+ * Sub CPU keeps its own rate (see setSubCPUClock).
  */
 function setCPUClock(hz) {
     CPU_CLOCK_HZ = hz;
@@ -31,8 +25,8 @@ function setCPUClock(hz) {
 }
 
 /**
- * Set sub CPU clock speed (2.000 MHz on every machine so far). Kept separate
- * from setCPUClock so the main CPU's MMR/TWR slowdown cannot leak into it.
+ * Set sub CPU clock speed. Kept separate from setCPUClock so a main CPU
+ * clock change does not affect it.
  */
 function setSubCPUClock(hz) {
     SUB_CLOCK_HZ = hz;
@@ -56,9 +50,7 @@ function cyclesToUs(cycles) {
 /**
  * A single scheduled event that fires periodically.
  *
- * The event's period is stored in microseconds (`intervalUs`) so it survives
- * CPU clock changes — `recomputeForClock()` re-derives `reload` (in cycles)
- * whenever the main CPU clock shifts (e.g. MMR/TWR turning on or off).
+ * The period is kept in microseconds so the event follows CPU clock changes.
  */
 class SchedulerEvent {
     /**
@@ -76,9 +68,7 @@ class SchedulerEvent {
     }
 
     /**
-     * Re-derive `reload` from `intervalUs` for the current CPU clock, and
-     * scale `current` proportionally so the event's relative phase within
-     * its period is preserved across the clock change.
+     * Adjust the event's wait for a CPU clock change.
      */
     recomputeForClock() {
         const oldReload = this.reload;
@@ -93,7 +83,7 @@ class SchedulerEvent {
 
     /**
      * Update the canonical interval (µs) and immediately re-derive cycles.
-     * Used by callbacks that change the period (e.g. timer 2034↔2035 µs).
+     * Used by callbacks that change the period.
      */
     setIntervalUs(intervalUs) {
         this.intervalUs = intervalUs;
@@ -136,22 +126,17 @@ export class Scheduler {
         this.subCPU = null;
 
         /**
-         * When true the sub CPU is halted (e.g. main CPU wrote to $FD05)
-         * and we skip its execution.
+         * When true the sub CPU is halted and we skip its execution.
          */
         this.subHalted = false;
 
         // Book-keeping for dual-CPU sync
         this.mainCyclesTotal = 0;
         this.subCyclesTotal = 0;
-        // Sub CPU cycle budget, accumulated incrementally per main instruction
-        // as `mainElapsed × SUB_CYCLE_RATIO`. Incremental accumulation (rather
-        // than `mainCyclesTotal × ratio`) keeps the budget correct across
-        // main-clock changes (MMR/TWR on/off) — the ratio at the time each
-        // main cycle was consumed is what counts.
+        // Sub CPU cycle budget.
         this.subCyclesTarget = 0;
 
-        // Timer IRQ alternation state (2034 / 2035 us)
+        // Timer IRQ alternation state
         this._timerAlternate = false;
     }
 
@@ -163,7 +148,6 @@ export class Scheduler {
      * Attach the main 6809 CPU.
      * The CPU object must expose:
      *   exec()  - execute one instruction, return cycles consumed
-     *   irq()   - assert IRQ line  (optional, used by timer event)
      */
     setMainCPU(cpu) {
         this.mainCPU = cpu;
@@ -219,7 +203,7 @@ export class Scheduler {
     }
 
     /**
-     * Disable and remove event by id.
+     * Remove event by id.
      */
     removeEvent(id) {
         const idx = this.events.findIndex(e => e.id === id);
@@ -240,19 +224,16 @@ export class Scheduler {
     // ------------------------------------------------------------------
 
     /**
-     * Install the standard FM-7 timer IRQ event (~2034.5 us period,
-     * alternating between 2034 and 2035 us to approximate 2034.5).
+     * Install the periodic timer IRQ event.
      *
      * @param {function} callback - called on each timer tick
      */
     addTimerEvent(callback) {
-        // Start with 2034 us; the wrapper alternates each firing
         const self = this;
         self._timerAlternate = false;
 
         const wrapper = () => {
             callback();
-            // Alternate the reload value for next period
             const evt = self.getEvent('timer');
             if (evt) {
                 self._timerAlternate = !self._timerAlternate;
@@ -264,7 +245,8 @@ export class Scheduler {
     }
 
     /**
-     * Install the standard 60 Hz VSync event.
+     * Install a fixed-period 'vsync' event (helper; the machine registers its
+     * own vsync event with the period of the display mode).
      *
      * @param {function} callback - called on each VSync
      */
@@ -277,13 +259,8 @@ export class Scheduler {
     // ------------------------------------------------------------------
 
     /**
-     * Run both CPUs for approximately the given number of microseconds.
-     *
-     * Execution proceeds instruction-by-instruction on the main CPU.
-     * After each main CPU instruction the sub CPU is run until it has
-     * caught up with its cycle budget (main cycles times the clock ratio),
-     * unless it is halted.  After each main instruction, all scheduler
-     * events are ticked by the number of cycles just consumed.
+     * Run both CPUs and the periodic events for approximately the given
+     * number of microseconds.
      *
      * @param {number} microseconds - target wall-time to simulate
      * @returns {number} actual microseconds executed
@@ -375,5 +352,5 @@ function getSubCycleRatio() {
     return SUB_CYCLE_RATIO;
 }
 
-// Export constants for external use
+// Clock values and helpers
 export { CPU_CLOCK_HZ, CYCLES_PER_MICROSECOND, usToCycles, cyclesToUs, setCPUClock, setSubCPUClock, getSubCycleRatio };

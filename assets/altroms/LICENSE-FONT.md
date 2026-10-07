@@ -1,11 +1,13 @@
 # Bundled font: provenance and license / 同梱するフォントの由来とライセンス
 
 This file covers the one third-party material bundled in this repository:
-the bitmap font in fonts/shinonome/. Everything else in the repository is
-this project's own work under the MIT License (see LICENSE).
+the bitmap font in fonts/shinonome/, and the glyphs in roms/kanji.rom /
+roms/kanji2.rom taken from it (section 3). Everything else in the repository
+is this project's own work under the MIT License (see LICENSE).
 
 本ファイルは、本リポジトリが同梱する唯一の第三者素材である fonts/shinonome/
-のビットマップフォントについて述べます。それ以外はすべて本プロジェクトの
+のビットマップフォントと、roms/kanji.rom / roms/kanji2.rom に含まれる同フォント
+由来の字形 (第 3 節) について述べます。それ以外はすべて本プロジェクトの
 成果物で、MIT License (LICENSE) の対象です。
 
 --------------------------------------------------------------------------
@@ -38,12 +40,10 @@ this project's own work under the MIT License (see LICENSE).
       Modified BDF (CHARS 6772). From the upstream bdf/shnmk16.bdf
       (CHARS 6879) the CHAR records of 107 code positions in JIS X 0208
       rows 1-8 are removed; they are the characters the upstream AUTHORS
-      lists as taken from the X11 jiskan16 font. The CHARS line is updated
-      and a COMMENT describing the change is added to the header. The
-      remaining glyph records are byte-for-byte as distributed upstream.
-      The modification is done by scripts/strip_bdf_chars.py; how to
-      reproduce the bundled BDF from the upstream archive is in
-      docs/BUILD.md section 3.1.
+      lists as taken from the X11 jiskan16 font. The remaining glyph
+      records are byte-for-byte as distributed upstream. The modification
+      is done by scripts/strip_bdf_chars.py; how to reproduce the bundled
+      BDF from the upstream archive is in docs/BUILD.md section 3.1.
   fonts/shinonome/LICENSE
       The upstream license text, byte-for-byte (EUC-JP).
   fonts/shinonome/LICENSE.utf8.txt
@@ -61,8 +61,7 @@ this project's own work under the MIT License (see LICENSE).
       改変した BDF (CHARS 6772)。上流の bdf/shnmk16.bdf (CHARS 6879) から、
       JIS X 0208 の 1〜8 区の 107 符号位置の CHAR レコードを取り除いて
       あります。取り除いたのは、上流の AUTHORS が X11 の jiskan16 フォント
-      から採ったと列挙する文字です。CHARS 行を更新し、ヘッダに改変内容を
-      述べる COMMENT を入れています。残る字形レコードは上流のバイト列の
+      から採ったと列挙する文字です。残る字形レコードは上流のバイト列の
       ままです。改変は scripts/strip_bdf_chars.py が行い、上流のアーカイブ
       から同梱の BDF を再現する手順は docs/BUILD.md §3.1 にあります。
   fonts/shinonome/LICENSE
@@ -82,9 +81,10 @@ this project's own work under the MIT License (see LICENSE).
 3. Use in this project, and what is MIT / 用途と区分
 
   The bundled BDF is the glyph source of roms/kanji.rom and roms/kanji2.rom.
-  The glyphs taken from it remain public domain; the MIT License does not
-  apply to them. If you redistribute those two ROM images, please keep this
-  file with them so that the origin of the glyphs is passed on.
+  The glyphs taken from it are covered by the upstream declaration in
+  section 1, not by the MIT License. If you redistribute those two ROM
+  images, please keep this file with them so that the origin of the glyphs
+  is passed on.
 
   The following are this project's own work under the MIT License:
     - the independent replacement glyphs for the removed 107 code positions
@@ -94,7 +94,7 @@ this project's own work under the MIT License (see LICENSE).
       the ROM images from the font (scripts/genkanji.py).
 
   同梱の BDF は roms/kanji.rom と roms/kanji2.rom の字形 (グリフ) の入力
-  です。そこから採った字形はパブリックドメインのままで、MIT License は
+  です。そこから採った字形には第 1 節の上流の宣言が及び、MIT License は
   適用されません。この 2 本の ROM イメージを再配布されるときは、字形の
   出所が伝わるよう本ファイルを添えてください。
 

@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 759.5999999999999 486" width="759.5999999999999" height="486">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 759.5999999999999 492" width="759.5999999999999" height="492">
   <title>編集キー・カーソルキー・テンキーが FM-7 のどのキーに当たるかの対応図</title>
   <defs>
     <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
     </marker>
   </defs>
-  <rect x="0" y="0" width="759.5999999999999" height="486" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
+  <rect x="0" y="0" width="759.5999999999999" height="492" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
   <text x="379.79999999999995" y="32" font-family="sans-serif" font-size="16" fill="#1f2328" text-anchor="middle" font-weight="bold">編集キー・カーソルキー・テンキーの対応（日本語配列 / 英語配列 共通）</text>
-  <text x="379.79999999999995" y="54" font-family="sans-serif" font-size="11" fill="#8c959f" text-anchor="middle">上段＝物理キーの刻印 / 下段＝割り当たる FM-7 キー（「—」は割当なし）</text>
+  <text x="379.79999999999995" y="54" font-family="sans-serif" font-size="11" fill="#8c959f" text-anchor="middle">上段＝物理キーの刻印 / 下段＝割り当たる FM-7 キー（「—」は割当なし。灰色の枠は押しても入力されないキー）</text>
   <text x="26" y="78" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">最上段（PrintScreen 列）</text>
   <rect x="26" y="92" width="52" height="50" rx="5" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2"/>
   <text x="52" y="108" font-family="sans-serif" font-size="6.5" fill="#57606a" text-anchor="middle">PrintScreen</text>
@@ -26,18 +26,18 @@
   <rect x="82" y="176" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
   <text x="108" y="192" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">Home</text>
   <text x="108" y="214" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">HOM</text>
-  <rect x="138" y="176" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <rect x="138" y="176" width="52" height="50" rx="5" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2"/>
   <text x="164" y="192" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">PageUp</text>
-  <text x="164" y="214" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">CLS</text>
+  <text x="164" y="214" font-family="sans-serif" font-size="14" fill="#8c959f" text-anchor="middle" font-weight="bold">CLS</text>
   <rect x="26" y="230" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
   <text x="52" y="246" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">Delete</text>
   <text x="52" y="268" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">DEL</text>
-  <rect x="82" y="230" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <rect x="82" y="230" width="52" height="50" rx="5" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2"/>
   <text x="108" y="246" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">End</text>
-  <text x="108" y="268" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">EL</text>
-  <rect x="138" y="230" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
+  <text x="108" y="268" font-family="sans-serif" font-size="14" fill="#8c959f" text-anchor="middle" font-weight="bold">EL</text>
+  <rect x="138" y="230" width="52" height="50" rx="5" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2"/>
   <text x="164" y="246" font-family="sans-serif" font-size="9.5" fill="#57606a" text-anchor="middle">PageDown</text>
-  <text x="164" y="268" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">DUP</text>
+  <text x="164" y="268" font-family="sans-serif" font-size="14" fill="#8c959f" text-anchor="middle" font-weight="bold">DUP</text>
   <rect x="82" y="338" width="52" height="50" rx="5" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
   <text x="108" y="354" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">↑</text>
   <text x="108" y="376" font-family="sans-serif" font-size="14" fill="#0a3069" text-anchor="middle" font-weight="bold">↑</text>
@@ -108,9 +108,9 @@
   <text x="471.59999999999997" y="262" font-family="sans-serif" font-size="11.5" fill="#0969da" text-anchor="start">↓ → テンキー 2</text>
   <text x="471.59999999999997" y="280" font-family="sans-serif" font-size="11.5" fill="#0969da" text-anchor="start">← → テンキー 4</text>
   <text x="471.59999999999997" y="298" font-family="sans-serif" font-size="11.5" fill="#0969da" text-anchor="start">→ → テンキー 6</text>
-  <text x="471.59999999999997" y="334" font-family="sans-serif" font-size="11.5" fill="#1f2328" text-anchor="start" font-weight="bold">FM-7 のテンキーの「=」は</text>
-  <text x="471.59999999999997" y="352" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">一般の PC のテンキーに無いため、</text>
-  <text x="471.59999999999997" y="370" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">キーカスタマイズで割り当てます。</text>
+  <text x="471.59999999999997" y="334" font-family="sans-serif" font-size="11.5" fill="#1f2328" text-anchor="start" font-weight="bold">FM-7 のテンキーの「=」には現在</text>
+  <text x="471.59999999999997" y="352" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">入力コードを割り当てていません。</text>
   <text x="471.59999999999997" y="406" font-family="sans-serif" font-size="11.5" fill="#1f2328" text-anchor="start" font-weight="bold">EL / CLS / DUP には現在</text>
   <text x="471.59999999999997" y="424" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">入力コードを割り当てていません。</text>
+  <text x="26" y="474" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ 現在、スキャンコード方式（FM77AV 系）では、テンキーの + は入力できず、Home は DEL と同じ入力になります。</text>
 </svg>

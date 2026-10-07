@@ -11,16 +11,10 @@
 //             device; see audio_output.js in the browser UI), used standalone for the
 //             FM-7 built-in PSG at $FD0D/$FD0E.
 //
-// FM-7 built-in PSG is mapped at $FD0D (command) / $FD0E (data).
-// BDIR/BC1 protocol:
-//   $03 → Address latch (data bus = register number)
-//   $02 → Data write   (data bus → latched register)
-//   $01 → Data read    (latched register → data bus)
-//   $00 → Inactive
+// The FM-7 built-in PSG is driven through its command / data ports
+// (address latch, data write, data read, inactive).
 //
-// PSG master clock = 1.2288 MHz (same as the synthesis-clock convention used
-// throughout the simulator). Tone frequency = clock / (16 × TP),
-// noise frequency = clock / (16 × NP), envelope step = clock / (256 × EP).
+// Generates tone, noise, and envelope signals.
 // =============================================================================
 
 const PSG_CLOCK     = 1228800;       // 1.2288 MHz
@@ -28,7 +22,7 @@ const CLOCK_DIV     = 8;             // Internal divider for tone/noise
 const ENV_DIV       = CLOCK_DIV * 2; // Envelope runs at half the tone rate
 const SAMPLE_RATE   = 44100;
 
-// AY-3-8910 volume table (logarithmic approximation, about 3 dB per step)
+// AY-3-8910 volume table (logarithmic approximation)
 const VOL = new Float32Array([
     0.0000, 0.0099, 0.0144, 0.0203,
     0.0287, 0.0405, 0.0573, 0.0809,
@@ -74,7 +68,7 @@ export class PSGCore {
     }
 
     // =====================================================================
-    // Reset
+    // Clock setup and reset
     // =====================================================================
 
     setCPUClock(hz) {
@@ -104,7 +98,7 @@ export class PSGCore {
     }
 
     // =====================================================================
-    // I/O interface  ($FD0D = command,  $FD0E = data)
+    // PSG command and data interface
     // =====================================================================
 
     /** Write to command port ($FD0D). */
@@ -131,7 +125,7 @@ export class PSGCore {
     /** Read from data port ($FD0E). */
     readData()     { return this._dataBus; }
 
-    /** Read from command port ($FD0D) — returns open-bus 0xFF. */
+    /** Read from command port ($FD0D) — always returns 0xFF. */
     readCmd()      { return 0xFF; }
 
     // =====================================================================
@@ -194,7 +188,7 @@ export class PSGCore {
         this._noiseCount += ticks;
         while (this._noiseCount >= np) {
             this._noiseCount -= np;
-            // 17-bit LFSR: XOR bits 0 and 3
+            // Advance the noise generator.
             const bit = ((this._lfsr ^ (this._lfsr >> 3)) & 1);
             this._lfsr = ((this._lfsr >> 1) | (bit << 16)) & 0x1FFFF;
             if (this._lfsr === 0) this._lfsr = 1;   // Safety
@@ -226,26 +220,26 @@ export class PSGCore {
         const hold  = shape & 0x01;
 
         if (!cont) {
-            // Shapes 0-7: one-shot, hold at 0
+            // One-shot: hold at 0
             this._envStep    = 0;
             this._envHolding = true;
         } else if (hold) {
             // Determine hold level
             if (alt) {
-                // 0xB → decay then hold 15;  0xF → attack then hold 0
+                // Alternate: hold at the opposite end
                 this._envStep = att ? 0 : 15;
             } else {
-                // 0x9 → decay then hold 0;   0xD → attack then hold 15
+                // Hold at the end reached
                 this._envStep = att ? 15 : 0;
             }
             this._envHolding = true;
         } else if (alt) {
-            // Triangle (0xA, 0xE): reverse direction
+            // Triangle: reverse direction
             this._envDir = -this._envDir;
             // Clamp to valid range
             this._envStep = (this._envDir > 0) ? 0 : 15;
         } else {
-            // Sawtooth repeat (0x8, 0xC): restart
+            // Sawtooth: restart
             this._envStep = att ? 0 : 15;
         }
     }
@@ -255,7 +249,7 @@ export class PSGCore {
         let out = 0;
 
         for (let ch = 0; ch < 3; ch++) {
-            // Mixer bits: 0-2 = tone enable (active low), 3-5 = noise enable (active low)
+            // Mixer: per-channel tone and noise gates (active low)
             const toneGate  = ((mixer >> ch)       & 1) ? 1 : this._toneOut[ch];
             const noiseGate = ((mixer >> (ch + 3))  & 1) ? 1 : this._noiseOut;
 
@@ -268,17 +262,13 @@ export class PSGCore {
             }
         }
 
-        // 3 channels max → scale to ≈ ±0.5
+        // Scale the mixed output.
         return out * 0.25;
     }
 
     /**
-     * Advance the synthesis core by exactly one output sample's worth of
-     * ticks and return the mixed sample value. For embedded use (SSG inside
-     * OPN), the caller drives this once per output-rate sample so the
-     * SSG progresses in lock-step with the host's audio rate.
-     *
-     * Returns a float in roughly ±0.5 range (3-channel sum scaled by 0.25).
+     * Generate and return one mixed audio sample (a float in the 0 to 0.75
+     * range). Call once per output-rate sample.
      */
     generateSample() {
         this._advance(this._ticksPerSample);
@@ -300,10 +290,8 @@ export class PSGCore {
 
     /**
      * Per-channel output level for A/B/C as 0-15.
-     * Same rule _mix() uses: the volume register (R8-R10) holds a fixed level
-     * in bits 0-3, and bit4 selects the envelope generator's current step
-     * instead. A channel whose tone and noise are both gated off in the mixer
-     * (R7) only emits a DC level, so it is reported as 0.
+     * The fixed volume, or the envelope generator's current step. A channel
+     * whose tone and noise are both gated off is reported as 0 in this view.
      * @param {number[]} [out] optional 3-element array to fill (avoids garbage)
      */
     getChannelLevels(out = [0, 0, 0]) {
@@ -331,9 +319,7 @@ export class PSG extends PSGCore {
         this._workletNode = null;
         this._gainNode    = null;
         this._volume      = 0.5;          // Default 50%
-        // Sample staging buffer for the current step() call. Resized as
-        // needed; flushed (transferred) to the attached output port at the end of
-        // each step() so the audio thread always has fresh data.
+        // Buffer for generated audio samples.
         this._sampleBuf   = new Float32Array(2048);
         this._sampleLen   = 0;
 
@@ -348,7 +334,8 @@ export class PSG extends PSGCore {
     }
 
     /**
-     * Advance the PSG by `cpuCycles` worth of audio and fill the ring buffer.
+     * Advance the PSG by `cpuCycles` worth of audio and fill the sample
+     * staging buffer.
      * Must be called regularly from the frame loop.
      */
     step(cpuCycles) {
@@ -364,7 +351,7 @@ export class PSG extends PSGCore {
             this._accum -= tps;
             this._advance(tps);
             if (len >= buf.length) {
-                // Grow staging buffer (rare; simulator catches up after pause)
+                // Grow the staging buffer when it is full
                 const grown = new Float32Array(buf.length * 2);
                 grown.set(buf);
                 this._sampleBuf = buf = grown;
@@ -373,11 +360,7 @@ export class PSG extends PSGCore {
         }
         this._sampleLen = len;
 
-        // Flush in chunks of FLUSH_SIZE samples. step() runs per CPU
-        // instruction (hundreds of thousands of times per second) so
-        // posting on every call would saturate the message channel and
-        // cause audible crackling. 1024 samples ≈ 21ms at 48 kHz, which
-        // is a reasonable trade-off between latency and overhead.
+        // Flush in chunks of FLUSH_SIZE samples to keep the message overhead low.
         if (this._workletNode) {
             const FLUSH_SIZE = 1024;
             while (this._sampleLen >= FLUSH_SIZE) {

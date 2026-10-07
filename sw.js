@@ -4,16 +4,11 @@
 // WebM7 Service Worker — PWA オフライン対応 (GitHub Pages 単体動作)
 //   全パス相対。SW の置かれたディレクトリがスコープになるため、project pages の
 //   サブパス公開でも独自ドメインのルート公開でも同じく動く。
-//   アプリシェル(HTML/エンジン/CSS/アイコン/必須md)を install 時にプリキャッシュし、
-//   それ以外は cache-first + ネットワークフォールバックで応答。
-//   ただしエンジン (core/*.js) と同梱 ROM (assets/altroms/*) だけは配備直後の
-//   1 回目から新しいバージョンを配るためネット優先とし、取れなければキャッシュへ落とす
-//   (オフライン起動は従来どおり成立する)。
+//   オフライン起動に必要な資源をキャッシュし、取得できないときはキャッシュで応答する。
 // =============================================================================
-const CACHE = 'webm7-20260926195254';
+const CACHE = 'webm7-20261007201858';
 
-// 同じオリジンに複数の WebM7 が置かれても衝突しないよう、
-// キャッシュ名にスコープを含めて区別する。
+// 同じオリジンに複数の WebM7 が置かれても衝突しないよう、配置先ごとにキャッシュを管理する。
 const CACHE_PREFIX = 'webm7-';
 const SCOPE = self.registration.scope;
 const CACHE_NAME = CACHE + '@' + SCOPE;
@@ -52,16 +47,16 @@ const SHELL = [
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png',
-  // UI テクスチャ（自前生成の御影石風タイル — AV40SX スキン背景）
+  // UI テクスチャ（自前生成の御影石風タイル — AV40SX スキンの前面パネル用）
   './assets/granite.png',
-  // 実行時に取得するドキュメント
+  // 実行時に取得する主なドキュメント
   './CHANGELOG.md',
   './docs/Tape_Manual.md',
   './docs/Tutorial.md',
   './docs/Keyboard_Manual.md',
   './docs/Headless_Test_Manual.md',
   // 同梱互換 ROM セット (assets/altroms/)。
-  // 条件は同梱の LICENSE / LICENSE-MIT.md / LICENSE-FONT.md を参照。
+  // 条件は同梱の LICENSE / LICENSE-MIT.md / LICENSE-FONT.md / docs/LEGAL.md を参照。
   './assets/altroms/7tbasic3.rom',
   './assets/altroms/boot_bas.rom',
   './assets/altroms/boot_dos.rom',
@@ -78,26 +73,25 @@ const SHELL = [
   './assets/altroms/kanji2.rom',
   './assets/altroms/dicrom.rom',
   // ROM 本体の動作には不要だが、ROM を配る以上その権利表示も同じ配布物として
-  // オフラインでたどれるようにする (LICENSE と同じ扱い。計 10KB 程度)
+  // オフラインでたどれるようにする (LICENSE と同じ扱い。計 40KB 程度)
   './assets/altroms/LICENSE',
   './assets/altroms/LICENSE-MIT.md',
   './assets/altroms/LICENSE-FONT.md',
-  // docs/images/*.svg は点数が多いためプリキャッシュせず実行時キャッシュに任せる
+  './assets/altroms/docs/LEGAL.md',
+  // docs/images/*.svg は閲覧時にキャッシュする
 ];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME)
-      // addAll は1つでも失敗すると全体が失敗するため、個別に best-effort で入れる
+      // 取得できた資源だけをキャッシュする
       .then((c) => Promise.allSettled(SHELL.map((u) => c.add(u))))
       .then(() => self.skipWaiting())
   );
 });
 
-// 同じオリジンの他のキャッシュ (別のスコープの WebM7、他のページ) は消さない。
-// 消すのは、同じスコープの古いバージョンと、スコープを名前に持たない旧形式のうち
-// このスコープの資源を収めているものだけ (旧形式は別のスコープのバージョンかもしれない
-// ため、中身で見分ける。見分けられなければ残す)。
+// 古いキャッシュを整理する。消すのは、同じスコープの古いバージョンと、このスコープに
+// 属すると判断できる旧形式のキャッシュだけ (見分けられなければ残す)。
 function isOwnLegacyCache(name) {
   return caches.open(name)
     .then((c) => c.keys())
@@ -121,14 +115,13 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// ローカル開発(localhost/127.0.0.1/file)では cache-first が古いファイルを
-// 配信し続け開発を阻害するため、ネット優先(network-first)で常に最新を取得。
+// ローカル環境ではネット優先 (network-first) とする。
 const DEV = self.location.hostname === 'localhost'
          || self.location.hostname === '127.0.0.1'
          || self.location.hostname === '';
 
 // バージョンごとに必ず最新を配りたい資源 (エンジンと同梱 ROM)。
-const FRESH_RE = /\/(?:core\/[^/]+\.js|assets\/altroms\/[^/]+)$/;
+const FRESH_RE = /\/(?:core\/[^/]+\.js|assets\/altroms\/(?:docs\/)?[^/]+)$/;
 
 function isFreshTarget(req) {
   try {
@@ -137,8 +130,7 @@ function isFreshTarget(req) {
   } catch (err) { return false; }
 }
 
-// バージョンのクエリ (?v=...) を落とした URL。プリキャッシュはクエリ無しで入るため、
-// キャッシュの参照・格納はこの正規化した URL に揃える。
+// キャッシュ用に正規化した URL。
 function baseUrl(req) {
   const u = new URL(req.url);
   u.search = '';
@@ -146,7 +138,7 @@ function baseUrl(req) {
   return u.href;
 }
 
-// バージョンのクエリの有無に関わらずキャッシュを引く (オフライン時の取りこぼし防止)。
+// オフライン時の取りこぼしを防ぐためのキャッシュ検索。
 function cacheLookup(req) {
   return caches.match(req).then((hit) => hit || caches.match(req, { ignoreSearch: true }));
 }
@@ -155,7 +147,7 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
 
-  // 開発時: 常にネットから取得(取れなければキャッシュ)。古い資産を掴まない。
+  // ローカル環境: ネット優先 (取れなければキャッシュ)。
   if (DEV) {
     e.respondWith(fetch(req).catch(() => cacheLookup(req)));
     return;
@@ -170,7 +162,6 @@ self.addEventListener('fetch', (e) => {
   }
 
   // エンジンと同梱 ROM: ネット優先 → 失敗時はキャッシュ (オフライン起動を維持)。
-  // 格納はクエリを落とした URL へ行い、プリキャッシュ分と二重持ちしない。
   if (isFreshTarget(req)) {
     e.respondWith(
       fetch(req).then((res) => {
@@ -182,8 +173,7 @@ self.addEventListener('fetch', (e) => {
           }
           return res;
         }
-        // 5xx 等でネットが正常に応答しないときはキャッシュを優先する。
-        // 任意 ROM の 404 のようにキャッシュにも無い場合はその応答を返す。
+        // 取得に失敗したときはキャッシュを利用し、無ければその応答を返す。
         return cacheLookup(req).then((hit) => hit || res);
       }).catch(() => cacheLookup(req))
     );

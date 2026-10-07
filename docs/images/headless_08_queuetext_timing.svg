@@ -40,7 +40,7 @@
   <line x1="312" y1="140" x2="312" y2="180" stroke="#1a7f37" stroke-width="1.5" marker-end="url(#ahb)"/>
 
   <rect x="756" y="110" width="120" height="30" rx="6" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/>
-  <text x="816" y="130" font-family="sans-serif" font-size="12" fill="#bc4c00" text-anchor="middle">次の行の 1 文字目</text>
+  <text x="816" y="130" font-family="sans-serif" font-size="12" fill="#bc4c00" text-anchor="middle">次の行があれば送出</text>
   <line x1="816" y1="140" x2="816" y2="180" stroke="#bc4c00" stroke-width="1.5" marker-end="url(#ah)"/>
 
   <!-- tick 行 -->
@@ -77,15 +77,15 @@
   <text x="732" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">17</text>
   <text x="774" y="212" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">18</text>
   <text x="816" y="212" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">19</text>
-  <text x="856" y="232" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="end">フレーム（1 フレーム = 16,667 マイクロ秒）</text>
+  <text x="856" y="232" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="end">フレーム（前のキーが読み取り済みで、待ちが無い場合の最短例）</text>
 
   <!-- 間隔ブラケット -->
   <path d="M60,250 L60,260 L144,260 L144,250" fill="none" stroke="#1a7f37" stroke-width="1.5"/>
-  <text x="102" y="280" font-family="sans-serif" font-size="13" fill="#1a7f37" text-anchor="middle">charGap=2 フレームごとに 1 キー</text>
+  <text x="102" y="280" font-family="sans-serif" font-size="13" fill="#1a7f37" text-anchor="middle">charGap=2: 最短 2 フレーム間隔</text>
 
   <path d="M312,290 L312,300 L816,300 L816,290" fill="none" stroke="#bc4c00" stroke-width="1.5"/>
   <text x="564" y="320" font-family="sans-serif" font-size="13" fill="#bc4c00" text-anchor="middle">RETURN の後は lineGap=12 フレーム待つ（BASIC が前の行を処理する時間）</text>
 
   <rect x="60" y="344" width="760" height="40" rx="8" fill="#ddf4ff" stroke="#0969da"/>
-  <text x="440" y="369" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">送出はスケジューラが毎フレーム自動で進めます。テスト側は scheduler.exec() を回すだけ（手動 tick は不要）</text>
+  <text x="440" y="369" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle">送出はスケジューラが毎フレーム自動で進めます。テスト側は scheduler.exec(16667) を繰り返すだけ（手動 tick は不要）</text>
 </svg>
