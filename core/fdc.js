@@ -20,7 +20,7 @@ const FDC_STATE = {
     READ_TRACK:          9,
     WRITE_TRACK:        10,
     COMPLETE:           11,
-    RNF_WAIT:           12,  // MB8877 5-index-pulse search before asserting RNF
+    RNF_WAIT:           12,  // search time before asserting RNF
 };
 
 // Command types
@@ -50,8 +50,7 @@ const STATUS = {
 // Accelerated seek step rates in CPU cycles, used in fast-read mode.
 const STEP_RATES = [200, 400, 600, 1000];
 
-// MB8877 step rates (6/12/20/30 ms), used outside fast-read mode.
-// Expressed in µs; cycle values are derived per CPU clock in setCPUClock().
+// Step rates used outside fast-read mode (µs; cycle values are derived in setCPUClock()).
 const STEP_RATES_REAL_US = [6000, 12000, 20000, 30000];
 
 // D77 header size
@@ -102,7 +101,7 @@ export class D77Disk {
             return false;
         }
 
-        // Parse disk name (17 bytes, null-terminated Shift-JIS)
+        // Parse disk name (up to 17 bytes, null-terminated; bytes kept as-is)
         let nameBytes = [];
         for (let i = 0; i < 17; i++) {
             const ch = bytes[i];
@@ -350,18 +349,9 @@ export class D77Disk {
     /**
      * Logically format the disk for F-BASIC DISK BASIC use.
      *
-     * A physically-formatted disk has all sectors present but their contents
-     * are undefined, so DISK BASIC reads the FAT/directory area as garbage and
-     * reports "0 free clusters" (cannot SAVE). This writes a valid empty
-     * filesystem so the disk is immediately usable:
-     *   - clears the write-protect flag,
-     *   - writes the disk information record (cyl0/h0/sec3),
-     *   - initialises the FAT (cyl1/h0/sec1-3) with every cluster free,
-     *   - initialises the directory (cyl1/h0/sec4.. and cyl1/h1) as all empty.
-     *
-     * Layout follows the F-BASIC 2D disk format (FAT on cylinder 1, free
-     * cluster marker 0xFF, 32-byte directory entries; an unused entry is all
-     * 0xFF). The directory track is cylinder 1 for both 2D and 2DD.
+     * Writes an empty filesystem (disk information record, FAT with every
+     * cluster free, empty directory) and clears the write-protect flag so
+     * the disk is immediately usable.
      *
      * @returns {boolean} true on success
      */
@@ -376,7 +366,7 @@ export class D77Disk {
         // (1) Clear write-protect.
         this.writeProtect = false;
 
-        // (2) Disk information record: cyl0/h0/sec3, "S" signature + spaces.
+        // (2) Disk information record.
         const sir = this.getSector(0, 0, 3);
         if (sir && sir.data) {
             sir.data.fill(0x00);
@@ -385,13 +375,12 @@ export class D77Disk {
             sir.data[2] = 0x20; // ' '
         }
 
-        // (3) FAT and its copies: cyl1/h0/sec1-3, every cluster free (0xFF).
+        // (3) Allocation tables, every cluster free.
         for (const sec of [1, 2, 3]) fill(1, 0, sec, 0xFF);
         const fat = this.getSector(1, 0, 1);
         if (fat && fat.data) fat.data[0] = 0x00; // FAT control byte
 
-        // (4) Directory: cyl1/h0/sec4..16 and cyl1/h1/sec1..16, all entries
-        //     unused (0xFF).
+        // (4) Directory, all entries unused.
         const lastSec = Math.max(...this.getSectorList(1, 0));
         for (let sec = 4; sec <= lastSec; sec++) fill(1, 0, sec, 0xFF);
         if (this.numSides > 1) {
@@ -483,23 +472,19 @@ export class FDC {
         this.currentDrive = 0;
         this.currentSide = 0;
         this.motorOn = false;
-        // Cold spin-up model (opt-in via strictSpinup).  When the spindle
-        // motor goes from stopped to running it needs time to reach 300 RPM;
-        // Read/Seek issued during this window miss.  Lenient
-        // default keeps the drive instantly ready.
+        // Optional motor spin-up delay (strictSpinup); the default keeps the
+        // drive instantly ready.
         this.strictSpinup = false;
         this._spinupRemaining = 0;   // CPU cycles left until motor is up to speed
-        this._settleRemaining = 0;   // 60 ms wait (drive register / head load / step) still pending; used only when fastReadMode is OFF
+        this._settleRemaining = 0;   // pending drive settle wait (fastReadMode OFF only)
         this._headLoaded = false;
         this._stepped = false;
         this.onHwWarn = null;        // (code, message) => void
         this.densityFlag = false; // bit4 of $FD1C
-        this.hdMode = false;     // $FD1E bit6: HD data rate (AV40+)
+        this.hdMode = false;     // $FD1E bit6 as written (1 = 2D drive mode)
 
-        // Drive type. Initial value is false (= 2D drive) on all models for
-        // FM-7 compatibility.  AV20/AV40/AV20EX/AV40EX software switches to
-        // 2DD by writing $FD1E bit6=0 (AV40 drive-mode register).  FM-7 and
-        // FM77AV (無印) ignore $FD1E writes, so the drive stays 2D.
+        // Drive type. Defaults to 2D; models that support drive-mode
+        // switching change it through $FD1E (see supportsDriveModeSwitch).
         this.driveModeIs2dd = false;
         // True when this machine wires $FD1E bit6 to the drive-mode flag
         // (AV20/AV40/AV20EX/AV40EX).  Set by fm7.js setMachineType.
@@ -547,17 +532,14 @@ export class FDC {
         this.idIndex = 0;
 
         // Timing
-        this.delayCycles = 0;       // Remaining delay in CPU cycles (2MHz)
+        this.delayCycles = 0;       // Remaining delay in main CPU cycles (at the current clock; see FDC.setCPUClock)
         this.cyclesToDrq = 0;       // Cycles between DRQ assertions
 
         // Fast-read mode selects accelerated STEP_RATES.
         // When disabled, use MB8877 timing (STEP_RATES_REAL).
         this.fastReadMode = true;
 
-        // Disk rotation phase — tracks the angular position of the spinning
-        // disk in CPU cycles.  300 RPM = 200 ms/revolution.  The phase wraps
-        // at one full revolution and is advanced by step().  Used to compute
-        // realistic rotational latency for sector find operations.
+        // Rotation phase used to calculate sector access delays.
         this._rotationPhase = 0;
 
         // IRQ / DRQ status
@@ -576,8 +558,7 @@ export class FDC {
         this.onIRQ = null;
 
         // Callbacks for FDD sound synthesis (see fdd_sound.js).
-        // onSeekSound(steps) — Type I command, `steps` = number of physical
-        //   track transitions the head will perform (0 if already on target).
+        // onSeekSound(steps) — Type I command; `steps` may be zero.
         // onHeadLoadSound() — head load click: Type I with h=1, or any Type II/III.
         // Force Interrupt never triggers sound.
         this.onSeekSound     = null;
@@ -625,6 +606,25 @@ export class FDC {
         return '???';
     }
 
+    /**
+     * Name the status bits for the log only. Bits 2, 4 and 5 mean different
+     * things for Type I (RESTORE/SEEK/STEP) and Type II/III commands.
+     * @param {number} bits - Status bits
+     * @returns {string[]} Flag names
+     * @private
+     */
+    _logStatusFlags(bits) {
+        const typeI = (this._logCmdByte & 0x80) === 0;
+        const flags = [];
+        if (bits & STATUS.RNF) flags.push(typeI ? 'SEEK' : 'RNF');
+        if (bits & STATUS.CRC_ERROR) flags.push('CRC');
+        if (bits & STATUS.LOST_DATA) flags.push(typeI ? 'TR0' : 'LOST');
+        if (bits & STATUS.WRITE_PROTECT) flags.push('WP');
+        if (bits & STATUS.NOT_READY) flags.push('NRDY');
+        if (bits & STATUS.RECORD_TYPE) flags.push(typeI ? 'HLD' : 'DDM');
+        return flags;
+    }
+
     _logPush(entry) {
         if (!this.logEnabled) return;
         entry.cyc = this._logCycle;
@@ -653,7 +653,7 @@ export class FDC {
                 const dur = this._logCycle - this._logBusyStart;
                 this.log.push({
                     cyc: this._logCycle, t: 'BUSY-',
-                    durCyc: dur, durUs: +(dur / 2).toFixed(1),
+                    durCyc: dur, durUs: +(dur / FDC.CYCLES_PER_US).toFixed(1),
                 });
             }
             this._logBusyPrev = busy;
@@ -695,7 +695,8 @@ export class FDC {
         const inclReg    = opts.includeReg    ? new Set(opts.includeReg)    : null;
         const lines = [];
         lines.push('# WebM7 FDC log');
-        lines.push('# cyc = cycles @ 2MHz (divide by 2 for µs)');
+        lines.push(`# cyc = main CPU cycles at ${FDC.CPU_CLOCK_HZ} Hz`
+                 + ` (${FDC.CYCLES_PER_US} cycles/µs; divide by that for µs)`);
         lines.push(`# compress=${compress}`);
         if (inclTypes) lines.push(`# includeTypes=${[...inclTypes].join(',')}`);
         else if (skipTypes.size) lines.push(`# skipTypes=${[...skipTypes].join(',')}`);
@@ -754,22 +755,24 @@ export class FDC {
         return lines.join('\n') + '\n';
     }
 
-    // Timing constants in microseconds (converted to CPU cycles dynamically)
-    // 300 RPM = 200ms/revolution, 16 sectors/track
-    // Average rotational latency: ~6000µs per sector
+    // Timing parameters in microseconds (converted to CPU cycles dynamically)
+    // Average rotational latency per sector
     static ROTATE_DELAY_US = 6000;
-    // MFM byte transfer delay: 32µs per byte (250kbps DD)
+    // MFM byte transfer delay per byte
     static BYTE_DELAY_US = 32;
     // Inter-sector gap delay for multi-sector reads/writes
-    // Real disk: ~12.5ms between adjacent sectors (200ms / 16 sectors)
     static MULTI_SECTOR_GAP_US = 6000;
-    // MB8877 RNF search window: 5 index pulses (5 revolutions at 300rpm = 1s)
-    // The controller keeps BUSY asserted while scanning sector IDs; only after
-    // 5 index pulses without a matching R does it set RNF and raise INTRQ.
+    // RNF search time: 5 index pulses (5 revolutions)
     static RNF_TIMEOUT_US = 1000000;
 
+    // Current main CPU clock (set by setCPUClock). Used for cycle <-> µs
+    // conversion in log headers and warning messages.
+    static CPU_CLOCK_HZ = 1794000;
+    static CYCLES_PER_US = 1.794;
+
     // CPU-clock-dependent cycle counts (set by setCPUClock)
-    // Defaults match FM-7 clock (1.794 MHz = 1.794 cycles/µs)
+    // Initial values assume the FM-7 main CPU clock (1.794 MHz = 1.794 cycles/µs);
+    // setCPUClock() recomputes them for the current clock.
     static ROTATE_DELAY = Math.round(6000 * 1.794);       // 10764
     static BYTE_DELAY = Math.round(32 * 1.794);           // 57
     static MULTI_SECTOR_GAP = Math.round(6000 * 1.794);   // 10764
@@ -781,20 +784,16 @@ export class FDC {
     static STEP_RATES_REAL = STEP_RATES_REAL_US.map(us => Math.round(us * 1.794));
     // Sectors per track (standard FM-7 2D/2DD format)
     static SECTORS_PER_TRACK = 16;
-    // Cold spin-up time: motor needs roughly half a second to reach a stable
-    // 300 RPM.  ~2.5 revolutions ≈ 500 ms is enough to model "read too early
-    // after motor-on misses" without making the IPL feel sluggish.
+    // Cold spin-up time before the motor reaches a stable speed.
     static SPINUP_US = 500000;
     static SPINUP_CYCLES = Math.round(500000 * 1.794); // 897000
-    // E flag wait (Type II / III) is 30 ms; drive register write, head load
-    // and step are each followed by a 60 ms wait (hardware spec).
+    // E flag wait (Type II / III) used when fast-read mode is off.
     static E_SETTLE_US = 30000;
     static E_SETTLE_CYCLES = Math.round(30000 * 1.794);
-    // fastReadMode ON: E flag wait stays at the accelerated value (~16.7 ms).
+    // fastReadMode ON: accelerated E flag wait.
     static E_SETTLE_FAST_US = 16700;
     static E_SETTLE_FAST_CYCLES = Math.round(16700 * 1.794);
-    // Wait after a seek finishes (fastReadMode OFF only): 20 ms when the head
-    // moved, 300 us when it did not.
+    // Wait after a seek finishes (fastReadMode OFF only): head moved / not moved.
     static SEEK_END_MOVED_US = 20000;
     static SEEK_END_MOVED_CYCLES = Math.round(20000 * 1.794);
     static SEEK_END_STAY_US = 300;
@@ -805,6 +804,8 @@ export class FDC {
     /** Update timing constants for actual CPU clock frequency */
     static setCPUClock(hz) {
         const cpm = hz / 1000000;  // cycles per microsecond
+        FDC.CPU_CLOCK_HZ = hz;
+        FDC.CYCLES_PER_US = cpm;
         FDC.ROTATE_DELAY = Math.round(FDC.ROTATE_DELAY_US * cpm);
         FDC.BYTE_DELAY = Math.round(FDC.BYTE_DELAY_US * cpm);
         FDC.MULTI_SECTOR_GAP = Math.round(FDC.MULTI_SECTOR_GAP_US * cpm);
@@ -835,7 +836,7 @@ export class FDC {
 
     /**
      * Load a disk image into a drive.
-     * Automatically detects D77 vs raw 2D format.
+     * Automatically detects HFE, D77 (single or multi-disk) and raw 2D/2DD images.
      * @param {number} driveNum - Drive number (0-3)
      * @param {ArrayBuffer} arrayBuffer - Disk image data
      * @returns {boolean} true if loaded successfully
@@ -849,8 +850,7 @@ export class FDC {
         const slots = [];
 
         // HFE (bit-stream floppy image, v1): MFM-decode into sectors and report
-        // any track-length problems that would stop the medium booting on real
-        // hardware.  Detected by the format signature "HXCPICFE".
+        // track-length warnings.  Detected by the format signature "HXCPICFE".
         if (arrayBuffer.byteLength >= 8) {
             const sig = new Uint8Array(arrayBuffer, 0, 8);
             if (String.fromCharCode(...sig) === 'HXCPICFE') {
@@ -888,7 +888,7 @@ export class FDC {
             }
         }
 
-        // Fallback: raw 2D
+        // Fallback: raw 2D/2DD
         if (slots.length === 0) {
             const d = new D77Disk();
             if (d.parseRaw2D(arrayBuffer)) slots.push(d);
@@ -1182,11 +1182,8 @@ export class FDC {
                 }
                 break;
 
-            case 0xFD1E: // AV40 drive-mode register (AV20+ only)
-                // bit6 selects drive type (inverted):
-                //   bit6=1 → 2D drive mode (FM-7 compatible)
-                //   bit6=0 → 2DD drive mode
-                // FM-7 and FM77AV (無印) ignore this write entirely.
+            case 0xFD1E: // Drive-mode register
+                // Update the drive mode on models with drive-mode switching.
                 if (this.supportsDriveModeSwitch) {
                     this.driveModeIs2dd = (value & 0x40) === 0;
                 }
@@ -1207,7 +1204,7 @@ export class FDC {
     /**
      * Advance the FDC state machine by the given number of CPU cycles.
      * Call this from the main emulation loop.
-     * @param {number} cycles - Number of CPU cycles elapsed (at 2MHz)
+     * @param {number} cycles - Number of main CPU cycles elapsed (at the current clock; see FDC.setCPUClock)
      */
     step(cycles) {
         if (this.logEnabled) this._logCycle += cycles;
@@ -1299,8 +1296,8 @@ export class FDC {
             case FDC_STATE.READ_TRANSFER:
                 // Data transfer is driven by CPU reads from $FD1B
                 // If DRQ has been set for too long without read, flag lost data
-                // (In practice, step() ensures DRQ timing; the actual data movement
-                // happens in readIO for $FD1B.)
+                // (Data movement happens in readIO for $FD1B; the timeout
+                // handling above also advances the transfer.)
                 break;
 
             case FDC_STATE.WRITE_FIND_SECTOR:
@@ -1316,20 +1313,16 @@ export class FDC {
                 break;
 
             case FDC_STATE.READ_TRACK:
-                // Not commonly used; stub
+                // Read Track: completes immediately without data transfer.
                 this._completeCommand(0);
                 break;
 
             case FDC_STATE.WRITE_TRACK:
                 // Data-driven by CPU writes to $FD1B (see _writeTrackByte).
-                // WRITE TRACK is treated as lasting one disk revolution
-                // (index pulse to the next index pulse).
-                // We accumulate elapsed cycles from command start and complete
-                // after one revolution, regardless of how many bytes the CPU
-                // managed to feed.  DRQ is paced at BYTE_DELAY (see
-                // _reqNextTrackByte) so the CPU feeds ~one track's worth of
-                // bytes per revolution, which keeps the format routine from
-                // over-running its track buffer.
+                // WRITE TRACK lasts one disk revolution and completes on
+                // elapsed cycles regardless of how many bytes the CPU fed.
+                // DRQ is paced at BYTE_DELAY (see _reqNextTrackByte) so the
+                // CPU feeds about one track's worth of bytes per revolution.
                 this._wtElapsed = (this._wtElapsed || 0) + (cycles || 0);
                 if (this._wtElapsed >= FDC.REVOLUTION_CYCLES) {
                     this._completeCommand(0);
@@ -1337,7 +1330,7 @@ export class FDC {
                 break;
 
             case FDC_STATE.RNF_WAIT:
-                // 5-index-pulse search window elapsed without matching sector.
+                // Search time elapsed without a matching sector.
                 this._completeCommand(STATUS.RNF);
                 break;
         }
@@ -1398,7 +1391,7 @@ export class FDC {
         if (this.strictSpinup && this._spinupRemaining > 0) {
             if (typeof this.onHwWarn === 'function') {
                 this.onHwWarn('fdc-spinup',
-                    `FDC command $${cmd.toString(16).padStart(2,'0')} issued during motor spin-up (${Math.round(this._spinupRemaining / 1.794)}us left); spin-up wait is active`);
+                    `FDC command $${cmd.toString(16).padStart(2,'0')} issued during motor spin-up (${Math.round(this._spinupRemaining / FDC.CYCLES_PER_US)}us left); spin-up wait is active`);
             }
             this._completeCommand(STATUS.NOT_READY);
             return;
@@ -1412,8 +1405,8 @@ export class FDC {
             this.cmdFlags.r = cmd & 0x03;
             this.cmdFlags.u = (cmd & 0x10) !== 0; // Update flag for Step variants
 
-            // FDD sound: compute how many physical steps this command will make,
-            // then fire the seek-sound callback BEFORE Restore overwrites trackReg.
+            // FDD sound: compute the step count for the seek sound, then fire
+            // the seek-sound callback BEFORE Restore overwrites trackReg.
             if (this.onSeekSound) {
                 let steps = 0;
                 if (cmdHigh === 0x00) {
@@ -1471,20 +1464,15 @@ export class FDC {
             if (this.onHeadLoadSound) this.onHeadLoadSound();
 
             // No disk inserted: return NOT_READY.
-            // MB8877 reports NOT_READY when drive has no media.
-            // Software may check NOT_READY to skip disk boot.
             if (!this.currentDisk || !this.currentDisk.loaded) {
                 this._completeCommand(STATUS.NOT_READY);
                 return;
             }
 
-            // Apply settle delay if E flag set.
-            // The head-settle time elapses BEFORE the controller starts
-            // scanning ID fields, so the rotational wait to the target
-            // sector must be measured from the post-settle disk phase.
-            // (Computing latency first and then adding the settle time
-            // would start the transfer 15ms past the sector's angular
-            // position and systematically miss the following sector.)
+            // Apply the wait before scanning (see _typeIIIWaitCycles).
+            // The wait elapses BEFORE the controller starts scanning ID
+            // fields, so the rotational latency to the target sector is
+            // measured from the disk phase after that wait.
             const settleCycles = this._typeIIIWaitCycles();
 
             if (cmdHigh === 0x80 || cmdHigh === 0x90) {
@@ -1560,11 +1548,8 @@ export class FDC {
      * continuously at 300 RPM; the time to reach a given sector depends
      * on where the head is in the rotation when the command is issued.
      *
-     * 300 RPM = 200 ms / revolution, 16 sectors / track.
-     * Sector N occupies a fixed arc: offset = N * (revolution / 16).
-     * Latency = (sector_offset - current_phase) mod revolution.
-     *
-     * Returns the rotational latency in CPU cycles for each sector read.
+     * Returns the wait from the current rotation position to the target
+     * sector, in CPU cycles.
      */
     _rotationalLatency(phaseOffsetCycles = 0) {
         const rev = FDC.REVOLUTION_CYCLES;
@@ -1590,21 +1575,20 @@ export class FDC {
         const phase = (this._rotationPhase + phaseOffsetCycles) % rev;
         let latency = Math.round(sectorOffset - phase);
         if (latency < 0) latency += rev;
-        // Minimum latency: at least ~1 ms for controller overhead
-        const minCycles = Math.round(rev / (spt * 4));  // ~3125 @ 2MHz
+        // Minimum latency for controller overhead: a quarter of a sector slot
+        const minCycles = Math.round(rev / (spt * 4));  // a quarter of a sector slot
         if (latency < minCycles) latency += rev;
         return latency;
     }
 
     // =========================================================================
-    // Type I: Seek / Step
+    // Command start wait, Type I: Seek / Step
     // =========================================================================
 
     /**
-     * Wait before a Type II / III command starts scanning: E flag (30 ms,
-     * or the accelerated value when fastReadMode is ON)
-     * plus, when fastReadMode is OFF, the pending 60 ms of drive register
-     * write / step and the head load if the head is not loaded yet.
+     * Wait before a Type II / III command starts scanning: the E flag wait
+     * plus, when fastReadMode is OFF, the pending drive register write /
+     * step wait and the head load if the head is not loaded yet.
      */
     _typeIIIWaitCycles() {
         let wait = 0;
@@ -1623,7 +1607,7 @@ export class FDC {
 
     /**
      * Wait in cycles after a seek has finished.  fastReadMode ON keeps the
-     * short fixed waits; OFF uses 20 ms (head moved) / 300 us (no movement).
+     * short fixed waits; OFF uses SEEK_END_MOVED_CYCLES / SEEK_END_STAY_CYCLES.
      */
     _seekEndDelay(moved) {
         if (this.fastReadMode) return moved ? 2000 : (this.cmdFlags.v ? 2000 : 200);
@@ -1653,9 +1637,7 @@ export class FDC {
         const headPos = this.headPosition[this.currentDrive];
         // Compare with the physical head position; software may change trackReg.
         if (target === headPos) {
-            // Already at target. Defer completion so polling loops that
-            // wait for BUSY=1 can observe the transient (see comment in
-            // _beginSeekRestore). Use a minimal 200-cycle delay.
+            // Already at target. Completion is deferred by _seekEndDelay(false).
             this.trackReg = target;
             this.delayCycles = this._seekEndDelay(false);
             this.state = FDC_STATE.SEEK_VERIFY;
@@ -1670,7 +1652,6 @@ export class FDC {
 
     /** Step command (with or without direction update) */
     _beginStep(directionSet) {
-        // directionSet: whether to change stepDirection (Step In/Out set it, plain Step doesn't)
         // stepDirection already set by caller for Step In/Out
         this.delayCycles = this._stepDelayCycles();
         this.state = FDC_STATE.SEEK_STEPPING;
@@ -1761,8 +1742,9 @@ export class FDC {
         if (this.cmdFlags.h) this._headLoaded = true;
         this._stepped = false;
 
-        // Drive is always READY for Type I commands — drives are physically
-        // present.  "No disk" is detected by RNF on Type II/III, not NOT_READY.
+        // Type I commands do not check for media, so a missing disk never
+        // reports NOT_READY here (the drive is physically present).  Type II/III
+        // report NOT_READY when no disk is inserted (see _executeCommand).
 
         this._completeCommand(status);
     }
@@ -1773,11 +1755,11 @@ export class FDC {
 
     /**
      * Map the physical head position (step counter) to the media track
-     * index, honouring the drive-mode ($FD1E) vs media-type combination:
+     * index according to the drive mode and the media type:
      *   - 2DD drive-mode + 2D media : the drive half-steps relative to the
      *     media pitch; odd head positions sit between tracks (returns -1).
      *   - 2D drive-mode + 2DD media : the drive double-steps, so the media
-     *     cylinder is twice the head position.
+     *     cylinder is twice the head position (low 8 bits).
      * Matching mode/media returns the head position unchanged.
      */
     _mediaTrackIndex() {
@@ -1803,19 +1785,13 @@ export class FDC {
             return;
         }
 
-        // Look up the sector on the CURRENT physical track by sector number.
-        // MB8877/WD1793 READ SECTOR scans address fields on the physical track.
-        // The FDC compares each sector ID's C field against the Track Register
-        // and R field against the Sector Register.  Only when both match does
-        // the data transfer begin.  If no matching ID is found within 5 index
-        // pulses, RNF is asserted.
-        // Drive vs media type compensation (reference: MB8877 / WD279x).
-        // D77 header byte 0x1B: 0x00=2D, 0x10=2DD, 0x20=2HD.
+        // Look up the target sector on the current track; if it is not found,
+        // report an error after the search time below.
+        // Drive vs media type compensation.
         // The step counter is mapped to the media track (2D-mode drive on
         // 2DD media double-steps; 2DD-mode drive on 2D media half-steps and
         // odd positions sit between tracks). The ID C-field of the sector on
-        // that media track must still match the Track Register, exactly as
-        // on the real controller.
+        // that media track must still match the Track Register.
         const physTrack = this._mediaTrackIndex();
         const side = this.currentSide;
         const sectorNum = this.sectorReg;
@@ -1831,8 +1807,7 @@ export class FDC {
                     has: !sector ? 'none' : `C${sector.c}`,
                 });
             }
-            // MB8877: on missing sector, keep BUSY asserted while searching
-            // for 5 index pulses (5 revolutions ≈ 1 s at 300rpm), then assert
+            // Missing sector: stay BUSY for the search time, then assert
             // RNF + INTRQ.
             this.statusReg = STATUS.BUSY;
             this.drqFlag = false;
@@ -1885,12 +1860,8 @@ export class FDC {
     /**
      * Advance read transfer after CPU reads data register.
      * @param {number} [elapsedSinceDrq=0] - Cycles elapsed since the DRQ
-     *   that the CPU just consumed.  Bytes arrive from the
-     *   spinning disk at fixed intervals (BYTE_DELAY).  If the CPU reads the
-     *   data register quickly, the remaining time until the *next* byte is
-     *   shorter than a full BYTE_DELAY.  Accounting for this prevents
-     *   artificially inflating the DRQ-to-DRQ gap and keeps software timing
-     *   loops (which poll $FD1F between bytes) in spec.
+     *   that the CPU just consumed; the next transfer is scheduled with
+     *   this time already counted.
      */
     _advanceRead(elapsedSinceDrq = 0) {
         if (this.state !== FDC_STATE.READ_TRANSFER) return;
@@ -1914,7 +1885,7 @@ export class FDC {
                     const secEnd = {
                         cyc: this._logCycle, t: 'SEC_END',
                         readBytes: this._logByteCount,
-                        nextSec: (this.sectorReg + 1) & 0xFF,
+                        nextSec: this.sectorReg + 1,
                     };
                     if (this._lostDataCount > 0) secEnd.lostBytes = this._lostDataCount;
                     this.log.push(secEnd);
@@ -1927,7 +1898,7 @@ export class FDC {
                 this.delayCycles = FDC.MULTI_SECTOR_GAP;
             } else {
                 // Single sector: done (include D77 sector status like CRC errors)
-                // Also report LOST_DATA in final status (real WD279x does this)
+                // Also report LOST_DATA in the final status
                 let finalStatus = this._readStatusExtra || 0;
                 if (this._lostDataCount > 0) finalStatus |= STATUS.LOST_DATA;
                 this._completeCommand(finalStatus);
@@ -1953,7 +1924,7 @@ export class FDC {
 
         const sector = track < 0 ? null : disk.getSector(track, side, sectorNum);
         if (!sector || sector.c !== this.trackReg) {
-            // MB8877: C field must match track register (same as read path).
+            // C field must match the track register (same as read path).
             this.statusReg = STATUS.BUSY;
             this.drqFlag = false;
             this.state = FDC_STATE.RNF_WAIT;
@@ -2038,11 +2009,7 @@ export class FDC {
     }
 
     /**
-     * Schedule the next WRITE TRACK DRQ one byte-period in the future.
-     * Pacing the data request at BYTE_DELAY (like the data-rate of a real
-     * drive) limits the CPU to ~one track's worth of bytes per revolution,
-     * so its format loop feeds its track buffer exactly once instead of
-     * spinning at full CPU speed and over-running the buffer.
+     * Schedule the next WRITE TRACK DRQ one byte-period (BYTE_DELAY) in the future.
      */
     _reqNextTrackByte() {
         if (this.state !== FDC_STATE.WRITE_TRACK) return;
@@ -2054,13 +2021,11 @@ export class FDC {
 
     /**
      * Consume one byte of the WRITE TRACK format stream.
-     * Address marks: 0xFE = ID (next 4 bytes C,H,R,N), 0xFB/0xF8 = Data
-     * (followed by 128<<N data bytes).  Gap/sync/CRC bytes (0x4E, 0x00,
-     * 0xF5, 0xF6, 0xF7, 0xFC, …) carry no sector data and are skipped.
+     * Address marks introduce the ID and data fields; gap/sync/CRC bytes
+     * carry no sector data and are skipped.
      */
     _writeTrackByte(b) {
         this._wtBytes++;
-        this._writeTrackIdle = 0;
         if (this.currentDisk) this.currentDisk.dirty = true;
 
         if (this._wtPhase === 'data') {
@@ -2071,10 +2036,10 @@ export class FDC {
             this._wtDataRemaining--;
             if (this._wtDataRemaining <= 0) {
                 // Sector data field captured.  Return to gap scanning and keep
-                // accepting bytes — WRITE TRACK is treated as lasting a full
-                // revolution (until the index pulse), so we let the CPU feed the
-                // trailing gap.  Completion happens via the idle timeout in
-                // step() once the CPU stops writing (or the safety cap below).
+                // accepting bytes — WRITE TRACK is treated as lasting one
+                // revolution's worth of time from its start, so we let the CPU
+                // feed the trailing gap.  Completion happens when that time has
+                // elapsed in step() (or at the safety cap below).
                 this._wtPhase = 'gap';
                 this._wtSector = null;
                 this._wtSectorsWritten++;
@@ -2108,8 +2073,8 @@ export class FDC {
             this._wtIdReady = false;
         }
 
-        // Safety cap (~2× a 2D track's raw capacity) in case the stream never
-        // describes the expected sector count, to avoid stalling forever.
+        // Safety cap (~2× a 2D track's raw capacity) on the bytes accepted by
+        // one WRITE TRACK command.
         if (this._wtBytes > 13000) {
             this._completeCommand(0);
             return;
@@ -2139,7 +2104,7 @@ export class FDC {
             if (this.logEnabled) {
                 this.log.push({ cyc: this._logCycle, t: 'RADDR_RNF', physTrk: track, side });
             }
-            // MB8877: unformatted track — search 5 index pulses before RNF.
+            // Unformatted track: stay BUSY for the search time, then report RNF.
             this.statusReg = STATUS.BUSY;
             this.drqFlag = false;
             this.state = FDC_STATE.RNF_WAIT;
@@ -2192,7 +2157,9 @@ export class FDC {
     // =========================================================================
 
     /**
-     * Force Interrupt command - aborts current operation.
+     * Force Interrupt command. Returns the state to idle, clears DRQ and
+     * rebuilds the status register (Type I style). The pending-DRQ flag
+     * and its timer are left as they are.
      * @param {number} cmd - Command byte ($D0-$DF)
      * @private
      */
@@ -2221,7 +2188,7 @@ export class FDC {
         }
 
         if (conditions !== 0) {
-            // Generate interrupt immediately for $D8 (immediate interrupt)
+            // Any non-zero condition bits raise the interrupt immediately
             this.irqFlag = true;
             if (this.onIRQ) {
                 this.onIRQ();
@@ -2247,19 +2214,13 @@ export class FDC {
 
         if (this.logEnabled) {
             const dur = this._logCycle - this._logCmdStart;
-            const flags = [];
-            if (errorBits & STATUS.RNF) flags.push('RNF');
-            if (errorBits & STATUS.CRC_ERROR) flags.push('CRC');
-            if (errorBits & STATUS.LOST_DATA) flags.push('LOST');
-            if (errorBits & STATUS.WRITE_PROTECT) flags.push('WP');
-            if (errorBits & STATUS.NOT_READY) flags.push('NRDY');
-            if (errorBits & STATUS.RECORD_TYPE) flags.push('DDM');
+            const flags = this._logStatusFlags(errorBits);
             const entry = {
                 cyc: this._logCycle, t: 'DONE',
                 cmd: this._logCmdName,
                 status: '$' + (errorBits & 0xFF).toString(16).padStart(2, '0'),
                 flags: flags.length ? flags.join('|') : 'OK',
-                durCyc: dur, durUs: +(dur / 2).toFixed(1),
+                durCyc: dur, durUs: +(dur / FDC.CYCLES_PER_US).toFixed(1),
                 bytes: this._logTotalBytes,
             };
             if (this._lostDataCount > 0) entry.lostBytes = this._lostDataCount;
@@ -2276,11 +2237,11 @@ export class FDC {
     }
 
     // =========================================================================
-    // Drive Status ($FD1C read)
+    // Drive status helper (not wired to an I/O address)
     // =========================================================================
 
     /**
-     * Read drive status register.
+     * Build a drive status byte. $FD1C reads do not use this helper.
      * @returns {number} Status byte
      * @private
      */
@@ -2304,7 +2265,7 @@ export class FDC {
             status |= 0x04;
         }
 
-        // Bit 1: index pulse (simulate: toggle based on timing, always return 0 for simplicity)
+        // Bit 1: index pulse (always 0)
         // Bit 0: side selected
         status |= (this.currentSide & 0x01);
 

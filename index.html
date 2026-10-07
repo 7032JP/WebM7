@@ -33,10 +33,10 @@
         </div>
         <!-- 機種の機能ラベル -->
         <div class="ctrl-row cap-badge-row" id="capBadgeRow">
-            <span class="cap-badge" id="capBadgeMMR" title="メモリ管理（MMR）と一時書き込み窓（TWR）">MMR/TWR</span>
+            <span class="cap-badge" id="capBadgeMMR" title="メモリ管理（MMR）とテキストウィンドウ RAM（TWR）">MMR/TWR</span>
             <span class="cap-badge" id="capBadgeAV" title="4096色表示・キースキャン読込・ALU/ハードウェア直線描画">77AV機能</span>
             <span class="cap-badge" id="capBadge2DD" title="2DD ディスク対応（ドライブモード切替 対応）">2DD</span>
-            <span class="cap-badge" id="capBadgeDMAC" title="DMAC (HD6844) による DMA 転送">DMAC</span>
+            <span class="cap-badge" id="capBadgeDMAC" title="DMAC による DMA 転送">DMAC</span>
             <span class="cap-badge" id="capBadgeFMMR" title="高速MMR（MMR 使用時の速度低下を抑止）">高速MMR</span>
             <span class="cap-badge" id="capBadgeAV40" title="400ライン表示・26万色表示">AV40機能</span>
             <span class="cap-badge" id="capBadgeEX" title="2面VRAM・ハードウェアウィンドウ・拡張サブROM・第2水準漢字/辞書">40EX機能</span>
@@ -60,16 +60,15 @@
             <canvas id="screen" width="640" height="200"></canvas>
             <div class="scanlines"></div>
         </div>
-        <!-- 表示倍率トグル: Web標準（ウィンドウに合わせる）/ x2（2倍固定）/ x1（デバイスピクセル等倍）。
-             右端の FULL はフルスクリーン切替のボタンで、倍率の選択状態（.active）には加わらない
-             （.scale-btn を持たないためトグルのクリック処理の対象外）。id と F11 の動作は従来どおり -->
+        <!-- 表示倍率トグル: Web標準（ウィンドウに合わせる）/ x2（デバイスピクセル基準の 2 倍）/ x1（デバイスピクセル等倍）。
+             右端の FULL はフルスクリーン切替のボタンで、倍率の選択状態（.active）には加わらない -->
         <div class="scale-row" id="scaleRow">
             <div class="scale-left">
                 <span class="scale-label">表示</span>
                 <div class="scale-toggle" id="scaleToggle" role="group" aria-label="表示倍率">
                     <button type="button" class="scale-btn" data-scale="free" title="Web標準: ウィンドウに合わせて自動調整">Web標準</button>
-                    <button type="button" class="scale-btn" data-scale="x2" title="2倍表示: 常に 1280x800 デバイスピクセル（1ドット=2x2デバイスピクセル）">x2</button>
-                    <button type="button" class="scale-btn" data-scale="dod" title="等倍表示: 常に 640x400 デバイスピクセル（1ドット=1デバイスピクセル）">x1</button>
+                    <button type="button" class="scale-btn" data-scale="x2" title="2倍表示">x2</button>
+                    <button type="button" class="scale-btn" data-scale="dod" title="等倍表示">x1</button>
                     <button type="button" class="scale-fs" id="fullscreenBtn" title="Fullscreen (F11)">FULL</button>
                 </div>
             </div>
@@ -122,28 +121,28 @@
                         <div class="status-led-item" title="Drive 1 アクセス（黄=2D / 白=2D DMA / 緑=2DD / 青=2DD DMA / 赤=書き込み）">
                             <span class="fdc-led" id="tbDrv1Led"></span>
                             <span class="status-led-name">Drv1</span>
-                            <span class="fdc-led" id="tbDrv1Dmac" title="Drive 1 が DMA 転送でアクセス中に点灯（DMAC の無い機種では常に消灯）"></span>
-                            <span class="status-led-name" title="Drive 1 が DMA 転送でアクセス中に点灯（DMAC の無い機種では常に消灯）">DMAC</span>
+                            <span class="fdc-led" id="tbDrv1Dmac" title="Drive 1 が DMA 転送でアクセス中に点灯"></span>
+                            <span class="status-led-name" title="Drive 1 が DMA 転送でアクセス中に点灯">DMAC</span>
                         </div>
                         <div class="status-led-item" title="Drive 0 アクセス（黄=2D / 白=2D DMA / 緑=2DD / 青=2DD DMA / 赤=書き込み）">
                             <span class="fdc-led" id="tbDrv0Led"></span>
                             <span class="status-led-name">Drv0</span>
-                            <span class="fdc-led" id="tbDrv0Dmac" title="Drive 0 が DMA 転送でアクセス中に点灯（DMAC の無い機種では常に消灯）"></span>
-                            <span class="status-led-name" title="Drive 0 が DMA 転送でアクセス中に点灯（DMAC の無い機種では常に消灯）">DMAC</span>
+                            <span class="fdc-led" id="tbDrv0Dmac" title="Drive 0 が DMA 転送でアクセス中に点灯"></span>
+                            <span class="status-led-name" title="Drive 0 が DMA 転送でアクセス中に点灯">DMAC</span>
                         </div>
                         <!-- FDC activity (Track / Sector / state) next to the drive LEDs -->
                         <span class="vol-label fdc-track-info" id="fdcTrackInfo" title="FDC Track / Sector / 状態">--</span>
-                        <span class="mod-pill" id="tbDriveMode" title="ドライブモード（2D / 2DD。両ドライブ共通の設定。2DD の無い機種では常に 2D）">2D</span>
+                        <span class="mod-pill" id="tbDriveMode" title="ドライブモード（2D / 2DD）">2D</span>
                     </div>
                     <span class="status-divider"></span>
                     <!-- MMR / TWR: memory mapper activity -->
-                    <div class="status-led-item" title="メモリ管理 (MMR) / 一時書き込み窓 (TWR) 使用中に点灯。緑=高速MMR動作中">
+                    <div class="status-led-item" title="メモリ管理 (MMR) / テキストウィンドウ RAM (TWR) 使用中に点灯。緑=高速MMR動作中">
                         <span class="fdc-led" id="tbMmrLed"></span>
                         <span class="status-led-name">MMR</span>
                     </div>
                     <span class="status-divider"></span>
                     <!-- Cycle steal: sub CPU VRAM access taken by the display -->
-                    <div class="status-led-item" title="サイクルスチールが解除され、サブ CPU が VRAM へ自由にアクセスできる状態で点灯（FM-7 は常時消灯。FM-77 は $D405 bit0 に 1 を書くと点灯、0 で消灯。FM77AV 以降は VRAM バスが独立のため常時点灯）">
+                    <div class="status-led-item" title="サイクルスチールが解除され、サブ CPU が VRAM へ自由にアクセスできる状態で点灯">
                         <span class="fdc-led" id="tbStealLed"></span>
                         <span class="status-led-name">NO STEAL</span>
                     </div>
@@ -177,17 +176,11 @@
              電源・リセット・フロッピードライブを機種ごとの配色の操作パネルとして表示する。
              FM-7 (FM-7 / FM-NEW7 スキン) は、画面下の横型の上面帯 (#hwTowerBand) と
              画面右列の縦型タワー (#hwTower, 5.25インチ外付けユニット) の 2 つ、
-             FM-77 / FM77AV 系 / AV40EX 系は横型バー (#hwBar, 画面下)。
-             どれを表示するかは body の意匠クラス (hw-right) で CSS が切り替える。
-             画面下のパネル (#hwTowerBand / #hwBar) は機種を切り替えても高さが変わらない
-             よう、CSS の共通の高さ (--hw-bottom-h / --hw-bottom-lip-h) に揃えてある。 -->
+             FM-77 / FM77AV 系 / AV40EX 系は横型バー (#hwBar, 画面下)。 -->
         <div class="hw-panel" id="hwPanel">
 
-            <!-- FM-7 / FM-NEW7 スキン: 上面帯（画面下・横型）。2 段構成で、
-                 上段は黄色のカバー（左に機種名、右端に電源スイッチ。低め）、
-                 下段はクリーム色の背面パネル（上段の倍以上の高さ）: 左端に RESET、右端に BOOT の
-                 DIP スイッチ、その間にダミー部品（AC インレット、DIN 端子 3 個、
-                 RCA ジャック、調整穴 2 個、エッジコネクタ 2 個。表示のみ）。表記は各部品の上 -->
+            <!-- FM-7 / FM-NEW7 スキン: 上面帯（画面下・横型）。上段はカバー（機種名・電源スイッチ）、
+                 下段は背面パネル（RESET・BOOT の DIP スイッチ・表示のみのダミー部品） -->
             <div class="hw-tower-top" id="hwTowerBand">
                 <div class="hw-tower-cover">
                     <!-- 機種名の表示はスキンに応じて切り替える -->
@@ -309,7 +302,7 @@
                             <div class="hw-kbd-led-item"><span class="hw-lamp" id="hwLedIns"></span><span>INS</span></div>
                             <div class="hw-kbd-led-item"><span class="hw-lamp" id="hwLedCap"></span><span>CAP</span></div>
                         </div>
-                        <!-- EX / SX 系: 起動モードは右列の BASIC / DOS ボタン -->
+                        <!-- 右列の BASIC / DOS ボタン（非表示） -->
                         <div class="hw-boot-chips hw-right-boot" id="hwRightBootChips">
                             <span class="hw-tiny-label">モード</span>
                             <button type="button" class="hw-boot-chip" data-boot="basic" title="BASIC モードで起動">BASIC</button>
@@ -319,12 +312,12 @@
                             <span class="hw-tiny-label">リセット</span>
                             <button type="button" class="hw-reset-btn" id="hwBarReset" title="リセット" aria-label="リセット"></button>
                         </div>
-                        <!-- 右上の注記。現在はどのスキンも文言を出さない（CSS で非表示） -->
+                        <!-- 右上の注記（非表示） -->
                         <div class="hw-right-note" id="hwRightNote"></div>
                     </div>
                 </div>
                 <div class="hw-bar-lip" id="hwBarLip">
-                    <!-- 下段左の注記。現在はどのスキンも文言を出さない（CSS で非表示） -->
+                    <!-- 下段左の注記（非表示） -->
                     <div class="hw-lip-left">
                         <span class="hw-lip-caption" id="hwLipCaption"></span>
                     </div>
@@ -395,9 +388,8 @@
             <button id="mobilePauseBtn" title="Pause/Resume">Pause</button>
             <button id="mobileResetBtn" title="Reset">Reset</button>
         </div>
-        <!-- Virtual Keyboard: docked below the screen on touch devices, hidden
-             on desktop via CSS. Placed statically inside .left-col so it always
-             sits above the footer regardless of script timing. -->
+        <!-- Virtual Keyboard: shown below the screen on touch devices, hidden
+             on desktop via CSS. -->
         <div id="softKbd" hidden></div>
     </div>
 
@@ -439,8 +431,8 @@
             <div class="ctrl-row ctl-retired">
                 <label>Boot Mode:</label>
                 <div class="radio-group">
-                    <label title="BASIC モードの起動 ROM で起動。ディスクがあればディスクから起動し、無ければ BASIC を起動（同梱互換 ROM では 7T-BASIC）"><input type="radio" name="bootMode" value="basic" checked> BASIC</label>
-                    <label title="DOS モードの起動 ROM で起動（起動可能なディスクをセットしておく）"><input type="radio" name="bootMode" value="dos"> DOS</label>
+                    <label title="BASIC モードで起動。ディスクがあればディスクから起動し、無ければ BASIC を起動（同梱互換 ROM では 7T-BASIC）"><input type="radio" name="bootMode" value="basic" checked> BASIC</label>
+                    <label title="DOS モードで起動（起動可能なディスクをセットしておく）"><input type="radio" name="bootMode" value="dos"> DOS</label>
                 </div>
             </div>
             <div class="ctrl-row" id="fmCardRow">
@@ -449,8 +441,8 @@
                 <span id="fmCardHint" class="ui-note fs-10" style="margin-left:6px;display:none;">次回の電源投入 / リセットから有効になります</span>
             </div>
             <div class="ctrl-row" id="mouseRow">
-                <label for="mouseModeSelect" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用でき、インテリジェントマウスはジョイスティックポート経由のため FM 音源カードが必要です">Mouse</label>
-                <select id="mouseModeSelect" class="fs-11" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用でき、インテリジェントマウスはジョイスティックポート経由のため FM 音源カードが必要です">
+                <label for="mouseModeSelect" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用できます。インテリジェントマウスは、FM77AV 系以外では FM 音源カードが必要です">Mouse</label>
+                <select id="mouseModeSelect" class="fs-11" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用できます。インテリジェントマウスは、FM77AV 系以外では FM 音源カードが必要です">
                     <option value="none">(None)</option>
                     <option value="bus">Mouse Set (bus)</option>
                     <option value="intel1">Intelligent Mouse (Port 1)</option>
@@ -583,7 +575,7 @@
                 </details>
             </div>
             <div class="sp-row sp-row-end" style="margin-top:4px;">
-                <button id="clearStorageBtn" title="ブラウザに保存した ROM とディスクを消去します">Clear Saved</button>
+                <button id="clearStorageBtn" title="ブラウザに保存した ROM・ディスク・最近使ったファイルの履歴・Library を消去します">Clear Saved</button>
             </div>
         </div>
 
@@ -591,7 +583,7 @@
         <div class="sp-section" data-section="library">
             <h3 class="sp-section-toggle">Library<span class="help-icon" data-help="help-library" title="Library パネルのヘルプ">?</span></h3>
             <div class="sp-row">
-                <input type="file" id="libImportFile" accept=".d77,.D77,.2d,.2D,.t77,.T77" title="PC の D77 / T77 ファイルを Library（ブラウザ内の棚）に取り込みます">
+                <input type="file" id="libImportFile" accept=".d77,.D77,.2d,.2D,.t77,.T77" title="PC の D77 / 2D / T77 ファイルを Library（ブラウザ内の棚）に取り込みます">
                 <button id="libNewBlank2D" title="新規 論理フォーマット済 2D ディスク (320KB・すぐ書き込み可)">＋2D</button>
                 <button id="libNewBlank2DD" title="新規 論理フォーマット済 2DD ディスク (640KB・すぐ書き込み可)">＋2DD</button>
             </div>
@@ -605,8 +597,8 @@
             <h3 class="sp-section-toggle">Disk Images<span class="help-icon" data-help="help-disks" title="Disk Images パネルのヘルプ">?</span></h3>
             <label for="diskFile0">Drive 0 <span class="fdc-led" id="fdcLed0"></span></label>
             <div class="sp-row">
-                <input type="file" id="diskFile0" accept=".d77,.D77,.2d,.2D">
-                <button id="diskSaveBtn0" aria-label="Drive 0 を .d77 で保存" title="現在のディスクイメージを .d77 として PC へ書き出します。PC 本体のファイルへ保存する唯一の操作です。保存ダイアログで上書きを指定しない限り、既存の D77 ファイルには影響しません（別名保存を推奨）"><span class="btn-icon">💾</span><span class="btn-text">Save</span></button>
+                <input type="file" id="diskFile0" accept=".d77,.D77,.2d,.2D" title="Choose a D77 / 2D file. If you have recent files, their list opens first">
+                <button id="diskSaveBtn0" aria-label="Drive 0 を .d77 で保存" title="現在のディスクイメージを .d77 として PC へ書き出します（Library の項目は Exp で書き出せます）"><span class="btn-icon">💾</span><span class="btn-text">Save</span></button>
                 <button id="diskEjectBtn0" title="Drive 0 を取り出す" aria-label="Drive 0 を取り出す"><span class="btn-icon">⏏</span><span class="btn-text">Eject</span></button>
             </div>
             <div class="file-name-row" id="diskStatus0">--</div>
@@ -614,15 +606,15 @@
             <select id="diskSelect0" class="fs-11" style="display:none;width:100%;margin-top:2px;"></select>
             <label for="diskFile1">Drive 1 <span class="fdc-led" id="fdcLed1"></span></label>
             <div class="sp-row">
-                <input type="file" id="diskFile1" accept=".d77,.D77,.2d,.2D">
-                <button id="diskSaveBtn1" aria-label="Drive 1 を .d77 で保存" title="現在のディスクイメージを .d77 として PC へ書き出します。PC 本体のファイルへ保存する唯一の操作です。保存ダイアログで上書きを指定しない限り、既存の D77 ファイルには影響しません（別名保存を推奨）"><span class="btn-icon">💾</span><span class="btn-text">Save</span></button>
+                <input type="file" id="diskFile1" accept=".d77,.D77,.2d,.2D" title="Choose a D77 / 2D file. If you have recent files, their list opens first">
+                <button id="diskSaveBtn1" aria-label="Drive 1 を .d77 で保存" title="現在のディスクイメージを .d77 として PC へ書き出します（Library の項目は Exp で書き出せます）"><span class="btn-icon">💾</span><span class="btn-text">Save</span></button>
                 <button id="diskEjectBtn1" title="Drive 1 を取り出す" aria-label="Drive 1 を取り出す"><span class="btn-icon">⏏</span><span class="btn-text">Eject</span></button>
             </div>
             <div class="file-name-row" id="diskStatus1">--</div>
             <div class="disk-geom" id="diskGeom1">-- (no disk)</div>
             <select id="diskSelect1" class="fs-11" style="display:none;width:100%;margin-top:2px;"></select>
             <div class="sp-row sp-row-end" style="margin-top:4px;">
-                <button id="clearDiskCacheBtn" title="ブラウザにキャッシュしたディスクイメージとファイル参照を消去します">Clear Disk Cache</button>
+                <button id="clearDiskCacheBtn" title="ブラウザにキャッシュしたディスクイメージ・ファイル参照と、最近使ったファイルの履歴（ディスク・テープ）を消去します（ROM と Library は残ります）">Clear Disk Cache</button>
             </div>
             <div class="ctrl-row" style="margin-top:6px;">
                 <label for="fddSoundCheck">Drive Sound</label>
@@ -633,7 +625,7 @@
                 <span class="vol-label" id="fddSoundVolLabel">50%</span>
             </div>
             <div class="ctrl-row" style="margin-top:6px;">
-                <label for="fastReadCheck" title="ON: シーク（ヘッド移動）を加速して高速ロード（既定）。 OFF: 実機相当のシーク速度・回転タイミングで動作します（実機相当のタイミングでの動作確認用）">高速読み込みモード</label>
+                <label for="fastReadCheck" title="ON: シーク（ヘッド移動）を加速して高速ロード（既定）。 OFF: 実機相当のシーク速度・回転タイミングで動作します">高速読み込みモード</label>
                 <input type="checkbox" id="fastReadCheck" checked>
             </div>
         </div>
@@ -642,7 +634,7 @@
         <div class="sp-section" data-section="tape">
             <h3 class="sp-section-toggle">Tape Image<span class="help-icon" data-help="help-tape" title="Tape Image パネルのヘルプ">?</span></h3>
             <div class="sp-row">
-                <input type="file" id="tapeFile" accept=".t77,.T77,.wav,.WAV">
+                <input type="file" id="tapeFile" accept=".t77,.T77,.wav,.WAV" title="Choose a T77 / WAV file. If you have recent files, their list opens first">
                 <button id="tapeEjectBtn" title="テープを取り出す" aria-label="テープを取り出す"><span class="btn-icon">⏏</span><span class="btn-text">Eject</span></button>
             </div>
             <div class="file-name-row" id="tapeStatus">--</div>
@@ -656,10 +648,24 @@
             </div>
             <div class="rec-label">録音（BASIC の SAVE / SAVEM で書き込んだ内容）</div>
             <div class="sp-row">
-                <button id="cmtSaveT77Btn" title="直前に録音した内容を .t77 形式で PC へ保存" aria-label="録音を .t77 で保存"><span class="btn-icon">💾</span><span class="btn-text">録音→.t77</span></button>
-                <button id="cmtSaveWavBtn" title="直前に録音した内容を .wav (PCM) 形式で PC へ保存" aria-label="録音を .wav で保存"><span class="btn-icon">💾</span><span class="btn-text">録音→.wav</span></button>
+                <button id="cmtSaveT77Btn" title="前回の録音クリア以降に蓄積された録音内容を .t77 形式で PC へ保存" aria-label="録音を .t77 で保存"><span class="btn-icon">💾</span><span class="btn-text">録音→.t77</span></button>
+                <button id="cmtSaveWavBtn" title="前回の録音クリア以降に蓄積された録音内容を .wav (PCM) 形式で PC へ保存" aria-label="録音を .wav で保存"><span class="btn-icon">💾</span><span class="btn-text">録音→.wav</span></button>
                 <button id="cmtRecClearBtn" title="録音内容を消去" aria-label="録音内容を消去"><span class="btn-icon">🗑</span><span class="btn-text">録音クリア</span></button>
                 <span class="ui-dim fs-11" id="cmtRecInfo">rec 0</span>
+            </div>
+        </div>
+
+        <!-- Recent (最近使ったファイル): Drive / Tape の「ファイルを選択」の行の直下へ JS が移して開く -->
+        <div id="recentPopover" class="recent-popover" role="dialog" aria-label="Recent files" hidden>
+            <div class="recent-head">
+                <span id="recentTitle">Recent files</span>
+                <button type="button" class="recent-close" id="recentCloseBtn" title="Close" aria-label="Close">×</button>
+            </div>
+            <div id="recentList" class="recent-list" role="list" aria-label="History"></div>
+            <div id="recentNotice" class="recent-notice" role="status" hidden></div>
+            <div class="recent-foot">
+                <button type="button" id="recentPickBtn" title="Open the file chooser">Choose a new file…</button>
+                <button type="button" id="recentClearBtn" title="Clear the whole history of this kind (Library items and files on your PC are not affected)">Clear history</button>
             </div>
         </div>
 
@@ -734,7 +740,7 @@
         <div class="ip-section" id="memAVSection" style="display:none;">
             <div class="ip-label">Memory State</div>
             <div class="debug-grid">
-                <span class="d-label">Boot RAM (BASIC)</span><span class="d-val" id="bootRamVal">--</span>
+                <span class="d-label">BASIC ROM/RAM</span><span class="d-val" id="bootRamVal">--</span>
                 <span class="d-label">MMR</span><span class="d-val" id="mmrVal">--</span>
                 <span class="d-label">MMR Bank ($FD90)</span><span class="d-val" id="mmrBankVal">--</span>
                 <span class="d-label">TWR</span><span class="d-val" id="twrVal">--</span>
@@ -805,7 +811,7 @@
             <div class="palette-row" id="paletteRow"></div>
         </div>
         <div class="ip-section" id="analogPaletteSection" style="display:none;">
-            <div class="ip-label" id="analogPalLabel">Analog Palette (4096 colors)</div>
+            <div class="ip-label" id="analogPalLabel">Analog Palette (4,096 colors)</div>
             <canvas id="analogPaletteCanvas" width="64" height="64" style="width:128px;height:128px;image-rendering:pixelated;border:1px solid #333;border-radius:3px;"></canvas>
         </div>
     </div>
@@ -898,10 +904,10 @@
 
         <h1>WebM7 — FM-7 / FM77AV Web Simulator</h1>
         <p>WebM7 は、ブラウザで FM-7 系の動作を体験し、対応ソフトウェアの開発・検証に利用できるシミュレータです。<br>
-        既定では同梱の互換 ROM セット（独立実装・MIT License）で動作するため、ROM ファイルの用意は不要です。お手持ちの ROM ファイルを使うこともできます。</p>
+        既定では同梱の互換 ROM セット（独立実装。本体は MIT License、第三者素材由来の漢字字形は対象外。詳細は <code>LICENSE-AltROMs.md</code>）で動作するため、ROM ファイルの用意は不要です。お手持ちの ROM ファイルを使うこともできます。</p>
 
         <p class="md-note" style="font-size:0.85em;"><strong>ROMファイルの取り扱いについて</strong><br>
-        ・本シミュレータが同梱・配信するのは、独立実装の互換 ROM セット（MIT License。配布元は <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.3" target="_blank" rel="noopener">7032 Alternative ROMs</a>）のみです。純正 ROM は同梱も配信もしません。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>
+        ・本シミュレータが同梱・配信するのは、独立実装の互換 ROM セット（本体は MIT License。配布元は <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.8" target="_blank" rel="noopener">7032 Alternative ROMs</a>）のみです。純正 ROM は同梱も配信もしません。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>
         ・利用者がご用意されたROMファイルはユーザーのブラウザ内（ローカル環境）でのみ処理します。ROMデータがサーバーに送信・保存されることはありません。</p>
 
         <p class="md-note" style="font-size:0.85em;">選択した機種に合う ROM を指定してください。</p>
@@ -919,7 +925,7 @@
         <h3 id="help-rom">1. ROM の供給元を選ぶ / ROMファイルを読み込む（ROM Files パネル）</h3>
         <p>本シミュレータは<strong>同梱の互換 ROM セットを常に土台</strong>として動作します。そのうえで、<strong>ROM 1 本ごとに供給元を選べます</strong>。各 ROM の行にある選択で「同梱互換」か「自分の ROM」を指定してください（例: <code>FBASIC30.ROM</code> だけ、あるいは <code>KANJI.ROM</code> だけをお手持ちのものにする、といった使い分けができます）。指定はブラウザに保存され、次回以降も維持されます。現在どの組み合わせで動作しているかは、同じパネル上部の <strong>ROM Set</strong> 表示で確認できます。</p>
         <ul>
-        <li><strong>同梱互換（既定）</strong> — 独立実装の互換 ROM セット（MIT License）を使用します。ROM ファイルの用意は不要で、そのまま起動できます（行の横に「互換」と表示されます）。漢字 ROM（第1水準・全機種）も同梱されており、漢字表示に対応しています。ソフトウェアの動作条件は、下記の互換 ROM の互換性情報を参照してください（第2水準漢字 ROM・辞書 ROM は FM77AV40EX/SX で必須です。辞書 ROM を使うかな漢字変換には対応していません）。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>同梱互換 ROM の BASIC は、プログラムをアスキー形式（<code>SAVE ,A</code> と同じ形式）だけで読み書きします。中間コード（バイナリ）形式で保存されたファイルは読み込めません（<a href="https://github.com/7032JP/7032AltROMs/blob/v1.0.3/docs/COMPATIBILITY.md" target="_blank" rel="noopener">COMPATIBILITY.md §3.2</a>）。お手持ちのプログラムファイルをそのまま使う場合は、<code>FBASIC30.ROM</code> の行を「自分の ROM」に切り替えてください。保存はアスキー形式のみ対応しています（詳細は上記の COMPATIBILITY.md を参照）。機械語ファイル（<code>SAVEM</code> / <code>LOADM</code>）の形式は従来どおりです</li>
+        <li><strong>同梱互換（既定）</strong> — 独立実装の互換 ROM セット（本体は MIT License）を使用します。ROM ファイルの用意は不要で、そのまま起動できます（行の横に「互換」と表示されます）。漢字 ROM（第1水準・全機種）も同梱されており、漢字表示に対応しています。ソフトウェアの動作条件は、下記の互換 ROM の互換性情報を参照してください（辞書 ROM を使うかな漢字変換には対応していません）。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>同梱互換 ROM の BASIC は、プログラムをアスキー形式（<code>SAVE ,A</code> と同じ形式）だけで読み書きします。中間コード（バイナリ）形式で保存されたファイルは読み込めません（<a href="https://github.com/7032JP/7032AltROMs/blob/v1.0.8/docs/COMPATIBILITY.md" target="_blank" rel="noopener">COMPATIBILITY.md §3.2</a>）。お手持ちのプログラムファイルをそのまま使う場合は、<code>FBASIC30.ROM</code> の行を「自分の ROM」に切り替えてください。機械語ファイル（<code>SAVEM</code> / <code>LOADM</code>）の形式は従来どおりです</li>
         <li><strong>自分の ROM</strong> — お手持ちの ROM ファイルを読み込んで使用します。ROM ファイルを読み込むと、その行は自動的に「自分の ROM」に切り替わります（行の横に「OK」と表示されます）</li>
         </ul>
         <p>「自分の ROM」に指定する行には以下の ROM ファイルが必要です（ご自身が適法に所有する実機から取得したものを用意してください）。</p>
@@ -943,6 +949,15 @@
         <tr><td><code>SUBSYS_A.ROM</code></td><td>サブシステム Type-A ROM</td></tr>
         <tr><td><code>SUBSYS_B.ROM</code></td><td>サブシステム Type-B ROM</td></tr>
         </table>
+
+        <h4>FM77AV40EX / SX 追加ROM</h4>
+        <p>FM77AV40EX / SX で起動する場合は、上記に加えて以下の ROM も必要です。</p>
+        <table>
+        <tr><th>ファイル名</th><th>内容</th></tr>
+        <tr><td><code>EXTSUB.ROM</code></td><td>拡張サブシステム ROM</td></tr>
+        <tr><td><code>DICROM.ROM</code></td><td>辞書 ROM</td></tr>
+        <tr><td><code>KANJI2.ROM</code></td><td>漢字 ROM（JIS第二水準）</td></tr>
+        </table>
         <p>読み込み方法は2通りあります。</p>
         <ul>
         <li><strong>フォルダ指定</strong> — 「Folder」で上記ファイルが入ったフォルダを選択</li>
@@ -955,53 +970,54 @@
         <tr><td><code>互換</code></td><td>「同梱互換」を指定（同梱の互換 ROM で動作）</td></tr>
         <tr><td><code>補完</code></td><td>「自分の ROM」を指定しているがファイルが未登録で、同梱互換 ROM で補って動作</td></tr>
         </table>
-        <p>ROM 名の横の <strong>必須</strong> / <strong>任意</strong> バッジは、選択中の機種の起動に最低限必要なファイルかどうかを示します。</p>
-        <p>「自分の ROM」に指定した行のファイルがまだ読み込まれていない場合は、<strong>その行だけ</strong>同梱の互換 ROM で自動的に補って起動します。設定は不要で、常にこの動作です。お持ちの ROM が互換 ROM で置き換わることはありません（補われた ROM の横には「補完」と表示され、パネル上部の <strong>ROM Set</strong> にも補完中の件数が出ます）。補う内容は選択中の機種に合わせて決まり、その機種に無い ROM が足されることはありません。</p>
-        <p><strong>Clear ROMs</strong> ボタンを押すと、ブラウザに保存した ROM だけを消去できます（ディスクや Library はそのまま残ります）。消えた ROM を指したままにならないよう、供給元の指定もすべて「同梱互換」に戻ります。</p>
+        <p>ROM 名の横の <strong>必須</strong> / <strong>任意</strong> バッジは、選択中の機種の ROM 構成を示します。</p>
+        <p>「自分の ROM」に指定した行のファイルがまだ読み込まれていない場合は、<strong>その行だけ</strong>同梱の互換 ROM で自動的に補って起動します（パネル上部の <strong>ROM Set</strong> に補完中の件数が出ます）。</p>
+        <p><strong>Clear ROMs</strong> ボタンを押すと、ブラウザに保存した ROM だけを消去できます（ディスクや Library はそのまま残ります）。供給元の指定もすべて「同梱互換」に戻ります。</p>
 
         <h3 id="help-library">2. メディアイメージを管理する（Library パネル）</h3>
         <p><strong>Library</strong> は、ディスク (D77) とテープ (T77) を<strong>ブラウザ内</strong>で管理する仮想メディアの棚です。</p>
         <p style="border:2px solid #cc8844;background:#2a2416;border-radius:6px;padding:8px 10px;color:#ffd9a0;">
-        <strong>【重要・必ずお読みください】</strong><br>
+        <strong>【PC のファイルへの影響について】</strong><br>
         Library への取り込み・挿入・<strong>論理FMT</strong>・複製・名前変更、ドライブへの抜き差し、
-        さらに <strong>BASIC からのディスク書き込み (SAVE 等)</strong> は、<strong>すべてブラウザ内
-        （メモリおよびブラウザ保存）で完結します。</strong><br>
-        <strong>お使いの PC 本体にある D77 ファイルには、これらの操作では一切変更が及びません。</strong>
-        PC 本体のファイルに書き出されるのは、<strong>Disk Images パネルの「Save」ボタン（.d77 書き出し）を
-        押し、保存ダイアログで上書きを指定したときだけ</strong>です。元の D77 ファイルを上書きしたくない
-        場合は、別名で保存してください。</p>
+        さらに <strong>BASIC からのディスク書き込み (SAVE 等)</strong> は、<strong>すべてブラウザ内で完結します。</strong><br>
+        <strong>お使いの PC 本体にある D77 ファイルは変更されません。</strong>
+        PC 本体へ書き出されるのは、<strong>Disk Images パネルの「Save」ボタンか Library の「Exp」ボタン
+        （.d77 書き出し）を押したときだけ</strong>です。元の D77 ファイルを上書きしたくない場合は、別名で保存してください。</p>
         <ul>
-        <li><strong>取り込み (ファイル選択)</strong> — 物理ファイル (<code>.d77</code> / <code>.t77</code>) を棚に追加</li>
-        <li><strong>＋2D / ＋2DD</strong> — 論理フォーマット済みの空ディスクを新規作成 (FAT・ディレクトリ初期化済みで、DISK BASIC からすぐ <code>SAVE</code> できます)</li>
+        <li><strong>取り込み (ファイル選択)</strong> — 物理ファイル (<code>.d77</code> / <code>.2d</code> / <code>.t77</code>) を棚に追加</li>
+        <li><strong>＋2D / ＋2DD</strong> — 論理フォーマット済みの空ディスクを新規作成 (DISK BASIC からすぐ <code>SAVE</code> できます)</li>
         <li><strong>▶0 / ▶1 / ▶T</strong> — 棚の項目を Drive 0 / Drive 1 / Tape へ挿入</li>
-        <li><strong>⬆Commit</strong> — 紐付け中のドライブに未反映の変更があるとき表示。明示的に押した時だけ棚側へ反映</li>
-        <li><strong>論理FMT</strong> — ディスクを論理フォーマット (FAT・ディレクトリを初期化) し、DISK BASIC で <code>SAVE</code> 等の書き込みができる状態にします。内容を消去したいディスクや、物理フォーマットのみのディスクを書き込み可能にしたいときに実行してください</li>
+        <li><strong>⬆Commit</strong> — 紐付け中のドライブに未反映の変更があるとき表示。押すと棚側へ反映</li>
+        <li><strong>論理FMT</strong> — ディスクを論理フォーマットし、DISK BASIC で <code>SAVE</code> 等の書き込みができる状態にします。内容を消去したいディスクや、物理フォーマットのみのディスクを書き込み可能にしたいときに実行してください</li>
         <li><strong>Exp</strong> / <strong>Ren</strong> / <strong>Dup</strong> / <strong>Del</strong> — 書き出し / 名前変更 / 複製 / 削除</li>
-        <li>挿入中の項目には <code>[Drive0]</code> 等のタグが付き、未反映時はオレンジ表示の <code>[Drive0*]</code></li>
+        <li>挿入中の項目には <code>[Drive0]</code> 等のタグが付きます。棚へ反映するときは Save より先に ⬆Commit を押してください</li>
         <li>Eject 時に未反映があれば「反映する / 破棄する」確認ダイアログが出ます</li>
         </ul>
 
         <h3 id="help-disks">3. ディスク（Disk Images パネル）</h3>
-        <p>D77 形式のディスクイメージを「Drive 0」「Drive 1」に直接セットできます。Library 経由の方が
+        <p>D77 形式 / 2D 形式のディスクイメージを「Drive 0」「Drive 1」に直接セットできます。Library 経由の方が
         複数イメージの管理に向いていますが、シンプルに 1 枚を試す場合はこのパネルで OK です。</p>
         <ul>
-        <li>ファイル選択で <code>.d77</code> を読み込み、<strong>Eject</strong> で取り出し</li>
-        <li><code>SAVE "0:NAME"</code> / <code>SAVEM</code> で書き込まれた内容は<strong>在メモリ（ブラウザ内）</strong>にのみ反映されます。<strong>この時点では PC 本体の D77 ファイルは変更されません。</strong></li>
-        <li><strong>Save</strong> ボタンは、現在のディスクイメージを <code>.d77</code> として PC へ書き出す<strong>唯一の操作</strong>です。保存ダイアログで上書きを指定しない限り、PC 内の既存 D77 ファイルには一切影響しません（別名保存を推奨）。</li>
+        <li>ファイル選択で <code>.d77</code> / <code>.2d</code> を読み込み、<strong>Eject</strong> で取り出し</li>
+        <li><strong>最近使ったファイル</strong> — 一度読み込んだファイルは履歴に残り、次に「ファイルを選択」を押すと先に一覧が開きます。行を押すだけで同じファイルを再度セットできます（Drive 0 / 1 で共通の一覧。Library から挿入したものも含まれます）。「Choose a new file…」でファイル選択ダイアログ、「✎」で表示名（メモ）、「×」で 1 件削除、「Clear history」で全消去。↑ / ↓ と Enter でも選べます</li>
+        <li>履歴は PC のファイルへの参照と、開いた時点の中身の控えをブラウザ内に保存します（ディスク・テープそれぞれ 20 件まで）。参照を保持できるブラウザでは履歴から開くたびに PC の最新のファイルを読み直し（権限の確認が出ることがあります）、読み直せないときは開いた時点の控えが残っていればそこから復元します。<strong>履歴の中身は BASIC からの書き込みで更新されず、PC のファイルへ書き戻されることもありません</strong></li>
+        <li><strong>Clear Disk Cache</strong> ボタンは、ブラウザにキャッシュしたディスクイメージ・ファイル参照と、最近使ったファイルの履歴（ディスク・テープ）を消去します（ROM と Library は残ります）</li>
+        <li><code>SAVE "0:NAME"</code> / <code>SAVEM</code> で書き込まれた内容はブラウザ内にのみ反映されます。PC へ書き出すのは <strong>Save</strong> ボタン（<code>.d77</code>。Library の項目は <strong>Exp</strong>）を押したときだけです。</li>
         <li>セット中のディスク情報（2D / 2DD、シリンダ数 C・サイド数 H・トラック当たりセクタ数 R・セクタ当たりバイト数 N）をドライブごとに表示</li>
-        <li>読み書き中のアクセス状況・動作状態（トラック / セクタ / 状態）は画面下のステータスバーに表示されます。同じ行には本体の外からは見えない内部状態として、ドライブモード（2D / 2DD）とドライブごとの DMA 転送の LED、MMR/TWR の使用、サイクルスチール（解除されてサブ CPU が VRAM へ自由にアクセスできる状態で点灯。FM-7 は常時消灯、FM-77 は解除で点灯、FM77AV 以降は常時点灯）、画面モードと色数も並びます</li>
+        <li>読み書き中のアクセス状況・動作状態（トラック / セクタ / 状態）は画面下のステータスバーに表示されます</li>
         <li><strong>高速読み込みモード</strong>（既定 ON）: シーク（ヘッド移動）を加速して高速にロードします。OFF にすると実機相当のシーク速度・回転タイミングで動作します</li>
         </ul>
 
         <h3 id="help-tape">4. テープ（Tape Image パネル）</h3>
         <p>T77 形式・WAV 形式のカセットテープイメージを「Tape Image」にセットできます。</p>
         <ul>
-        <li>T77 テープイメージ形式に対応。バイトオーダーは自動検出</li>
-        <li>WAV 形式（PCM 8bit / 16bit、モノラル・多チャンネル）にも対応。波形を周期から復調する方式と、しきい値を自動調整して切り分ける方式を自動で切り替えてテープ信号として再生</li>
+        <li>T77 テープイメージ形式に対応</li>
+        <li>WAV 形式（PCM 8bit / 16bit、モノラル・多チャンネル）にも対応し、テープ信号として再生</li>
         <li><strong>REW</strong> ボタンでテープを巻き戻し、<strong>Eject</strong> ボタンで取り出し</li>
+        <li><strong>最近使ったファイル</strong> — ディスクと同じく、一度読み込んだテープは履歴に残り、「ファイルを選択」で先に一覧が開きます（WAV は中身を控えないため、参照を保持できないブラウザでは選び直しになります）</li>
         <li>テープ読み込み中（モーター ON 時）はシミュレータが自動的に高速化されます</li>
         <li>BASIC モードで起動後、<code>RUN ""</code>、<code>LOAD</code>、<code>LOADM</code> でテープから読込</li>
-        <li>BASIC <code>SAVE</code> / <code>SAVEM</code> で書き込んだ内容は自動的に録音され、<strong>録音→.t77</strong>（T77 形式）または <strong>録音→.wav</strong>（PCM WAV 形式）ボタンでファイル保存できます（<strong>録音クリア</strong> で録音をクリア。録音内容が無いときは保存ボタンは淡色表示になり押せません）</li>
+        <li>BASIC <code>SAVE</code> / <code>SAVEM</code> で書き込んだ内容は自動的に録音され、<strong>録音→.t77</strong>（T77 形式）または <strong>録音→.wav</strong>（PCM WAV 形式）ボタンでファイル保存できます（<strong>録音クリア</strong> で録音をクリア）</li>
         <li>詳しい SAVE / LOAD 手順、WAV の読み込み・保存と取り込み時の注意点は <a href="#" class="tape-manual-trigger">テープ操作マニュアル</a> を参照</li>
         </ul>
 
@@ -1009,17 +1025,18 @@
         <p>テキストを BASIC 画面へ自動入力できます。</p>
         <ul>
         <li>BASIC 起動後（同梱互換 ROM では 7T-BASIC）、TXT/BAS ファイルを選ぶか <strong>Paste clipboard</strong> でクリップボードの内容を 1 文字ずつ自動入力</li>
+        <li>英数字・記号とタブ・改行のほかの文字（日本語など）は読み飛ばされます</li>
         <li>BASIC プログラムのリストを貼り付ければ、そのままプログラムとして入力されます（入力後 <code>RUN</code> で実行）</li>
-        <li>入力先の処理に合わせて速度を自動調整します。<strong>Stop</strong> で中断できます</li>
+        <li><strong>Stop</strong> で中断できます</li>
         <li>BASIC キーワードは大文字推奨（小文字だとトークン化されない場合があります）</li>
         </ul>
 
         <h3 id="help-control">6. 起動（機種タブ・ハードウェアパネル・Options パネル）</h3>
-        <p><img class="help-figure" src="docs/images/ui_flow.svg" alt="操作の流れ。ROM の供給元を選び、電源を入れ、ドライブをクリックしてディスクを入れ、起動モードを選んでリセットする"></p>
-        <p><img class="help-figure" src="docs/images/ui_front_panel.svg" alt="前面パネルの各部。電源、リセット、起動モード、ドライブ、イジェクト、ステータスバー"></p>
+        <p><img class="help-figure" src="docs/images/ui_flow.svg" alt="操作の流れ。ROM の供給元を選び、ドライブをクリックしてディスクを入れ、起動モードを選び、電源を入れる"></p>
+        <p><img class="help-figure" src="docs/images/ui_front_panel.svg" alt="ハードウェアパネルとステータスバーの各部。電源、リセット、起動モード、ドライブ、イジェクト、ステータスバー"></p>
         <ol>
         <li>画面上部の<strong>機種タブ</strong>で機種を選択（FM-7 / FM-77 / FM77AV 〜 FM77AV40EX）</li>
-        <li><strong>Boot Mode</strong>（BASIC / DOS）を機種別ハードウェアパネルで選択。FM-7（FM-7 / FM-NEW7 スキン）は RESET 横の DIP スイッチ、FM-77 は前面の BOOT ボタン、FM77AV 系は下部帯の BASIC / DOS ボタンです</li>
+        <li><strong>Boot Mode</strong>（BASIC / DOS）を機種別ハードウェアパネルで選択。FM-7（FM-7 / FM-NEW7 スキン）は画面下の背面パネル右端の DIP スイッチ（BOOT）、FM-77 は前面ボタン列の BASIC ボタン（押し込み = BASIC）、FM77AV 系は下部帯の BASIC / DOS ボタンです</li>
         <li>ハードウェアパネルの<strong>電源スイッチ</strong>で起動（もう一度押すと停止。画面下の Pause で一時停止・Resume で再開）</li>
         </ol>
         <p>画面（Screen）をクリックするとキーボード入力がシミュレータに渡ります。</p>
@@ -1029,12 +1046,12 @@
 
         <h3>左側 — シミュレータ画面</h3>
         <ul>
-        <li><strong>Screen</strong> — FM-7 / FM77AV の映像出力（640×200。FM77AV40 系の 400 ライン表示時は 640×400。スキャンライン付き）。クリックするとキーボード入力がシミュレータに渡ります。</li>
-        <li><strong>表示倍率</strong> — 画面のすぐ下にある <strong>Web標準</strong> / <strong>x2</strong> / <strong>x1</strong> で表示倍率を切り替えます（Web標準＝ウィンドウに合わせて自動調整、x2＝1 ドットを 2×2 デバイスピクセルで表示する 2 倍固定、x1＝1 ドットを 1 デバイスピクセルで表示する等倍）。同じ列の右端の <strong>FULL</strong>（または F11 キー）でフルスクリーン表示を切り替えます</li>
+        <li><strong>Screen</strong> — FM-7 / FM77AV の映像出力。クリックするとキーボード入力がシミュレータに渡ります。</li>
+        <li><strong>表示倍率</strong> — 画面のすぐ下にある <strong>Web標準</strong> / <strong>x2</strong> / <strong>x1</strong> で表示倍率を切り替えます（Web標準＝ウィンドウに合わせて自動調整、x2＝2 倍、x1＝等倍。モバイル表示とフルスクリーン中は画面に合わせて調整します）。同じ列の右端の <strong>FULL</strong>（または F11 キー）でフルスクリーン表示を切り替えます</li>
         <li><strong>Toolbar 1行目</strong> — 画面下のバーに以下の機能があります。
             <ul>
             <li><strong>スピーカーアイコン (🔊/🔇)</strong> / スライダー — 音量調整（クリックでミュート切替）</li>
-            <li><strong>ステータス表示</strong>（2 段）— 1 段目はキーボード関連（<strong>CAP / カナ / INS</strong> の LED、<strong>SHIFT / CTRL / GRPH</strong> の状態、入力したキーのコード / スキャンコード）、2 段目はドライブ・画面情報（<strong>Drive 1 / Drive 0</strong> のアクセスランプとドライブ動作状態 <code>T:トラック S:セクタ 状態</code>、<strong>MMR</strong> ランプ、フレームレート、画面解像度＆色数）。ドライブのアクセスランプは <strong>黄＝2D / 白＝2D DMA / 緑＝2DD / 青＝2DD DMA / 赤＝書き込み</strong>。MMR ランプはメモリ管理機能の使用中に点灯し、高速MMR動作中は緑。CAP / カナ / INS の LED 色は機種で変化（FM-7＝赤 / FM77AV 系＝黄）<br><img class="help-figure" src="docs/images/ui_status_bar.svg" alt="ステータスバー 2 段目の読み方。ドライブのアクセス LED と DMAC、FDC の状態、2D / 2DD、MMR、NO STEAL、画面モードと色数"></li>
+            <li><strong>ステータス表示</strong>（2 段）— 1 段目はキーボード関連（<strong>CAP / カナ / INS</strong> の LED、<strong>SHIFT / CTRL / GRPH</strong> の状態、入力したキーのコード / スキャンコード）、2 段目はドライブ・画面情報（<strong>Drive 1 / Drive 0</strong> のアクセスランプと DMAC ランプ、ドライブ動作状態 <code>T:トラック S:セクタ 状態</code>、ドライブモード（2D / 2DD）、<strong>MMR</strong> ランプ、<strong>NO STEAL</strong> ランプ、フレームレート、画面解像度＆色数）。ドライブのアクセスランプは <strong>黄＝2D / 白＝2D DMA / 緑＝2DD / 青＝2DD DMA / 赤＝書き込み</strong>。MMR ランプはメモリ管理機能の使用中に点灯し、高速MMR動作中は緑。CAP / カナ / INS の LED は点灯すると赤<br><img class="help-figure" src="docs/images/ui_status_bar.svg" alt="ステータスバー 2 段目の読み方。ドライブのアクセス LED と DMAC、FDC の状態、2D / 2DD、MMR、NO STEAL、画面モードと色数"></li>
             <li><strong>⏸ Pause</strong> — シミュレータの一時停止 / 再開（停止中は Resume 表示）</li>
             <li><strong>📷</strong> — 現在の画面を PNG 画像として保存</li>
             </ul>
@@ -1042,10 +1059,10 @@
         <li><strong>Toolbar 2行目 (Debug Panels)</strong> — 各ボタンで独立したフローティング・デバッグパネルを開閉できます。
             <ul>
             <li><strong>CPU</strong> — Main/Sub CPU の全レジスタ (A/B/X/Y/S/U/PC/DP/CC)、動作状態、FM77AV では Monitor / Initiator を表示</li>
-            <li><strong>Memory</strong> — FM77AV 時のメモリ状態 (Boot RAM / MMR / TWR / MMR Map / 物理メモリマップ)、State Dump ボタン</li>
+            <li><strong>Memory</strong> — FM77AV 時のメモリ状態 (BASIC ROM/RAM / MMR / TWR / MMR Map / 物理メモリマップ)、State Dump ボタン</li>
             <li><strong>Keyboard</strong> — キー入力表示、FM-7 キーボードレイアウト、BREAK キー変更</li>
             <li><strong>Palette</strong> — 画面モードに応じたパレット表示 (Digital 8色 / 4,096色 / 262,144色)。320x200 / 262K モードではアナログパレットキャンバスも表示</li>
-            <li><strong>Sound</strong> — PSG / SSG / FM 各チャンネルの音量メーターと、PSG レジスタ。FM 音源カードを搭載した構成と FM77AV 系では、FM 音源 (OPN) の全レジスタ (SSG $00-$0F / モード・タイマ $20-$2F / FM $30-$BF) も表示。値はパネルを開いている間、毎フレーム更新されます</li>
+            <li><strong>Sound</strong> — PSG / SSG / FM 各チャンネルの音量メーターとレジスタを表示</li>
             <li><strong>Input</strong> — Input Monitor パネルの開閉 (後述)</li>
             </ul>
         </li>
@@ -1054,10 +1071,10 @@
         <h3>右側 — サイドパネル</h3>
         <table>
         <tr><th>セクション</th><th>内容</th></tr>
-        <tr><td><strong>Options</strong></td><td>FM Sound Card（FM-7のみ）、Mouse、Joystick 1 / Joystick 2（接続したゲームパッドの割り当て）、Cursor → Ten Key（カーソルキーをテンキー代用）の選択。機種は画面上部の機種タブ、電源・リセット・Boot Mode は機種別ハードウェアパネル、Pause と 📷（PNG保存）は画面下のツールバーにあります</td></tr>
-        <tr><td><strong>ROM Files</strong></td><td>ROM ファイルの読み込み（フォルダ一括 or 個別指定）。各 ROM の横に OK が出れば成功。ROM Info で読み込み済みROMのサイズ・ハッシュを確認可能（Copy ボタンでクリップボードにコピー）</td></tr>
+        <tr><td><strong>Options</strong></td><td>FM Sound Card（FM-7 / FM-77 のみ）、Mouse、Joystick 1 / Joystick 2（接続したゲームパッドの割り当て）、Cursor → Ten Key（カーソルキーをテンキー代用）の選択。機種は画面上部の機種タブ、電源・リセット・Boot Mode は機種別ハードウェアパネル、Pause と 📷（PNG保存）は画面下のツールバーにあります</td></tr>
+        <tr><td><strong>ROM Files</strong></td><td>ROM ファイルの読み込み（フォルダ一括 or 個別指定）。各 ROM の横のタグ（OK / 互換 / 補完）で供給元を確認できます。ROM Info で読み込み済みROMのサイズ・ハッシュを確認可能（Copy ボタンでクリップボードにコピー）</td></tr>
         <tr><td><strong>Library</strong></td><td>ディスク (D77) / テープ (T77) をブラウザ内で管理する仮想メディアの棚。ファイル選択で取り込み、＋2D / ＋2DD で論理フォーマット済みの空ディスクを作成、▶0 / ▶1 / ▶T でドライブ・テープへ挿入、⬆Commit で棚へ反映。論理FMT / Exp / Ren / Dup / Del も可能</td></tr>
-        <tr><td><strong>Disk Images</strong></td><td>D77 形式のディスクイメージを Drive 0 / Drive 1 にセット。セット時にファイル名を表示。Save ボタンで書き込み後イメージを .d77 保存（書込時は自動でブラウザ保存・<code>*</code>表示）。Eject ボタンで取り出し。セット中ディスクの情報（2D/2DD・シリンダ/サイド/セクタ/セクタ長）を表示。読み書き状況とドライブ動作状態は画面下のステータスバーに表示（同じ行に 2D / 2DD のドライブモードとドライブごとの DMA 転送、MMR/TWR・サイクルスチール・画面モードと色数の内部状態も表示）</td></tr>
+        <tr><td><strong>Disk Images</strong></td><td>D77 / 2D 形式のディスクイメージを Drive 0 / Drive 1 にセット。セット時にファイル名を表示。Save ボタンで書き込み後イメージを .d77 保存（書き込み後は <code>*</code> を表示。自動では保存しません。Library に反映するには ⬆Commit、PC へ保存するには Save）。Eject ボタンで取り出し。セット中ディスクの情報（2D / 2DD など）を表示。読み書き状況とドライブ動作状態は画面下のステータスバーに表示</td></tr>
         <tr><td><strong>Tape Image</strong></td><td>T77 / WAV 形式のテープイメージをセット。REW（巻き戻し）、Eject ボタン。CMT LED 付き。録音→.t77 / 録音→.wav で書き込み内容を保存（録音クリアで消去）</td></tr>
         <tr><td><strong>BASIC Paste</strong></td><td>TXT / BAS ファイルの選択、または Paste clipboard でクリップボードの内容を BASIC 画面へ 1 文字ずつ自動入力。Stop で中断</td></tr>
         </table>
@@ -1067,29 +1084,28 @@
         <ul>
         <li><strong>Held Keys</strong> — 現在ブラウザ上で押下中のキー一覧</li>
         <li><strong>FM-7 Key</strong> — シミュレータに渡されたFM-7キーコード（16進数）とキーバッファ残数</li>
-        <li><strong>Joystick</strong> — ゲームパッドの方向（D-pad）とボタン状態をリアルタイム表示。PC のゲームパッドを接続し、Options セクションの Joystick 1 / Joystick 2 でポートへ割り当てると、FM-7 のジョイスティックとして使用できます。</li>
+        <li><strong>Joystick</strong> — 最初に見つかった接続済みのゲームパッドの、スティックの方向とボタン 2 つの状態を表示</li>
         </ul>
 
         <h2>ジョイスティック</h2>
-        <p>PCのゲームパッド（USB / Bluetooth）を接続すると、FM-7/FM77AV のジョイスティックとして使用できます。</p>
+        <p>PCのゲームパッドを接続すると、FM-7/FM77AV のジョイスティックとして使用できます。</p>
         <ul>
         <li><strong>自動認識</strong> — ブラウザが対応するゲームパッドを接続すると、Options セクションの Joystick 1 / Joystick 2 のプルダウンに自動で一覧表示されます（一度割り当てたゲームパッドは、次に接続したときも同じポートへ自動で戻ります）</li>
         <li><strong>ポート選択</strong> — サイドパネルの Options セクションにある <strong>Joystick 1</strong> / <strong>Joystick 2</strong> のプルダウンで、接続中のゲームパッドをどちらのポートに割り当てるか選べます。1P用プログラムは通常 Joystick 1 を使用します</li>
         <li><strong>ボタン割り当て</strong> — 左スティック / D-pad = 方向、A/X ボタン = トリガー1、B/Y ボタン = トリガー2</li>
         <li><strong>2P対応</strong> — 2 台目のゲームパッドは、もう一方のプルダウンで選ぶと 2P 側として使えます</li>
         </ul>
-        <p>Input Monitor パネル（ツールバー 2 行目の <strong>Input</strong> ボタン）でジョイスティックの入力状態をリアルタイムで確認できます。</p>
 
         <h2>キーボード</h2>
         <p>キー配置の全体図、FM-7 固有のキー（BREAK / GRPH / カナ / HOME など）が日本語配列・英語配列のどのキーに当たるか、キーの割り当ての変え方は <a href="#" class="keyboard-manual-trigger">キーボードマニュアル</a> に図入りでまとめています。</p>
         <ul>
-        <li><strong>キー入力方式</strong> — <code>event.code</code>（物理キー位置）ベースでマッピングしています。JIS配列（106/109キー）・US配列（101/104キー）のどちらでも同じ配置で使えます</li>
-        <li><strong>クリックで入力（ソフトウェアキーボード）</strong> — Keyboard パネルのキーボード図のキーをクリックすると、その文字がシミュレータに入力されます。Shift はスティッキー（押すたびにON/OFF）、GRPH は押している間のみ、CAP / カナ / CTR はトグル動作です。タッチ端末では画面下部のソフトウェアキーボードでも同様に入力できます</li>
+        <li><strong>キー入力方式</strong> — 物理キーの位置でマッピングしています。JIS配列（106/109キー）・US配列（101/104キー）のどちらでも同じ配置で使えます</li>
+        <li><strong>クリックで入力（ソフトウェアキーボード）</strong> — Keyboard パネルのキーボード図のキーをクリックすると、その文字がシミュレータに入力されます（テンキーの <code>=</code> と EL / CLS / DUP は入力に対応していません。スキャンコード方式ではテンキーの <code>+</code> も入力できず、HOM は DEL と同じ入力になります）。Shift と CTR はスティッキー（押すたびに ON / OFF が切り替わり、次のキーを押して離すと自動で戻ります。CTR は入力コードの無いキーでは戻りません）、GRPH は押している間のみ、CAP / カナ はトグル動作です。タッチ端末では画面下部のソフトウェアキーボードでも同様に入力できます</li>
         <li><strong>Cursor → Ten Key</strong> — テンキーのないキーボード向けのオプションです。サイドパネルの Options セクションでチェックを入れると、カーソルキー（↑↓←→）がテンキーの 8/2/4/6 として動作します。テンキーを使うプログラムに便利です</li>
         <li><strong>キーカスタマイズ</strong> — Keyboard パネルの「キーカスタマイズ」で、お使いの物理キーボードを配列（日本語配列 / 英語配列）と種別（フルキー / テンキーレス / コンパクト）で選べます。「カスタマイズ開始」を押し、割り当てたい FM-7 キーをクリックしてから物理キーを押すと、そのキーが割り当てられます。割当は保存され、「リセット」で既定に戻せます（手順は <a href="#" class="keyboard-manual-trigger">キーボードマニュアル</a> の第 5 章）</li>
-        <li><strong>BREAK キー</strong> — デフォルトでは <code>Esc</code> キーまたは <code>Pause</code> キーが BREAK キーに割り当てられています（実機の配置と同じく、PC の Esc の位置が BREAK です）。FM-7 の ESC キーは、日本語配列の <code>半角/全角</code>（英語配列の <code>`</code>）の位置です。変更は「キーカスタマイズ」と共通で、「カスタマイズ開始」を押してキーボード図の <strong>BRK</strong> キーをクリックし、割り当てたい物理キーを押します（<code>Pause</code> は常に予備として有効）。「リセット」で既定に戻ります</li>
+        <li><strong>BREAK キー</strong> — デフォルトでは <code>Esc</code> キーまたは <code>Pause</code> キーが BREAK キーに割り当てられています（PC の Esc の位置が BREAK です）。FM-7 の ESC キーは、日本語配列の <code>半角/全角</code>（英語配列の <code>`</code>）の位置です。変更は「キーカスタマイズ」と共通で、「カスタマイズ開始」を押してキーボード図の <strong>BRK</strong> キーをクリックし、割り当てたい物理キーを押します（<code>Pause</code> は常に予備として有効）。「リセット」で既定に戻ります</li>
         <li><strong>英語配列向けの代替入力</strong> — <code>_</code> キーが無い配列では <code>Ctrl + /</code> で <code>_</code> を入力できます（<code>@</code> は P の右の <code>[</code> キーにそのまま割り当たっています）</li>
-        <li><strong>CAPS / カナ / INS</strong> — それぞれ CapsLock / 右Alt（またはカナキー） / Insert キーで切り替え。状態はキーボードレイアウト表示のLEDで確認できます</li>
+        <li><strong>CAPS / カナ / INS</strong> — それぞれ CapsLock / 右Alt（またはカナキー） / Insert キーで切り替え。状態は CAP / カナ / INS の LED で確認できます</li>
         </ul>
 
         <h2>スマートフォン / タブレット</h2>
@@ -1103,10 +1119,7 @@
         <p>画面下のツールバーにある 📷 ボタンで、現在の画面をPNG画像として保存できます。640×200モード・320×200モードともに 640×400 ピクセルで保存されます。</p>
 
         <h2>フルスクリーン</h2>
-        <p>画面のすぐ下、表示倍率トグルの右端にある <strong>FULL</strong> ボタンまたは <strong>F11</strong> キーでシミュレータ画面をフルスクリーン表示できます。もう一度押すと元に戻ります。</p>
-
-        <h2>ROMファイルについて</h2>
-        <p>お手持ちの ROM は、ご自身が適法に所有する実機から取得したものをお使いください。</p>
+        <p>画面のすぐ下、表示倍率トグルの右端にある <strong>FULL</strong> ボタンまたは <strong>F11</strong> キーでシミュレータ画面をフルスクリーン表示できます。元に戻すには F11 キーを押します。</p>
 
         <div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #2a2a4a;">
             <button id="helpCloseBottom" style="padding:10px 48px;font-size:1.1em;font-weight:bold;background:linear-gradient(180deg,#e8c840,#c8a020);color:#1a1a2e;border:none;border-radius:6px;cursor:pointer;font-family:inherit;letter-spacing:0.05em;">閉じる</button>
@@ -1115,7 +1128,7 @@
 </div>
 
 
-<!-- Manual Modal (shared: tape manual / tutorial / headless test manual) -->
+<!-- Manual Modal (shared by the Markdown manuals) -->
 <div class="modal-overlay" id="tapeManModal">
     <div class="modal-content">
         <button class="modal-close" id="tapeManClose" aria-label="Close manual">&times;</button>
@@ -1150,16 +1163,16 @@
         <h1>クレジット</h1>
 
         <h2>同梱互換 ROM セット</h2>
-        <p class="md-note" style="font-size:0.85em;">本シミュレータには、独立実装の互換 ROM セット（MIT License）を同梱しており、既定ではこの互換 ROM セットで動作します。
-        ROM 本体と併せてライセンス文（LICENSE・その適用範囲を記した LICENSE-MIT.md）・同梱フォントの由来と原ライセンス文（LICENSE-FONT.md）・検証用ハッシュ（SHA256SUMS）・説明（README.md）を
-        <code>assets/altroms/</code> に同梱しています。互換 ROM セットのソースと文書は配布元 <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.3" target="_blank" rel="noopener">7032 Alternative ROMs</a> にあります。</p>
+        <p class="md-note" style="font-size:0.85em;">本シミュレータには、独立実装の互換 ROM セット（本体は MIT License）を同梱しており、既定ではこの互換 ROM セットで動作します。
+        ROM 本体と併せてライセンス文（LICENSE・その適用範囲を記した LICENSE-MIT.md）・同梱フォントの由来と原ライセンス文（LICENSE-FONT.md）・利用条件と来歴、字形の区分の詳細（docs/LEGAL.md）・検証用ハッシュ（SHA256SUMS）・説明（README.md）を
+        <code>assets/altroms/</code> に同梱しています。互換 ROM セットのソースと文書は配布元 <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.8" target="_blank" rel="noopener">7032 Alternative ROMs</a> にあります。</p>
         <p class="md-note" style="font-size:0.85em;">ただし、<strong>漢字系 ROM（KANJI・KANJI2）に含まれる第三者素材由来の字形は、上記 MIT License の対象ではありません。</strong>
         独自字形と変換処理の適用条件は、同梱の <code>assets/altroms/LICENSE-MIT.md</code> / <code>assets/altroms/LICENSE-FONT.md</code> を参照してください。
         これらの文書に現れる相対パスは互換 ROM セット側の配布物（ソース一式）内のパスです。</p>
 
         <h2>ROMファイルの取り扱いについて</h2>
         <ul class="md-note" style="font-size:0.85em;">
-        <li>本シミュレータが同梱・配信するのは、上記の独立実装互換 ROM セット（MIT License）のみです。純正 ROM は同梱も配信もしません。</li>
+        <li>本シミュレータが同梱・配信するのは、上記の独立実装互換 ROM セット（本体は MIT License、第三者素材由来の漢字字形は対象外）のみです。純正 ROM は同梱も配信もしません。</li>
         <li>利用者がご用意されたROMファイルはユーザーのブラウザ内（ローカル環境）でのみ処理します。ROMデータがサーバーに送信・保存されることはありません。</li>
         </ul>
 
@@ -1188,7 +1201,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.</pre>
 
-        <p class="md-fine" style="font-size:0.75em;margin-top:20px;">機種名・製品名は対応対象を示すために使用しています。本プロジェクトは各メーカーの公式製品ではなく、富士通株式会社とは一切関係ありません。</p>
+        <p class="md-fine" style="font-size:0.75em;margin-top:20px;">機種名・製品名は対応対象を示すために使用しています。本プロジェクトは各メーカーの承認を受けたものではありません。</p>
 
         <div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #2a2a4a;">
             <button id="creditsCloseBottom" style="padding:10px 48px;font-size:1.1em;font-weight:bold;background:linear-gradient(180deg,#e8c840,#c8a020);color:#1a1a2e;border:none;border-radius:6px;cursor:pointer;font-family:inherit;letter-spacing:0.05em;">閉じる</button>
@@ -1218,8 +1231,7 @@ import {
 import { getCGGlyphDataURL, getCGKeyCompositeDataURL } from './core/cgrom_glyph.js';
 import { initGuideBalloons } from './core/guide_balloons.js';
 
-// FM-77 は FM-7 に続く独立した機種。UI 側では機種 id をそのまま扱えば
-// よいので、コア側の定数へ依存させずここで持つ。
+// FM-77 の機種識別子。
 const MACHINE_FM77 = 'fm77';
 // UI が「FM77AV 以降」として扱う機種か。FM-7 と FM-77 は AV 機ではないため、
 // AV 専用の ROM 行・デバッグ表示・能力バッジ等はいずれも対象外になる。
@@ -1415,17 +1427,14 @@ function updateMachineType() {
     // needs the FM Sound Card's OPN; FM77AV has it built in).
     updateMouseModeAvailability();
 
-    // Modern UI: sync the header machine tabs / skin chips / hardware
+    // Sync the header machine tabs / skin chips / hardware
     // panel theme with the selected machine (function declaration is hoisted).
     uiOnMachineChanged(machineType);
 }
 
 machineTypeSelect.addEventListener('change', () => {
     updateMachineType();
-    // 土台となる同梱互換 ROM の構成が機種で変わる (イニシエータ ROM の変種・
-    // 機種別の任意 ROM) ため、どの構成でも ROM セットを組み直す。
-    // 利用者 ROM は毎回 IndexedDB から読み直されるので失われない。
-    // 実行中は ROM セットに触らない (UI 側でも実行中は無効化している)。
+    // 停止中の機種変更に合わせて ROM セットを組み直す (実行中は触らない)。
     const romStopped = (typeof emuState === 'undefined') || (emuState === 'stopped');
     if (romStopped && typeof applyRomSet === 'function') {
         applyRomSet();
@@ -1574,7 +1583,7 @@ cursorToNumpadCheck.addEventListener('change', () => {
 // =========================================================================
 // Mouse (all machines)
 // =========================================================================
-// Checkbox-based capture (no Pointer Lock): while enabled and the pointer is
+// No Pointer Lock: while a mouse mode is selected and the pointer is
 // over the canvas, relative motion is forwarded to fm7.addMouseDelta() and the
 // left/right buttons to fm7.setMouseButtons().
 
@@ -1595,7 +1604,7 @@ mouseModeSelect.addEventListener('change', () => {
 });
 
 // FM Sound Card checkbox: persist the choice. This option only takes effect on
-// FM-7 (FM77AV has OPN built-in and the row is hidden). The card is applied at
+// FM-7 / FM-77 (FM77AV has OPN built-in and the row is hidden). The card is applied at
 // the next power-on / Reset via setFMCard(); we do not apply it live here, so a
 // hint tells the user when the change becomes active.
 const fmCardCheck = document.getElementById('fmCardCheck');
@@ -1641,12 +1650,8 @@ canvas.addEventListener('mousemove', (e) => {
     const rawDY = e.clientY - mouseLastY;
     mouseLastX = e.clientX;
     mouseLastY = e.clientY;
-    // Scale host pixel motion down to the mouse's working coordinate space of
-    // 320x200: software interprets one count as one dot in that space (two dots
-    // on 640-dot / 400-line displays), so the guest cursor tracks the on-screen
-    // pointer 1:1 regardless of display zoom, fullscreen, or screen mode.
-    // Negate both axes to match pointer direction, and carry the sub-pixel
-    // remainder so slow motion isn't lost to rounding.
+    // Scale host pixel motion to the guest coordinate space so the cursor
+    // tracks the pointer regardless of display zoom.
     const rect = canvas.getBoundingClientRect();
     const sx = rect.width  > 0 ? 320 / rect.width  : 1;
     const sy = rect.height > 0 ? 200 / rect.height : 1;
@@ -1724,8 +1729,9 @@ function _refreshVolUI() {
     const pct = Math.round(savedVolume * 100);
     const off = isMuted || pct === 0;
     muteBtn.textContent = off ? SPK_OFF : SPK_ON;
-    const tip = off ? `ミュート中 (音量 ${pct}%) — クリックで解除`
-                    : `音量 ${pct}% — クリックでミュート`;
+    const tip = isMuted ? `ミュート中 (音量 ${pct}%) — クリックで解除`
+              : off     ? `音量 ${pct}%`
+                        : `音量 ${pct}% — クリックでミュート`;
     muteBtn.title = tip;
     muteBtn.setAttribute('aria-label', tip);
     volumeSlider.title = `音量 ${pct}%`;
@@ -1794,7 +1800,7 @@ fddSoundVolume.addEventListener('input', () => {
     localStorage.setItem('fm7_fdd_sound_volume', v.toString());
 });
 
-// --- 高速読み込みモード (既定 ON): OFF で実機忠実なシーク速度に切替える ---
+// --- 高速読み込みモード (既定 ON): OFF でシークの加速を無効にする ---
 const fastReadCheck = document.getElementById('fastReadCheck');
 const storedFastRead = localStorage.getItem('fm7_fast_read_mode');
 const fastReadInit = storedFastRead === null ? true : storedFastRead === '1';
@@ -1870,10 +1876,7 @@ const _isFirefox = navigator.userAgent.includes('Firefox');
 function _updateFullscreenSize() {
     const isFull = !!_getFullscreenElement();
     fullscreenBtn.textContent = isFull ? 'EXIT' : 'FULL';
-    // The screen container is a descendant of .main-layout, whose CSS `zoom`
-    // (set by the layout fitter) would otherwise multiply the fullscreen
-    // pixel sizes and blow the display up past the viewport. Neutralize it
-    // while fullscreen; restore the normal fitted layout on exit.
+    // Neutralize the layout fitter's zoom while fullscreen; restore it on exit.
     const _layout = document.querySelector('.main-layout');
     if (isFull) {
         if (_layout) _layout.style.zoom = '1';
@@ -1918,30 +1921,68 @@ for (const evt of ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenc
 // after page reload. Uses IndexedDB (handles binary, 50MB+ quota).
 
 const DB_NAME = 'WebM7Storage';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORE_ROMS = 'roms';
 const STORE_DISKS = 'disks';           // 旧形式のディスク保存領域（ドライブごとに 1 スロット）
 const STORE_SETTINGS = 'settings';
 const STORE_LIBRARY = 'library';       // 仮想フロッピー/テープの棚
 const STORE_BINDINGS = 'bindings';     // drive/tape → library id 紐付け
+const STORE_RECENT = 'recent';         // 最近開いたディスク / テープの履歴
+
+const STORE_RECENT_DATA = 'recentData';  // 履歴の中身（ArrayBuffer）。recent の id をキーにする
+const ALL_STORES = [STORE_ROMS, STORE_DISKS, STORE_SETTINGS, STORE_LIBRARY, STORE_BINDINGS,
+                    STORE_RECENT, STORE_RECENT_DATA];
+
+function _createMissingStores(db) {
+    if (!db.objectStoreNames.contains(STORE_ROMS)) db.createObjectStore(STORE_ROMS);
+    if (!db.objectStoreNames.contains(STORE_DISKS)) db.createObjectStore(STORE_DISKS);
+    if (!db.objectStoreNames.contains(STORE_SETTINGS)) db.createObjectStore(STORE_SETTINGS);
+    if (!db.objectStoreNames.contains(STORE_LIBRARY)) {
+        db.createObjectStore(STORE_LIBRARY, { keyPath: 'id', autoIncrement: true });
+    }
+    if (!db.objectStoreNames.contains(STORE_BINDINGS)) db.createObjectStore(STORE_BINDINGS);
+    if (!db.objectStoreNames.contains(STORE_RECENT)) {
+        const st = db.createObjectStore(STORE_RECENT, { keyPath: 'id', autoIncrement: true });
+        st.createIndex('slotKind', 'slotKind', { unique: false });
+        st.createIndex('lastUsed', 'lastUsed', { unique: false });
+    }
+    if (!db.objectStoreNames.contains(STORE_RECENT_DATA)) db.createObjectStore(STORE_RECENT_DATA);
+}
+
+// 他のタブが DB を開いたままでアップグレードが待たされているときの案内。
+function _showDbBlockedNotice() {
+    const msg = 'Storage upgrade is waiting — close the other tabs of this page';
+    for (const el of [diskStatusEl0, tapeStatusEl]) {
+        if (el) { el.textContent = msg; el.classList.remove('loaded'); }
+    }
+}
 
 let _dbPromise = null;
 function openDB() {
     if (_dbPromise) return _dbPromise;
     _dbPromise = new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onupgradeneeded = () => {
-            const db = req.result;
-            if (!db.objectStoreNames.contains(STORE_ROMS)) db.createObjectStore(STORE_ROMS);
-            if (!db.objectStoreNames.contains(STORE_DISKS)) db.createObjectStore(STORE_DISKS);
-            if (!db.objectStoreNames.contains(STORE_SETTINGS)) db.createObjectStore(STORE_SETTINGS);
-            if (!db.objectStoreNames.contains(STORE_LIBRARY)) {
-                db.createObjectStore(STORE_LIBRARY, { keyPath: 'id', autoIncrement: true });
-            }
-            if (!db.objectStoreNames.contains(STORE_BINDINGS)) db.createObjectStore(STORE_BINDINGS);
+        const open = (version) => {
+            const req = indexedDB.open(DB_NAME, version);
+            req.onupgradeneeded = () => _createMissingStores(req.result);
+            req.onblocked = () => {
+                console.warn('IndexedDB upgrade blocked by another tab');
+                _showDbBlockedNotice();
+            };
+            req.onsuccess = () => {
+                const db = req.result;
+                // 必要なストアが足りない場合は、一段上のバージョンで開き直して足りないストアを作る。
+                if (!ALL_STORES.every((n) => db.objectStoreNames.contains(n))) {
+                    db.close();
+                    open(db.version + 1);
+                    return;
+                }
+                // 別のタブがアップグレードを始めたら、こちらは閉じて次回開き直す。
+                db.onversionchange = () => { db.close(); _dbPromise = null; };
+                resolve(db);
+            };
+            req.onerror = () => reject(req.error);
         };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
+        open(DB_VERSION);
     });
     return _dbPromise;
 }
@@ -1988,20 +2029,18 @@ async function loadROM(slot) { return dbGet(STORE_ROMS, slot); }
 
 // Save/load a disk slot.
 //   handle: FileSystemFileHandle (preferred — re-reads the live file each time)
-//   data:   ArrayBuffer cache (only used when File System Access API is unavailable)
+//   data:   ArrayBuffer of the saved disk image
 async function saveDisk(slot, name, { handle = null, data = null } = {}) {
     return dbPut(STORE_DISKS, slot, { name, handle, data });
 }
 async function loadDiskSaved(slot) { return dbGet(STORE_DISKS, slot); }
 
-// Save/load a setting (machineType, joyDev1Id, joyDev2Id, cursorToNumpad, sectionState).
+// Save/load a setting by key.
 async function saveSetting(key, value) { return dbPut(STORE_SETTINGS, key, value); }
 async function loadSetting(key) { return dbGet(STORE_SETTINGS, key); }
 
 // =========================================================================
 // Library API: browser-side shelf of virtual media images.
-// Each item: { id (auto), name, kind ('d77'|'t77'|'wav'), data (ArrayBuffer),
-//              size, created, modified }
 // =========================================================================
 async function libAdd(item) {
     const db = await openDB();
@@ -2056,6 +2095,197 @@ async function libBindingSet(slot, libId) {
 async function libBindingGet(slot) { return dbGet(STORE_BINDINGS, slot); }
 async function libBindingClear(slot) { return dbDelete(STORE_BINDINGS, slot); }
 
+// =========================================================================
+// Recent API: 最近開いたディスク / テープの履歴。
+// Drive 0 / 1 は 'disk' の履歴を共有し、Tape は 'tape'。履歴の中身は開いた
+// 時点のまま更新せず、元ファイルへの書き戻しもしない。
+// =========================================================================
+const RECENT_MAX_ITEMS = 20;                      // 種別ごとの件数の上限
+const RECENT_MAX_DATA_BYTES = 64 * 1024 * 1024;   // 保存する中身の合計の上限
+
+async function recentGetAll() {
+    try {
+        const db = await openDB();
+        return await new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_RECENT, 'readonly');
+            const req = tx.objectStore(STORE_RECENT).getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror   = () => reject(req.error);
+        });
+    } catch (e) { console.warn('recentGetAll failed:', e); return []; }
+}
+// 新しい順（lastUsed の降順）に並べた一覧。
+async function recentList(slotKind) {
+    const all = await recentGetAll();
+    return all.filter((it) => it.slotKind === slotKind)
+              .sort((a, b) => (b.lastUsed || '').localeCompare(a.lastUsed || ''));
+}
+async function recentGet(id) { return dbGet(STORE_RECENT, id); }
+async function recentGetData(id) { return dbGet(STORE_RECENT_DATA, id); }
+// 付帯情報と中身を 1 つのトランザクションで書く。
+//   data: undefined = 中身は触らない / null = 中身を消す / ArrayBuffer = 中身を置き換える
+async function recentPut(item, data = undefined) {
+    try {
+        const db = await openDB();
+        return await new Promise((resolve, reject) => {
+            const tx = db.transaction([STORE_RECENT, STORE_RECENT_DATA], 'readwrite');
+            if (data !== undefined) item.dataSize = data ? data.byteLength : 0;
+            const req = tx.objectStore(STORE_RECENT).put(item);
+            req.onsuccess = () => {
+                const id = req.result;
+                item.id = id;
+                if (data === null) tx.objectStore(STORE_RECENT_DATA).delete(id);
+                else if (data) tx.objectStore(STORE_RECENT_DATA).put(data, id);
+            };
+            tx.oncomplete = () => resolve(item.id);
+            tx.onerror    = () => reject(tx.error);
+        });
+    } catch (e) { console.warn('recentPut failed:', e); return undefined; }
+}
+async function recentDelete(id) {
+    try {
+        const db = await openDB();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction([STORE_RECENT, STORE_RECENT_DATA], 'readwrite');
+            tx.objectStore(STORE_RECENT).delete(id);
+            tx.objectStore(STORE_RECENT_DATA).delete(id);
+            tx.oncomplete = () => resolve();
+            tx.onerror    = () => reject(tx.error);
+        });
+    } catch (e) { console.warn('recentDelete failed:', e); }
+    await recentRefreshCounts();
+}
+// slotKind を省くと全種別を消す。
+async function recentClear(slotKind = null) {
+    try {
+        const db = await openDB();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction([STORE_RECENT, STORE_RECENT_DATA], 'readwrite');
+            const st = tx.objectStore(STORE_RECENT);
+            const sd = tx.objectStore(STORE_RECENT_DATA);
+            if (slotKind == null) {
+                st.clear();
+                sd.clear();
+            } else {
+                const req = st.index('slotKind').openKeyCursor(IDBKeyRange.only(slotKind));
+                req.onsuccess = () => {
+                    const cur = req.result;
+                    if (cur) { st.delete(cur.primaryKey); sd.delete(cur.primaryKey); cur.continue(); }
+                };
+            }
+            tx.oncomplete = () => resolve();
+            tx.onerror    = () => reject(tx.error);
+        });
+    } catch (e) { console.warn('recentClear failed:', e); }
+    await recentRefreshCounts();
+}
+
+// 同じファイルを指す既存の行を探す。Library の id、ハンドルの同一性、
+// ファイル名 + サイズ の順に突き合わせる。両方にハンドルがあって別のファイルだと
+// 分かった行は、名前とサイズが同じでも別物として扱う。
+async function recentFindSame(list, { fileName, size, handle, libId }) {
+    for (const it of list) {
+        const src = it.source || {};
+        if (libId != null) {
+            if (src.libId === libId) return it;
+            continue;
+        }
+        if (src.libId != null) continue;
+        if (handle && src.handle && typeof handle.isSameEntry === 'function') {
+            try {
+                if (await handle.isSameEntry(src.handle)) return it;
+                continue;
+            } catch (e) { /* 判定できない時は名前 + サイズへ */ }
+        }
+        if (it.fileName === fileName && it.size === size) return it;
+    }
+    return null;
+}
+
+// 読み込みに成功したイメージを履歴に積む（既存の行があれば更新する）。
+//   fromHistory: 履歴から開いたとき true。ハンドルと中身は触らない。
+//   id:          履歴から開いたときの行の id（突き合わせを省いてその行を更新する）。
+async function recentRecord({ slotKind, fileName, size, slot, handle = null, data = null,
+                              libId = null, fromHistory = false, id = null }) {
+    try {
+        const hit = (id != null)
+            ? await recentGet(id)
+            : await recentFindSame(await recentList(slotKind), { fileName, size, handle, libId });
+        const item = hit || { slotKind, fileName, label: '', size, useCount: 0, source: {}, dataSize: 0 };
+        if (!item.source) item.source = {};
+        item.fileName = fileName;
+        item.size = size;
+        item.lastUsed = new Date().toISOString();
+        item.lastSlot = slot;
+        item.useCount = (item.useCount || 0) + 1;
+        item.missing = false;
+        if (libId != null) item.source.libId = libId;
+        let newData;   // undefined = 触らない
+        if (!fromHistory) {
+            if (handle) item.source.handle = handle;
+            if (data && data.byteLength <= RECENT_MAX_DATA_BYTES) newData = data;
+        }
+        await recentPut(item, newData);
+        await recentEnforceLimits();
+        await recentRefreshCounts();
+    } catch (e) { console.warn('recentRecord failed:', e); }
+}
+
+// 種別ごとの件数のキャッシュ。「ファイルを選択」のクリック時に、ダイアログを
+// そのまま開くか履歴を出すかを決めるために持つ（読み込み中なら待つ）。
+const _recentCounts = { disk: 0, tape: 0 };
+let _recentCountsPromise = null;
+function recentCount(slotKind) { return _recentCounts[slotKind] || 0; }
+async function recentRefreshCounts() {
+    _recentCountsPromise = (async () => {
+        try {
+            const db = await openDB();
+            for (const kind of ['disk', 'tape']) {
+                _recentCounts[kind] = await new Promise((resolve, reject) => {
+                    const tx = db.transaction(STORE_RECENT, 'readonly');
+                    const req = tx.objectStore(STORE_RECENT).index('slotKind').count(IDBKeyRange.only(kind));
+                    req.onsuccess = () => resolve(req.result || 0);
+                    req.onerror   = () => reject(req.error);
+                });
+            }
+        } catch (e) { console.warn('recentRefreshCounts failed:', e); }
+    })();
+    return _recentCountsPromise;
+}
+async function recentCountsReady() {
+    if (!_recentCountsPromise) await recentRefreshCounts();
+    else await _recentCountsPromise;
+}
+
+// 上限の適用: 種別ごと RECENT_MAX_ITEMS 件を超えた古い行を削除し、中身の合計が
+// RECENT_MAX_DATA_BYTES を超えないよう、新しい行から数えて収まらない行の中身だけを落とす（行は残す）。
+// 付帯情報の dataSize だけで計算するので中身は読まない。
+async function recentEnforceLimits() {
+    const all = await recentGetAll();
+    all.sort((a, b) => (b.lastUsed || '').localeCompare(a.lastUsed || ''));
+    const counts = {};
+    let bytes = 0;
+    for (const it of all) {
+        counts[it.slotKind] = (counts[it.slotKind] || 0) + 1;
+        if (counts[it.slotKind] > RECENT_MAX_ITEMS) { await recentDelete(it.id); continue; }
+        const sz = it.dataSize || 0;
+        if (!sz) continue;
+        bytes += sz;
+        if (bytes > RECENT_MAX_DATA_BYTES) {
+            bytes -= sz;
+            await recentPut(it, null);
+        }
+    }
+}
+
+// 履歴の行の付帯情報（表示名・missing の印）だけを更新する。
+async function recentUpdateMeta(id, patch) {
+    const it = await recentGet(id);
+    if (!it) return;
+    Object.assign(it, patch);
+    await recentPut(it);
+}
+
 // Infer image kind from filename extension.
 function inferKind(filename) {
     const m = /\.([^.]+)$/.exec(filename || '');
@@ -2068,7 +2298,7 @@ function inferKind(filename) {
     return null;
 }
 
-// Build a fresh, physically-formatted blank D77 (zero data) of the given kind.
+// Build a fresh blank D77 of the given kind.
 function makeBlankD77Buffer(kind /* '2D' | '2DD' */) {
     const size = (kind === '2DD') ? 655360 : 327680;
     const raw = new Uint8Array(size).buffer;
@@ -2114,21 +2344,18 @@ for (const [filename, entry] of Object.entries(ROM_FILE_MAP)) {
 // =========================================================================
 // ROM Source selection — スロット単位の供給元
 // =========================================================================
-// 同梱の互換 ROM セット (assets/altroms/ — 独立実装・MIT License)
-// を常に土台とし、ROM スロット
+// 同梱の互換 ROM セット (assets/altroms/ — 独立実装。本体は MIT License、第三者素材
+// 由来の漢字字形は対象外。詳細は LICENSE-AltROMs.md) を常に土台とし、ROM スロット
 // ごとに供給元を選ぶ。
 // 'builtin': 同梱の互換 ROM を fetch して使用 (既定)。
 // 'user': 利用者の ROM ファイル (IndexedDB に保存) を使用。
 
-// ビルドスタンプ。公開時に値が入る。
-const BUILD_STAMP = '20260926195254';
+// ビルドスタンプ。
+const BUILD_STAMP = '20261007201858';
 
 const ALTROM_DIR = 'assets/altroms/';
 
-// 同梱 ROM の取得 URL へ付すバージョンのクエリ。配備直後の 1 回目でも、まだ制御権を
-// 持つ旧 Service Worker のキャッシュには存在しない URL となるため、必ず
-// ネットワークから新しい ROM を取得できる。ローカル (ビルドスタンプが既定値 'dev') では
-// 付けないので、これまでどおりの URL のまま動く。
+// 同梱互換 ROM の更新を取得 URL に反映するためのクエリ。
 const ALTROM_QUERY = BUILD_STAMP === 'dev' ? '' : ('?v=' + encodeURIComponent(BUILD_STAMP));
 
 // スロット単位の供給元。'user' を指定したスロットだけを保持し、
@@ -2169,7 +2396,7 @@ const _altromCache = new Map();
 // 機種ごとの互換 ROM ファイル → スロット対応表。
 // イニシエータ ROM は機種別の変種を 'initiate' スロットへ割り当てる。
 // optional: true の ROM は assets/altroms/ に存在すれば読み込み、
-// 無ければ (404 等) 静かにスキップして従来どおり起動する。
+// 無ければ (404 等) 失敗に数えずに起動する。
 function builtinRomEntries(machine) {
     const isAV = isAVMachine(machine);
     const list = [
@@ -2194,8 +2421,7 @@ function builtinRomEntries(machine) {
         );
     }
     if (machine === 'fm77av40ex') list.push({ file: 'extsub.rom', slot: 'extsub' });
-    // 漢字系 ROM (任意): 互換 ROM セットに同梱されていれば読み込む。
-    // 同梱セットに収録済み (KANJI は全機種、KANJI2 / DICROM は FM77AV40EX/SX のみ)。
+    // 漢字系 ROM (取得できないときは読み飛ばす): KANJI は全機種、KANJI2 / DICROM は FM77AV40EX/SX のみ。
     // ファイル名は assets/altroms/ に置かれた任意 ROM のファイル名と合わせること。
     list.push({ file: 'kanji.rom', slot: 'kanji', optional: true });
     if (machine === 'fm77av40ex') {
@@ -2207,10 +2433,8 @@ function builtinRomEntries(machine) {
     return list;
 }
 
-// ビルドスタンプ付き URL で取得し、それが取れないとき (オフラインで旧 Service Worker が
-// ビルドスタンプ無しの URL しかキャッシュしていない等) だけビルドスタンプ無しの URL へ落として
-// 再試行する。ビルドスタンプはページの生存期間中は不変のため、キャッシュのキーは
-// 従来どおりファイル名のままで世代が混ざることはない。
+// ビルドスタンプ付き URL で取得し、それが取れないときだけビルドスタンプ無しの URL へ
+// 落として再試行する。
 async function fetchAltRom(file) {
     if (_altromCache.has(file)) return _altromCache.get(file);
     let res = null;
@@ -2256,12 +2480,8 @@ async function loadBuiltinROMs() {
 // -------------------------------------------------------------------------
 // 「自分の ROM」に指定したスロットのファイルがまだ読み込まれていないとき、
 // そのスロットだけを同梱互換 ROM で補う。実際の補完は applyRomSet() が
-// 土台の一覧 (builtinRomEntries) をたどりながら行うため、
-//  - 利用者 ROM が読み込めたスロットが補われることはあり得ない
-//    ＝ 利用者 ROM を互換 ROM で上書きすることはあり得ない
-//  - 機種に無いスロットを足すこともない (KANJI2 / DICROM は FM77AV40EX/SX のみ等)
-//  - イニシエータ ROM の機種別変種の選び方も同梱互換 ROM と同一になる
-// が保証される。
+// 土台の一覧 (builtinRomEntries) をたどりながら行うため、利用者 ROM が読み込めた
+// スロットを上書きすることも、機種に無いスロットを足すこともない。
 
 // 補完済みスロットのタグ表示 (利用者 ROM の "OK" とは別の見た目にする)
 function markFilled(el, file) {
@@ -2374,7 +2594,7 @@ function updateRomSourceUI(ok) {
         ind.classList.toggle('loaded', !!ok && filled === 0 && builtinSlots.length === 0);
         ind.classList.toggle('filled', filled > 0);
     }
-    // 供給元はスロット単位で常時操作できるため、利用者 ROM 欄の淡色化は行わない
+    // 利用者 ROM 欄は淡色化しない (供給元の変更は停止中のみ可能)
     const block = document.getElementById('userRomBlock');
     if (block) block.style.opacity = '';
     updateRomSlotSelectUI();
@@ -2384,7 +2604,7 @@ function updateRomSourceUI(ok) {
 // 同梱互換 ROM セットを土台とし、スロットごとに供給元へ従って読み込む。
 // 毎回 fm7.clearROMs() してから一方向に読むため、利用者 ROM を同梱互換 ROM で
 // 上書きすることも、その逆も起こらない。
-// persist: true のときは、呼び出し前に romSlotSource を保存する。
+// persist: true のときは、最初に romSlotSource を保存する。
 async function applyRomSet({ persist = false } = {}) {
     if (persist) await saveRomSlotSource();
     await refreshSavedRomSlots();
@@ -2445,7 +2665,7 @@ async function applyRomSet({ persist = false } = {}) {
     }
 
     // 土台の一覧に無いスロットでも、「自分の ROM」に指定されていて保存済み
-    // ファイルがあるものは読み込む (例: FM-7 で漢字 ROM を自分のもので入れる)。
+    // ファイルがあるものは読み込む。
     for (const [filename, entry] of Object.entries(ROM_FILE_MAP)) {
         const slot = entry.slot;
         if (baseSlots.has(slot)) continue;
@@ -2479,7 +2699,7 @@ async function applyRomSet({ persist = false } = {}) {
 }
 
 // 利用者が ROM ファイルを読み込んだスロットは、自動的に「自分の ROM」にする。
-// 停止中は ROM セットを組み直し、実行中は選択 UI の表示だけ更新する。
+// 停止中は ROM セットを組み直し、実行中は ROM Set 表示と選択 UI の表示だけ更新する。
 async function markSlotsAsUser(slots) {
     let changed = false;
     for (const slot of slots) {
@@ -2494,8 +2714,12 @@ async function markSlotsAsUser(slots) {
     if (stopped) {
         await applyRomSet();
     } else {
+        // 呼び出し元がコアへ読み込み済みのスロットを、実績値へ反映する。
+        for (const slot of slots) {
+            if (slot && ROM_SLOT_MAP[slot]) activeRomOrigins[slot] = 'user';
+        }
         await refreshSavedRomSlots();
-        updateRomSlotSelectUI();
+        updateRomSourceUI(true);
     }
 }
 
@@ -2625,18 +2849,14 @@ setupIndividualROM(romExtSubInput,   (d) => fm7.loadExtSubROM(d),  statusExtSubE
 setupIndividualROM(romDicromInput,   (d) => fm7.loadDicromROM(d),  statusDicromEl,  'dicrom');
 setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2El,  'kanji2');
 
-// Restore persisted settings from IndexedDB on startup.
-// One-time migration: pull from legacy localStorage if IndexedDB is empty.
+// Restore persisted settings on startup (older formats are migrated).
 (async function restoreSettings() {
     // Machine type
     let mt = await loadSetting('machineType');
     if (mt === undefined) {
-        // No legacy storage for machineType — leave default (FM-7)
+        // Not saved yet — leave default (FM-7)
     }
-    // FM-77 の独立。以前は「機種 FM-7 ＋ FM-77 スキン」で FM-77 を
-    // お使いいただいていたため、その設定の方だけを機種 FM-77 へ一度だけ移す。
-    // 移行済みの印を残し、以後は通常の機種選択として扱う (移行後に FM-7 へ
-    // 戻された方が、次回起動でまた FM-77 に戻されることはない)。
+    // 旧設定を機種 FM-77 へ一度だけ移行する。
     if (!(await loadSetting('fm77MachineMigrated'))) {
         let oldSkins = null;
         try { oldSkins = await loadSetting('uiSkins'); } catch (e) { oldSkins = null; }
@@ -2644,7 +2864,7 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
         if (wasFm77Skin && (mt === undefined || mt === 'fm7')) {
             mt = 'fm77';
             await saveSetting('machineType', mt);
-            // 退役したスキン指定は残さない (FM-7 の既定スキンへ戻す)
+            // 移行済みのスキン指定は消す (FM-7 の既定スキンへ戻す)
             const cleaned = { ...oldSkins };
             delete cleaned.fm7;
             await saveSetting('uiSkins', cleaned);
@@ -2662,7 +2882,7 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
 
     // Boot mode override
     let bm = await loadSetting('bootMode');
-    // Migrate the retired 'auto' setting to the new default 'basic'.
+    // Map an older saved value to the default.
     if (bm === 'auto') bm = 'basic';
     if (bm === 'dos' || bm === 'basic') {
         fm7._bootModeOverride = bm;
@@ -2670,7 +2890,6 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
         const r = document.querySelector(`input[name="bootMode"][value="${bm}"]`);
         if (r) r.checked = true;
         // ハードウェアパネル側の起動モード表示を復元値に同期
-        // （関数宣言の巻き上げにより本モジュール内どこからでも呼べる）
         hwUpdateBootMode();
     }
 
@@ -2684,7 +2903,6 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
     // Cursor → Ten Key
     let ck = await loadSetting('cursorToNumpad');
     if (ck === undefined) {
-        // Migrate from legacy localStorage
         const legacy = localStorage.getItem('fm7_cursor_to_numpad');
         if (legacy !== null) {
             ck = (legacy === '1');
@@ -2697,8 +2915,7 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
         applyCursorToNumpad(true);
     }
 
-    // Mouse connection mode (available on every machine). Migrate the legacy
-    // 'mouseEnabled' toggle to 'bus' when no 'mouseMode' has been saved yet.
+    // Mouse connection mode (available on every machine).
     let mouseMode = await loadSetting('mouseMode');
     if (mouseMode === undefined || mouseMode === null) {
         const legacyOn = await loadSetting('mouseEnabled');
@@ -2708,9 +2925,8 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
     mouseModeSelect.value = mouseMode;
     fm7.setMouseMode(mouseMode);
 
-    // FM Sound Card checkbox (meaningful on FM-7 only; the row is hidden on
-    // FM77AV). Restore before power-on so the power-on setFMCard() call reflects
-    // it. The card is applied at the next power-on / Reset, not live.
+    // FM Sound Card checkbox (FM-7 / FM-77 only). The card is applied at the
+    // next power-on / Reset, not live.
     const fmCard = await loadSetting('fmCard');
     if (fmCard === true) fmCardCheck.checked = true;
 
@@ -2737,9 +2953,7 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
             if (v === 'user' && ROM_SLOT_MAP[slot]) romSlotSource[slot] = 'user';
         }
     } else {
-        // 未保存のときだけ、従来の romSource 設定から一度だけ組み立てて保存する。
-        // これまで「自分の ROM」でお使いだった方は全スロットが「自分の ROM」に
-        // なり、移行後も起動内容がまったく同じになる。以後 romSource は書かない。
+        // 未保存のときは組み立てて保存する。
         let romSrc = await loadSetting('romSource');
         if (romSrc !== 'builtin' && romSrc !== 'user') {
             romSrc = (await savedUserRomCount()) > 0 ? 'user' : 'builtin';
@@ -2750,8 +2964,7 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
         }
         await saveRomSlotSource();
     }
-    // 足りない ROM は常に同梱互換 ROM で補うため、補完の切替設定は持たない。
-    // 旧バージョンの補完トグルの設定がブラウザに残っていても読まない。
+    // 足りない ROM は常に同梱互換 ROM で補う。
     await applyRomSet();
 })();
 
@@ -2775,11 +2988,11 @@ document.querySelectorAll('.sp-section h3.sp-section-toggle').forEach(h3 => {
 // slot, whether the bundled compatible ROM or the user's ROM (IndexedDB) is used.
 
 // =========================================================================
-// ROM Info Display (size and SHA-256 of the loaded ROMs)
+// ROM Info Display (size and hash of the loaded ROMs)
 // =========================================================================
 
 async function hashHex(buffer) {
-    // Try Web Crypto API (HTTPS only), fallback to FNV-1a 32-bit hash
+    // Use crypto.subtle when available, otherwise fall back to FNV-1a 32-bit hash
     try {
         if (crypto.subtle) {
             const hash = await crypto.subtle.digest('SHA-256', buffer);
@@ -2880,7 +3093,8 @@ function markLoaded(el) {
 // Disk Loading
 // =========================================================================
 
-// Show the geometry (2D/2DD + CHRN) of the disk currently in a drive.
+// Show the geometry (disk type, cylinders, sides, sectors per track, sector
+// size) of the disk currently in a drive.
 // Read-only: pulls from the FDC's parsed disk structure, never mutates it.
 function updateDiskInfo(driveNum) {
     const el = driveNum === 0 ? diskGeomEl0 : diskGeomEl1;
@@ -2923,6 +3137,9 @@ const HAS_FS_API = typeof window.showOpenFilePicker === 'function';
 // or restored from IndexedDB on page load). Used to re-read the file from
 // disk on every Reset / Power on, so external file updates are picked up.
 const _diskHandle = [null, null];
+// 履歴の控え（recentData）から入れたドライブの履歴 id。ハンドルが無い時の
+// 「読み直し元」として、電源 ON / Reset でハンドルと同じ段取りで読み直す。
+const _diskRecentId = [null, null];
 // Base filename per drive (for naming the saved .d77) and whether the in-memory
 // image has been written to since load (for the UI "modified" marker).
 const _diskName = ['', ''];
@@ -2955,10 +3172,11 @@ async function ensureReadPermission(handle) {
 
 // Re-read the disk for a given drive from the live FileSystemFileHandle.
 // Called on Reset / Power on so external file updates are picked up.
-// Returns true if reload succeeded; false if no handle held (silent no-op).
+// Returns true if reload succeeded. With no handle held, falls back to the
+// history snapshot (reloadDiskFromRecent).
 async function reloadDiskFromHandle(driveNum) {
     const handle = _diskHandle[driveNum];
-    if (!handle) return false;
+    if (!handle) return reloadDiskFromRecent(driveNum);
     const statusEl = driveNum === 0 ? diskStatusEl0 : diskStatusEl1;
     try {
         const ok = await ensureReadPermission(handle);
@@ -2993,59 +3211,153 @@ async function reloadDiskFromHandle(driveNum) {
     }
 }
 
+// Re-read the disk for a drive from its history snapshot (recentData) when
+// no file handle is held. Same timing as the handle path (Power on / Reset).
+// Returns false when the drive has no history source (silent no-op).
+async function reloadDiskFromRecent(driveNum) {
+    const id = _diskRecentId[driveNum];
+    if (id == null) return false;
+    const statusEl = driveNum === 0 ? diskStatusEl0 : diskStatusEl1;
+    const data = await recentGetData(id);
+    if (data && fm7.loadDisk(driveNum, data)) {
+        statusEl.textContent = `${_diskName[driveNum]} (restored from history)`;
+        statusEl.classList.add('loaded');
+        updateDiskSelector(driveNum);
+        return true;
+    }
+    // Snapshot dropped (history limit) or unreadable → treat as no disk
+    console.warn(`Drive ${driveNum}: history snapshot unavailable; ejecting`);
+    fm7.fdc.ejectDisk(driveNum);
+    _diskRecentId[driveNum] = null;
+    statusEl.textContent = '(history data missing)';
+    statusEl.classList.remove('loaded');
+    updateDiskInfo(driveNum);
+    const sel = driveNum === 0 ? diskSelectEl0 : diskSelectEl1;
+    sel.style.display = 'none';
+    sel.innerHTML = '';
+    return false;
+}
+
 async function reloadAllDisksFromHandles() {
     for (const driveNum of [0, 1]) {
         await reloadDiskFromHandle(driveNum);
     }
 }
 
-function setupDiskInput(fileInput, statusEl, driveNum) {
-    if (HAS_FS_API) {
-        // Intercept native file picker; use File System Access API instead so
-        // we get a FileSystemFileHandle that can be re-read later.
-        fileInput.addEventListener('click', async (e) => {
-            e.preventDefault();
-            try {
-                const handle = await pickDiskHandle();
-                _diskHandle[driveNum] = handle;
-                const file = await handle.getFile();
-                const data = await file.arrayBuffer();
-                const ok = fm7.loadDisk(driveNum, data);
-                if (ok) {
-                    statusEl.textContent = file.name;
-                    statusEl.classList.add('loaded');
-                    _diskName[driveNum] = file.name;
-                    _diskModified[driveNum] = false;
-                    await saveDisk(`drive${driveNum}`, file.name, { handle });
-                    updateDiskSelector(driveNum);
-                    if (typeof updatePowerReadiness === 'function') updatePowerReadiness();
-                } else {
-                    statusEl.textContent = 'Fail';
-                }
-            } catch (err) {
-                if (err && err.name === 'AbortError') return;  // user cancelled
-                statusEl.textContent = 'Err';
-                console.error(`Failed to load disk (drive ${driveNum}):`, err);
+// Common path to mount a loaded disk image into a drive: load it into the
+// simulator, update the status UI and, when we hold a file handle, persist
+// it for the next page load. A disk from the PC replaces any Library binding.
+//   note:     状態行に添える一言（履歴の控えから開いたとき等）。
+//   recentId: 履歴の控えから開いたときの履歴 id（電源 ON / Reset の読み直し元）。
+async function mountDiskImage(driveNum, fileName, data, { handle = null, note = '', recentId = null } = {}) {
+    const statusEl = driveNum === 0 ? diskStatusEl0 : diskStatusEl1;
+    const ok = fm7.loadDisk(driveNum, data);
+    if (!ok) { statusEl.textContent = 'Fail'; return false; }
+    _diskHandle[driveNum] = handle;
+    _diskRecentId[driveNum] = handle ? null : recentId;
+    _diskName[driveNum] = fileName;
+    _diskModified[driveNum] = false;
+    fm7.clearDiskDirty(driveNum);
+    statusEl.textContent = note ? `${fileName} ${note}` : fileName;
+    statusEl.classList.add('loaded');
+    // ハンドルがある時だけ disks ストアに保存する（次回の電源 ON で読み直す）。
+    // 挿入の時点では中身を disks ストアへ置かず、履歴（recentData）側に控える。
+    if (handle) await saveDisk(`drive${driveNum}`, fileName, { handle });
+    else await dbDelete(STORE_DISKS, `drive${driveNum}`);
+    if (_libBindCache['drive' + driveNum] != null) {
+        _libBindCache['drive' + driveNum] = null;
+        await libBindingClear('drive' + driveNum);
+        await renderLibrary();
+    }
+    updateDiskSelector(driveNum);
+    if (typeof updatePowerReadiness === 'function') updatePowerReadiness();
+    return true;
+}
+
+// Confirm before replacing a drive that holds unsaved writes. Mirrors the
+// Library insert guard; returns false when the user keeps the current disk.
+async function confirmReplaceDisk(driveNum) {
+    if (!_diskModified[driveNum]) return true;
+    const libId = _libBindCache['drive' + driveNum];
+    if (libId != null) {
+        const prev = await libGet(libId);
+        const choice = confirm(
+            `Drive ${driveNum} の "${prev ? prev.name : '?'}" に未反映の変更があります。\n` +
+            `OK: ライブラリへ反映してから差し替える\n` +
+            `キャンセル: 変更を破棄して差し替える`);
+        if (choice && prev) {
+            const buf = fm7.saveDiskImage(driveNum);
+            if (buf) {
+                prev.data = buf; prev.size = buf.byteLength;
+                prev.modified = new Date().toISOString();
+                await libUpdate(prev);
             }
+        }
+        return true;
+    }
+    return confirm(
+        `Drive ${driveNum} ("${_diskName[driveNum] || '?'}") has unsaved changes ` +
+        `(the Save button writes them to your PC).\n` +
+        `OK: discard the changes and replace the disk\n` +
+        `Cancel: keep the current disk`);
+}
+
+// File System Access API route: pick a disk file, mount it, keep the handle
+// and add it to the history.
+async function pickDiskViaFsApi(driveNum) {
+    const statusEl = driveNum === 0 ? diskStatusEl0 : diskStatusEl1;
+    try {
+        const handle = await pickDiskHandle();
+        const file = await handle.getFile();
+        const data = await file.arrayBuffer();
+        if (!(await confirmReplaceDisk(driveNum))) return;
+        const ok = await mountDiskImage(driveNum, file.name, data, { handle });
+        if (ok) {
+            await recentRecord({ slotKind: 'disk', fileName: file.name, size: data.byteLength,
+                                 slot: `drive${driveNum}`, handle, data });
+        }
+    } catch (err) {
+        if (err && err.name === 'AbortError') return;  // user cancelled
+        statusEl.textContent = 'Err';
+        console.error(`Failed to load disk (drive ${driveNum}):`, err);
+    }
+}
+
+// Drive 0 / 1 の「ファイルを選択」: 履歴があればポップオーバーを出し、無ければ
+// ダイアログ（対応ブラウザは showOpenFilePicker、それ以外は通常の
+// ダイアログ）を開く。
+function setupDiskInput(fileInput, statusEl, driveNum) {
+    const slot = `drive${driveNum}`;
+    const anchorEl = fileInput.closest('.sp-row') || fileInput;
+    const pickNew = () => {
+        if (HAS_FS_API) pickDiskViaFsApi(driveNum);
+        else recentBypassNativeClick(fileInput);
+    };
+    fileInput.addEventListener('click', async (e) => {
+        if (recentIsBypassed(fileInput)) return;       // 通常のダイアログをそのまま開く
+        e.preventDefault();
+        if (recentIsOpenFor(fileInput)) { closeRecentPopover(); return; }
+        await recentCountsReady();
+        if (recentCount('disk') === 0) { pickNew(); return; }
+        openRecentPopover({
+            slotKind: 'disk', inputEl: fileInput, anchorEl,
+            title: `Drive ${driveNum}: Recent files`,
+            onPickNew: pickNew,
+            onOpenItem: (it) => openRecentItem(it, slot),
         });
-    } else {
-        // Fallback: Firefox / Safari — cache ArrayBuffer in IndexedDB.
+    });
+    if (!HAS_FS_API) {
+        // Firefox / Safari: no handle — the image data is kept only in the history.
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
             try {
                 const data = await file.arrayBuffer();
-                const ok = fm7.loadDisk(driveNum, data);
+                if (!(await confirmReplaceDisk(driveNum))) { fileInput.value = ''; return; }
+                const ok = await mountDiskImage(driveNum, file.name, data);
                 if (ok) {
-                    statusEl.textContent = file.name;
-                    statusEl.classList.add('loaded');
-                    _diskName[driveNum] = file.name;
-                    _diskModified[driveNum] = false;
-                    await saveDisk(`drive${driveNum}`, file.name, { data });
-                    updateDiskSelector(driveNum);
-                    if (typeof updatePowerReadiness === 'function') updatePowerReadiness();
-                } else {
-                    statusEl.textContent = 'Fail';
+                    await recentRecord({ slotKind: 'disk', fileName: file.name, size: data.byteLength,
+                                         slot, data });
                 }
             } catch (err) {
                 statusEl.textContent = 'Err';
@@ -3067,17 +3379,266 @@ function setupDiskSelect(sel, driveNum) {
 setupDiskSelect(diskSelectEl0, 0);
 setupDiskSelect(diskSelectEl1, 1);
 
+// =========================================================================
+// Recent popover — Drive 0 / 1 / Tape の「ファイルを選択」で出す履歴の一覧。
+// 対象の行の直下にその場で開く。行クリックで即挿入、Esc / 外側クリックで閉じる。
+// =========================================================================
+const recentPopoverEl = document.getElementById('recentPopover');
+const recentListEl    = document.getElementById('recentList');
+const recentTitleEl   = document.getElementById('recentTitle');
+const recentNoticeEl  = document.getElementById('recentNotice');
+// 開いている間の文脈: { slotKind, inputEl, anchorEl, title, onPickNew, onOpenItem }
+let _recentCtx = null;
+// 「新しいファイルを選ぶ」で通常のダイアログを開くとき、自分の click 横取りを
+// 一度だけ素通りさせる印。
+let _recentBypassInput = null;
+
+function recentBypassNativeClick(input) {
+    input.value = '';   // 同じファイルを選び直しても change が届くようにする
+    _recentBypassInput = input;
+    try { input.click(); } finally { _recentBypassInput = null; }
+}
+function recentIsBypassed(input) { return _recentBypassInput === input; }
+function recentIsOpenFor(input) { return !!(_recentCtx && _recentCtx.inputEl === input); }
+
+function recentEsc(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+}
+function recentFormatDate(iso) {
+    const d = new Date(iso || '');
+    if (isNaN(d.getTime())) return '';
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function recentSlotLabel(slot) {
+    return slot === 'tape' ? 'Tape' : slot === 'drive1' ? 'Drive 1' : 'Drive 0';
+}
+// 取得方法の印: Library / PC のファイル（ハンドル）/ 中身の控え / 名前のみ
+function recentSourceBadge(it) {
+    const src = it.source || {};
+    if (src.libId != null) return { icon: '📚', text: 'Library item' };
+    if (src.handle) return { icon: '🔗', text: it.dataSize ? 'File on your PC (snapshot kept)' : 'File on your PC' };
+    if (it.dataSize) return { icon: '📦', text: 'Snapshot taken when the file was opened' };
+    return { icon: '❔', text: 'Name only (you will be asked to choose the file again)' };
+}
+
+function renderRecentRows(list) {
+    recentListEl.innerHTML = list.map((it) => {
+        const b = recentSourceBadge(it);
+        const meta = [
+            it.label ? recentEsc(it.label) : '',
+            recentFormatDate(it.lastUsed),
+            libFormatSize(it.size || 0),
+            recentSlotLabel(it.lastSlot),
+        ].filter(Boolean).join(' · ');
+        const miss = it.missing
+            ? '<span class="recent-missing" title="The file was not found last time">(file missing)</span>'
+            : '';
+        return `
+            <div class="recent-row${it.missing ? ' is-missing' : ''}" role="listitem" tabindex="0" data-id="${it.id}">
+              <span class="recent-badge" title="${recentEsc(b.text)}">${b.icon}</span>
+              <span class="recent-main">
+                <span class="recent-name" title="${recentEsc(it.fileName)}">${recentEsc(it.fileName)} ${miss}</span>
+                <span class="recent-meta">${meta}</span>
+              </span>
+              <button type="button" data-act="label" title="Set or change the display name (memo)" aria-label="Set display name">✎</button>
+              <button type="button" data-act="del" title="Remove this entry from the history" aria-label="Remove from history">×</button>
+            </div>`;
+    }).join('');
+}
+
+async function openRecentPopover(ctx) {
+    const list = await recentList(ctx.slotKind);
+    if (!list.length) { closeRecentPopover(); ctx.onPickNew(); return; }
+    _recentCtx = ctx;
+    recentTitleEl.textContent = ctx.title;
+    recentSetNotice('');
+    renderRecentRows(list);
+    ctx.anchorEl.after(recentPopoverEl);
+    recentPopoverEl.hidden = false;
+    const first = recentListEl.querySelector('.recent-row');
+    if (first) first.focus();
+}
+function closeRecentPopover() {
+    if (!_recentCtx) return;
+    recentPopoverEl.hidden = true;
+    _recentCtx = null;
+}
+async function refreshRecentPopover() {
+    if (!_recentCtx) return;
+    const list = await recentList(_recentCtx.slotKind);
+    if (!list.length) { closeRecentPopover(); return; }
+    renderRecentRows(list);
+}
+async function recentActivateRow(id) {
+    const ctx = _recentCtx;
+    if (!ctx) return;
+    const it = await recentGet(id);
+    if (!it) { await refreshRecentPopover(); return; }
+    await ctx.onOpenItem(it);
+}
+
+// ポップオーバー内の案内（開けなかった時など）。
+function recentSetNotice(text) {
+    recentNoticeEl.textContent = text || '';
+    recentNoticeEl.hidden = !text;
+}
+function recentMarkRow(id, cls) {
+    const row = recentListEl.querySelector(`.recent-row[data-id="${id}"]`);
+    if (row) row.classList.add(cls);
+}
+
+// Open a history row into a slot: Library → handle → saved data → re-select.
+// 差し替えの確認（confirmReplaceDisk）は中身が手に入ってから行う。開けなかった
+// 時はポップオーバーを開いたまま案内を出し、次のクリックでダイアログを開いてもらう。
+async function openRecentItem(it, slot) {
+    const isTape = slot === 'tape';
+    const driveNum = slot === 'drive1' ? 1 : 0;
+    const slotKind = isTape ? 'tape' : 'disk';
+    const src = it.source || {};
+    const mount = async (fileName, data, opts) => {
+        if (!isTape && !(await confirmReplaceDisk(driveNum))) return 'cancel';
+        const ok = isTape
+            ? await mountTapeImage(fileName, data, { note: opts.note })
+            : await mountDiskImage(driveNum, fileName, data, { handle: opts.handle || null, note: opts.note,
+                                                              recentId: opts.recentId ?? null });
+        if (!ok) return 'fail';
+        await recentRecord({ id: it.id, slotKind, fileName, size: data.byteLength, slot, fromHistory: true });
+        closeRecentPopover();
+        return 'ok';
+    };
+    let fallbackNote = '';   // 控えから開く理由（権限なし / ファイル無し）
+    // 1. Library の項目
+    if (src.libId != null) {
+        const libItem = await libGet(src.libId);
+        if (libItem) {
+            // Library に紐付いていないディスクの未保存の変更は、ここで確認する
+            // （紐付いている時は libInsertDrive 自身の確認に任せる）。
+            if (!isTape && _libBindCache['drive' + driveNum] == null && !(await confirmReplaceDisk(driveNum))) return;
+            const ok = isTape ? await libInsertTape(src.libId) : await libInsertDrive(src.libId, driveNum);
+            if (ok) { await renderLibrary(); closeRecentPopover(); return; }
+        }
+        fallbackNote = libItem ? '(library item could not be loaded)' : '(library item missing)';
+    }
+    // 2. ハンドル（対応ブラウザ）: 権限を確かめて最新のファイルを読む
+    if (src.handle) {
+        let permitted = false;
+        try {
+            permitted = await ensureReadPermission(src.handle);
+            if (permitted) {
+                const file = await src.handle.getFile();
+                const data = await file.arrayBuffer();
+                const r = await mount(file.name, data, { handle: src.handle });
+                if (r === 'cancel') return;
+                if (r === 'ok') return;
+                recentSetNotice(`"${file.name}" could not be loaded as an image.`);
+                return;
+            }
+            fallbackNote = '(permission denied)';
+            recentSetNotice(`Read permission for "${it.fileName}" was not granted — opening the saved snapshot instead.`);
+        } catch (err) {
+            // File deleted, moved, or otherwise unavailable
+            console.warn('recent: file unavailable', err);
+            fallbackNote = '(file missing)';
+            await recentUpdateMeta(it.id, { missing: true });
+            recentMarkRow(it.id, 'is-missing');
+        }
+    }
+    // 3. 開いた時点の中身の控え
+    if (it.dataSize) {
+        const data = await recentGetData(it.id);
+        if (data) {
+            const note = fallbackNote ? `(restored from history — ${fallbackNote.replace(/^\(|\)$/g, '')})`
+                                      : '(restored from history)';
+            const r = await mount(it.fileName, data, { note, recentId: it.id });
+            if (r === 'ok' || r === 'cancel') return;
+            recentSetNotice(`The snapshot of "${it.fileName}" could not be loaded as an image.`);
+            return;
+        }
+    }
+    // 4. 再選択: ポップオーバーは開いたまま案内し、「新しいファイルを選ぶ…」で
+    //    ダイアログを開いてもらう。
+    recentMarkRow(it.id, 'is-missing');
+    recentSetNotice(`"${it.fileName}" cannot be opened${fallbackNote ? ' ' + fallbackNote : ''}. Press "Choose a new file…" to select the file again.`);
+    const pickBtn = document.getElementById('recentPickBtn');
+    if (pickBtn) pickBtn.focus();
+}
+
+recentListEl.addEventListener('click', async (e) => {
+    if (!_recentCtx) return;
+    const row = e.target.closest('.recent-row');
+    if (!row) return;
+    const id = parseInt(row.dataset.id, 10);
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) { await recentActivateRow(id); return; }
+    if (btn.dataset.act === 'del') {
+        await recentDelete(id);
+        await refreshRecentPopover();
+    } else if (btn.dataset.act === 'label') {
+        const it = await recentGet(id);
+        if (!it) return;
+        const next = prompt('Display name (memo). Leave empty to show the file name only:', it.label || '');
+        if (next === null) return;
+        await recentUpdateMeta(id, { label: next.trim() });
+        await refreshRecentPopover();
+    }
+});
+document.getElementById('recentCloseBtn').addEventListener('click', () => closeRecentPopover());
+document.getElementById('recentPickBtn').addEventListener('click', () => {
+    const ctx = _recentCtx;
+    closeRecentPopover();
+    if (ctx) ctx.onPickNew();
+});
+document.getElementById('recentClearBtn').addEventListener('click', async () => {
+    const ctx = _recentCtx;
+    if (!ctx) return;
+    const label = ctx.slotKind === 'tape' ? 'tape' : 'disk';
+    if (!confirm(`Clear the whole ${label} history?\n(Library items and files on your PC are not affected.)`)) return;
+    await recentClear(ctx.slotKind);
+    closeRecentPopover();
+});
+// キー操作: ↑ / ↓ で行を移動、Enter で挿入、Esc で閉じる。ポップオーバー内の
+// キー入力はシミュレータへ渡さない。
+recentPopoverEl.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    const rows = Array.from(recentListEl.querySelectorAll('.recent-row'));
+    const idx = rows.indexOf(document.activeElement);
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        const inp = _recentCtx && _recentCtx.inputEl;
+        closeRecentPopover();
+        if (inp) inp.focus();
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (rows.length) (rows[idx + 1] || rows[0]).focus();
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (rows.length) (rows[idx - 1] || rows[rows.length - 1]).focus();
+    } else if ((e.key === 'Enter' || e.key === ' ') && idx >= 0) {
+        e.preventDefault();
+        recentActivateRow(parseInt(rows[idx].dataset.id, 10));
+    }
+});
+recentPopoverEl.addEventListener('keyup', (e) => e.stopPropagation());
+// 外側クリックで閉じる（元の「ファイルを選択」のクリックは自身の横取りで扱う）
+document.addEventListener('pointerdown', (e) => {
+    if (!_recentCtx) return;
+    if (recentPopoverEl.contains(e.target)) return;
+    if (_recentCtx.inputEl && _recentCtx.inputEl.contains(e.target)) return;
+    closeRecentPopover();
+}, true);
+recentRefreshCounts();
+
 // Restore disks from IndexedDB on startup.
 //   - With a saved handle (FS API path): keep handle in memory, mark "(saved)".
 //     Actual file read happens on the next Power on / Reset (user gesture
 //     required for permission prompt).
 //   - With cached data (legacy / fallback path): load directly.
-(async function restoreDisks() {
+const _restoreDisksPromise = (async function restoreDisks() {
     for (const driveNum of [0, 1]) {
         const slot = `drive${driveNum}`;
         const binding = await libBindingGet(slot);
-        // Legacy storage migration: a legacy STORE_DISKS entry with no library binding
-        // → import the cached data into the library and bind it.
+        // No library binding: import a saved disk into the library and bind it.
         if (!binding) {
             const saved = await loadDiskSaved(slot);
             if (saved && saved.data) {
@@ -3090,14 +3651,14 @@ setupDiskSelect(diskSelectEl1, 1);
                     });
                     await libBindingSet(slot, id);
                     await dbDelete(STORE_DISKS, slot);
-                    console.log(`[migrate] STORE_DISKS drive${driveNum} → library #${id}`);
+                    console.log(`[migrate] saved disk in drive ${driveNum} → library #${id}`);
                 } catch (err) {
                     console.warn('Legacy disk migration failed:', err);
                 }
             }
         }
-        // Legacy non-migratable entries (handle-only on FS API browsers)
-        // still get displayed; the actual file read happens on Power on / Reset.
+        // Entries that hold only a file handle are still displayed; the actual
+        // file read happens on Power on / Reset.
         const saved = await loadDiskSaved(slot);
         if (!saved) continue;
         const el = driveNum === 0 ? diskStatusEl0 : diskStatusEl1;
@@ -3122,23 +3683,29 @@ setupDiskSelect(diskSelectEl1, 1);
     if (typeof updatePowerReadiness === 'function') updatePowerReadiness();
 })();
 
-// Clear saved ROMs, legacy disks, and the Library from storage
+// Clear saved ROMs, saved disks, the recent-file history and the Library
+// (with its bindings) from storage
 document.getElementById('clearStorageBtn').addEventListener('click', async () => {
-    if (!confirm('Clear ROMs, legacy disks, AND the Library?\nThis cannot be undone.')) return;
+    if (!confirm('Clear ROMs, saved disks, the recent-file history AND the Library?\nThis cannot be undone.')) return;
     try {
         const db = await openDB();
         await new Promise((resolve, reject) => {
-            const tx = db.transaction([STORE_ROMS, STORE_DISKS, STORE_LIBRARY, STORE_BINDINGS], 'readwrite');
+            const tx = db.transaction([STORE_ROMS, STORE_DISKS, STORE_LIBRARY, STORE_BINDINGS,
+                                       STORE_RECENT, STORE_RECENT_DATA], 'readwrite');
             tx.objectStore(STORE_ROMS).clear();
             tx.objectStore(STORE_DISKS).clear();
             tx.objectStore(STORE_LIBRARY).clear();
             tx.objectStore(STORE_BINDINGS).clear();
+            tx.objectStore(STORE_RECENT).clear();
+            tx.objectStore(STORE_RECENT_DATA).clear();
             tx.oncomplete = resolve;
             tx.onerror = () => reject(tx.error);
         });
-        _diskHandle[0] = null;
-        _diskHandle[1] = null;
+        _diskHandle[0] = _diskHandle[1] = null;
+        _diskRecentId[0] = _diskRecentId[1] = null;
         _libBindCache.drive0 = _libBindCache.drive1 = _libBindCache.tape = null;
+        closeRecentPopover();
+        await recentRefreshCounts();
         await renderLibrary();
         alert('Storage cleared. Reload the page to re-select ROM files.');
     } catch (e) {
@@ -3146,20 +3713,26 @@ document.getElementById('clearStorageBtn').addEventListener('click', async () =>
     }
 });
 
-// Clear cached disk images and file handles only (keep ROM cache).
+// Clear cached disk images, file handles and the recent-file history
+// (disk and tape) — keeps the ROM cache and the Library.
 document.getElementById('clearDiskCacheBtn').addEventListener('click', async () => {
-    if (!confirm('Clear cached disk images and file handles from browser storage?')) return;
+    if (!confirm('Clear cached disk images, file handles and the recent-file history from browser storage?\n(ROMs and the Library are kept.)')) return;
     try {
         const db = await openDB();
         await new Promise((resolve, reject) => {
-            const tx = db.transaction(STORE_DISKS, 'readwrite');
+            const tx = db.transaction([STORE_DISKS, STORE_RECENT, STORE_RECENT_DATA], 'readwrite');
             tx.objectStore(STORE_DISKS).clear();
+            tx.objectStore(STORE_RECENT).clear();
+            tx.objectStore(STORE_RECENT_DATA).clear();
             tx.oncomplete = resolve;
             tx.onerror = () => reject(tx.error);
         });
+        closeRecentPopover();
+        await recentRefreshCounts();
         for (const driveNum of [0, 1]) {
             fm7.fdc.ejectDisk(driveNum);
             _diskHandle[driveNum] = null;
+            _diskRecentId[driveNum] = null;
             const fileInput = driveNum === 0 ? diskFileInput0 : diskFileInput1;
             const statusEl = driveNum === 0 ? diskStatusEl0 : diskStatusEl1;
             const sel = driveNum === 0 ? diskSelectEl0 : diskSelectEl1;
@@ -3230,35 +3803,105 @@ document.getElementById('clearRomsBtn').addEventListener('click', async () => {
 // Tape Loading
 // =========================================================================
 
-tapeFileEl.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+// Common path to mount a tape image (T77 / WAV): load it into the simulator
+// and update the status UI. A tape from the PC replaces any Library binding.
+//   note: 状態行に添える一言（履歴の控えから開いたとき等）。
+async function mountTapeImage(fileName, data, { note = '' } = {}) {
+    const isWav = /\.wav$/i.test(fileName);
+    const ok = isWav ? fm7.loadTapeWAV(data) : fm7.loadTape(data);
+    if (!ok) { tapeStatusEl.textContent = 'Fail'; return false; }
+    tapeStatusEl.textContent = note ? `${fileName} ${note}` : fileName;
+    tapeStatusEl.classList.add('loaded');
+    cmtInfo.textContent = 'pos=0 (loaded)';
+    // WAV: surface the virtual-read quality (block checksum result).
+    const q = isWav && fm7.cmt && fm7.cmt._wavQuality;
+    if (q && (q.okBlocks || q.badBlocks)) {
+        const total = q.okBlocks + q.badBlocks;
+        cmtInfo.textContent = q.badBlocks === 0
+            ? `loaded — ${q.okBlocks} blocks OK`
+            : `loaded — ${q.okBlocks}/${total} blocks OK, ${q.badBlocks} BAD (read may fail)`;
+    }
+    if (_libBindCache.tape != null) {
+        _libBindCache.tape = null;
+        await libBindingClear('tape');
+        await renderLibrary();
+    }
+    return true;
+}
+
+// 履歴に積む。WAV は大きくなり得るので中身は保存せず、名前（とハンドル）だけ持つ。
+async function recordTapeRecent(fileName, data, handle = null) {
+    const isWav = /\.wav$/i.test(fileName);
+    await recentRecord({ slotKind: 'tape', fileName, size: data.byteLength, slot: 'tape',
+                         handle, data: isWav ? null : data });
+}
+
+async function pickTapeHandle() {
+    const [handle] = await window.showOpenFilePicker({
+        types: [{
+            description: 'Tape Image',
+            accept: { 'application/octet-stream': ['.t77', '.T77'], 'audio/wav': ['.wav', '.WAV'] },
+        }],
+        multiple: false,
+        excludeAcceptAllOption: false,
+    });
+    return handle;
+}
+
+// File System Access API route: pick a tape file, mount it and add it to the
+// history with its handle.
+async function pickTapeViaFsApi() {
     try {
+        const handle = await pickTapeHandle();
+        const file = await handle.getFile();
         const data = await file.arrayBuffer();
-        const isWav = /\.wav$/i.test(file.name);
-        const ok = isWav ? fm7.loadTapeWAV(data) : fm7.loadTape(data);
-        if (ok) {
-            tapeStatusEl.textContent = file.name;
-            tapeStatusEl.classList.add('loaded');
-            cmtInfo.textContent = 'pos=0 (loaded)';
-            // WAV: surface the virtual-read quality (block checksum result).
-            const q = isWav && fm7.cmt && fm7.cmt._wavQuality;
-            if (q && (q.okBlocks || q.badBlocks)) {
-                const total = q.okBlocks + q.badBlocks;
-                cmtInfo.textContent = q.badBlocks === 0
-                    ? `loaded — ${q.okBlocks} blocks OK`
-                    : `loaded — ${q.okBlocks}/${total} blocks OK, ${q.badBlocks} BAD (read may fail)`;
-            }
-        } else {
-            tapeStatusEl.textContent = 'Fail';
-        }
+        const ok = await mountTapeImage(file.name, data);
+        if (ok) await recordTapeRecent(file.name, data, handle);
     } catch (err) {
+        if (err && err.name === 'AbortError') return;  // user cancelled
         tapeStatusEl.textContent = 'Err';
         console.error('Failed to load tape:', err);
-    } finally {
-        e.target.value = '';
     }
-});
+}
+
+// Tape の「ファイルを選択」: Drive と同じく、履歴があればポップオーバー、無ければ
+// ダイアログ（対応ブラウザは showOpenFilePicker、それ以外は通常のダイアログ）。
+(function setupTapeInput() {
+    const anchorEl = tapeFileEl.closest('.sp-row') || tapeFileEl;
+    const pickNew = () => {
+        if (HAS_FS_API) pickTapeViaFsApi();
+        else recentBypassNativeClick(tapeFileEl);
+    };
+    tapeFileEl.addEventListener('click', async (e) => {
+        if (recentIsBypassed(tapeFileEl)) return;      // 通常のダイアログをそのまま開く
+        e.preventDefault();
+        if (recentIsOpenFor(tapeFileEl)) { closeRecentPopover(); return; }
+        await recentCountsReady();
+        if (recentCount('tape') === 0) { pickNew(); return; }
+        openRecentPopover({
+            slotKind: 'tape', inputEl: tapeFileEl, anchorEl,
+            title: 'Tape: Recent files',
+            onPickNew: pickNew,
+            onOpenItem: (it) => openRecentItem(it, 'tape'),
+        });
+    });
+    if (HAS_FS_API) return;
+    // Firefox / Safari: no handle — keep the image data (T77 only) in the history.
+    tapeFileEl.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            const data = await file.arrayBuffer();
+            const ok = await mountTapeImage(file.name, data);
+            if (ok) await recordTapeRecent(file.name, data);
+        } catch (err) {
+            tapeStatusEl.textContent = 'Err';
+            console.error('Failed to load tape:', err);
+        } finally {
+            e.target.value = '';
+        }
+    });
+})();
 
 cmtRewindBtn.addEventListener('click', () => {
     const stats = fm7.cmt.rewind();
@@ -3375,7 +4018,7 @@ async function renderLibrary() {
         const nameEsc = (it.name || '(unnamed)').replace(/&/g, '&amp;').replace(/</g, '&lt;');
         const isDisk = (it.kind === 'd77');
         const isTape = (it.kind === 't77' || it.kind === 'wav');
-        // Which slot (if any) currently holds this item? Mark "*" when the
+        // Which slot (if any) is this item bound to? Mark "*" when the
         // bound drive has unsaved changes (in-memory differs from library).
         const inSlots = [];
         let dirtyBound = false;
@@ -3400,7 +4043,7 @@ async function renderLibrary() {
             ? `<button data-act="commit" data-id="${it.id}" style="padding:0 3px;background:#664400;color:#ffcc66;" title="ドライブの変更をライブラリへ反映">⬆Commit</button>`
             : '';
         const fmtBtn = isDisk
-            ? `<button data-act="fmt" data-id="${it.id}" style="padding:0 3px;" title="論理フォーマット (FAT/ディレクトリ初期化, BASIC で書き込み可能にする)">論理FMT</button>`
+            ? `<button data-act="fmt" data-id="${it.id}" style="padding:0 3px;" title="論理フォーマット (BASIC で書き込み可能にする)">論理FMT</button>`
             : '';
         return `
             <div class="lib-row" style="display:flex;align-items:center;gap:3px;padding:2px;border-bottom:1px solid #1a1f2a;">
@@ -3413,7 +4056,7 @@ async function renderLibrary() {
               ${insertBtns}
               ${commitBtn}
               ${fmtBtn}
-              <button data-act="exp" data-id="${it.id}" style="padding:0 3px;" title="この項目を .d77 ファイルとして PC へ書き出します（保存ダイアログで上書き指定しない限り既存ファイルは変更されません）">Exp</button>
+              <button data-act="exp" data-id="${it.id}" style="padding:0 3px;" title="この項目をファイルとして PC へ書き出します">Exp</button>
               <button data-act="ren" data-id="${it.id}" style="padding:0 3px;" title="名前変更">Ren</button>
               <button data-act="dup" data-id="${it.id}" style="padding:0 3px;" title="複製">Dup</button>
               <button data-act="del" data-id="${it.id}" style="padding:0 3px;color:#cc6666;" title="削除">Del</button>
@@ -3423,7 +4066,8 @@ async function renderLibrary() {
 
 // Insert a library item into a drive. Loads its data into the simulator's
 // in-memory disk and updates the binding (so a page reload restores it).
-async function libInsertDrive(libId, driveNum) {
+//   record: 履歴に積むかどうか（起動時の復元では積まない）。
+async function libInsertDrive(libId, driveNum, { record = true } = {}) {
     const item = await libGet(libId);
     if (!item || item.kind !== 'd77') return false;
     // Guard: if the drive currently holds a dirty library-bound item,
@@ -3447,20 +4091,26 @@ async function libInsertDrive(libId, driveNum) {
     const ok = fm7.loadDisk(driveNum, item.data);
     if (!ok) return false;
     _libBindCache['drive' + driveNum] = libId;
+    _diskRecentId[driveNum] = null;
     _diskName[driveNum] = item.name;
     _diskModified[driveNum] = false;
     fm7.clearDiskDirty(driveNum);
     await libBindingSet('drive' + driveNum, libId);
-    // Update legacy disk status UI so it reflects the library-inserted disk.
+    // Update the drive status display so it reflects the library-inserted disk.
     const el = driveNum === 0 ? diskStatusEl0 : diskStatusEl1;
     if (el) { el.textContent = item.name + ' (lib)'; el.classList.add('loaded'); }
     updateDiskSelector(driveNum);
     if (typeof updatePowerReadiness === 'function') updatePowerReadiness();
+    if (record) {
+        await recentRecord({ slotKind: 'disk', fileName: item.name, size: item.size || item.data.byteLength,
+                             slot: 'drive' + driveNum, libId });
+    }
     return true;
 }
 
 // Insert a library item into the tape slot.
-async function libInsertTape(libId) {
+//   record: 履歴に積むかどうか（起動時の復元では積まない）。
+async function libInsertTape(libId, { record = true } = {}) {
     const item = await libGet(libId);
     if (!item || (item.kind !== 't77' && item.kind !== 'wav')) return false;
     const ok = (item.kind === 'wav') ? fm7.loadTapeWAV(item.data) : fm7.loadTape(item.data);
@@ -3470,6 +4120,10 @@ async function libInsertTape(libId) {
     tapeStatusEl.textContent = item.name + ' (lib)';
     tapeStatusEl.classList.add('loaded');
     cmtInfo.textContent = 'pos=0 (loaded)';
+    if (record) {
+        await recentRecord({ slotKind: 'tape', fileName: item.name, size: item.size || item.data.byteLength,
+                             slot: 'tape', libId });
+    }
     return true;
 }
 
@@ -3479,13 +4133,13 @@ async function libRestoreBindings() {
     for (const driveNum of [0, 1]) {
         const b = await libBindingGet('drive' + driveNum);
         if (b && b.libId != null) {
-            try { await libInsertDrive(b.libId, driveNum); }
+            try { await libInsertDrive(b.libId, driveNum, { record: false }); }
             catch (err) { console.warn('lib restore drive failed:', err); }
         }
     }
     const tb = await libBindingGet('tape');
     if (tb && tb.libId != null) {
-        try { await libInsertTape(tb.libId); }
+        try { await libInsertTape(tb.libId, { record: false }); }
         catch (err) { console.warn('lib restore tape failed:', err); }
     }
     await renderLibrary();
@@ -3520,7 +4174,7 @@ libImportFile.addEventListener('change', async (e) => {
     }
 });
 
-// Create a blank physically-formatted disk and add to library.
+// Create a blank logically-formatted disk and add to library.
 async function addBlankDisk(kind /* '2D' | '2DD' */) {
     const data = makeBlankD77Buffer(kind);
     const now = new Date().toISOString();
@@ -3551,9 +4205,12 @@ libListEl.addEventListener('click', async (e) => {
             await renderLibrary();
         } else if (act === 'commit') {
             // Materialize the in-memory dirty disk back into the library item.
+            // When the item is in both drives, take it from the drive that has
+            // unsaved changes (Drive 0 first if both have them).
+            const in0 = _libBindCache.drive0 === id, in1 = _libBindCache.drive1 === id;
             let drv = -1;
-            if (_libBindCache.drive0 === id) drv = 0;
-            else if (_libBindCache.drive1 === id) drv = 1;
+            if (in0 && (_diskModified[0] || !in1 || !_diskModified[1])) drv = 0;
+            else if (in1) drv = 1;
             if (drv < 0) { alert('ドライブとの紐付けが見つかりません'); return; }
             const buf = fm7.saveDiskImage(drv);
             if (!buf) { alert('シリアライズに失敗しました'); return; }
@@ -3566,7 +4223,7 @@ libListEl.addEventListener('click', async (e) => {
             if (el) el.textContent = item.name + ' (lib)';
             await renderLibrary();
         } else if (act === 'fmt') {
-            if (!confirm(`論理フォーマットしますか？\n空の FAT / ディレクトリで初期化し、DISK BASIC で書き込み可能にします。\n(既存ファイルがあれば失われます)\n  ${item.name}`)) return;
+            if (!confirm(`論理フォーマットしますか？\nDISK BASIC で書き込み可能にします。\n(既存ファイルがあれば失われます)\n  ${item.name}`)) return;
             const d = new D77Disk();
             if (!d.parseD77(item.data)) { alert('D77 の解析に失敗しました'); return; }
             if (!d.logicalFormat()) { alert('論理フォーマットに失敗しました'); return; }
@@ -3576,9 +4233,10 @@ libListEl.addEventListener('click', async (e) => {
             item.modified = new Date().toISOString();
             await libUpdate(item);
             // If this disk is currently inserted in a drive, reload it so the
-            // running machine sees the freshly formatted image.
-            if (_libBindCache.drive0 === id) await libInsertDrive(id, 0);
-            else if (_libBindCache.drive1 === id) await libInsertDrive(id, 1);
+            // running machine sees the freshly formatted image. When the same
+            // item is in both drives, both are reloaded.
+            if (_libBindCache.drive0 === id) await libInsertDrive(id, 0, { record: false });
+            if (_libBindCache.drive1 === id) await libInsertDrive(id, 1, { record: false });
             await renderLibrary();
             alert('論理フォーマット完了');
         } else if (act === 'exp') {
@@ -3613,8 +4271,41 @@ libListEl.addEventListener('click', async (e) => {
     }
 });
 
-// Initial render + binding restore.
-libRestoreBindings().catch(console.error);
+// Startup restore from the history (for browsers that cannot keep a file
+// handle, and for drives last filled from a history snapshot). Drives are
+// read at the next Power on / Reset; the tape is loaded right away.
+async function restoreFromRecent() {
+    await _restoreDisksPromise;
+    const all = await recentGetAll();
+    all.sort((a, b) => (b.lastUsed || '').localeCompare(a.lastUsed || ''));
+    const newestFor = (slotKind, slot) =>
+        all.find((it) => it.slotKind === slotKind && it.lastSlot === slot && (it.dataSize || 0) > 0);
+    for (const driveNum of [0, 1]) {
+        const slot = `drive${driveNum}`;
+        if (_diskHandle[driveNum] || _libBindCache[slot] != null || _diskName[driveNum]) continue;
+        const it = newestFor('disk', slot);
+        if (!it) continue;
+        _diskRecentId[driveNum] = it.id;
+        _diskName[driveNum] = it.fileName;
+        const el = driveNum === 0 ? diskStatusEl0 : diskStatusEl1;
+        el.textContent = `${it.fileName} (saved — Power on to load)`;
+        el.classList.add('loaded');
+    }
+    if (_libBindCache.tape == null && !tapeStatusEl.classList.contains('loaded')) {
+        const it = newestFor('tape', 'tape');
+        if (it) {
+            const data = await recentGetData(it.id);
+            if (data) {
+                try { await mountTapeImage(it.fileName, data, { note: '(restored from history)' }); }
+                catch (err) { console.warn('tape restore from history failed:', err); }
+            }
+        }
+    }
+    if (typeof updatePowerReadiness === 'function') updatePowerReadiness();
+}
+
+// Initial render + binding restore, then the history-based restore.
+libRestoreBindings().then(restoreFromRecent).catch(console.error);
 
 // =========================================================================
 // Control Buttons
@@ -3623,9 +4314,7 @@ libRestoreBindings().catch(console.error);
 // Simulator states: 'stopped' | 'running' | 'paused'
 let emuState = 'stopped';
 
-// Set a button's visible label without destroying its icon span (buttons that
-// use the <span class="btn-icon"> + <span class="btn-text"> structure keep the
-// icon; plain buttons fall back to textContent).
+// Set a button's visible label without destroying its icon.
 function setBtnLabel(btn, label) {
     const textSpan = btn.querySelector('.btn-text');
     if (textSpan) textSpan.textContent = label;
@@ -3671,13 +4360,13 @@ function setEmuState(state) {
 
 // Return the list of required ROM filenames that are not yet loaded for the
 // current machine type, boot mode and disk state. Empty list means power-on
-// is allowed. Mirrors the ROM set installed in the real hardware:
-// FBASIC30 and SUBSYS_C are always on board; FM-7 models also carry the
-// boot ROM matching the selected boot mode, while FM77AV models replace the
-// boot ROMs with INITIATE (plus SUBSYS_A/B when a disk is mounted).
+// is allowed. Required ROM set per machine type: FBASIC30 and SUBSYS_C
+// always; FM-7 models also need the boot ROM matching the selected boot
+// mode, while FM77AV models use INITIATE instead (plus SUBSYS_A/B when a
+// disk is in Drive 0).
 function getMissingRequiredRoms() {
     const hasDisk = fm7.fdc.disks[0] && fm7.fdc.disks[0].loaded;
-    // Use the live radio state — fm7._bootMode is only latched at reset.
+    // Use the live radio state.
     const bootMode = (document.querySelector('input[name="bootMode"]:checked') || {}).value || 'basic';
     const missing = [];
     if (!fm7.romLoaded.fbasic) missing.push('FBASIC30.ROM');
@@ -3721,9 +4410,8 @@ function updatePowerReadiness() {
 // Power toggle switch
 powerToggle.addEventListener('change', async () => {
     if (powerToggle.checked) {
-        // Re-read every mounted disk from its file handle so external file
-        // updates are picked up on every power-on (matches "load fresh from
-        // disk" semantics — no stale cache).
+        // Reload the mounted disks (from the file handle when there is one)
+        // so external file updates are picked up on power-on.
         await reloadAllDisksFromHandles();
         // Check minimum ROM requirements before starting
         updateMachineType();
@@ -3741,9 +4429,8 @@ powerToggle.addEventListener('change', async () => {
         fm7.start(canvas);
         setEmuState('running');
     } else {
-        // Power off: stop execution and zero-reset all hardware state
-        // (display mode, palette, PSG/OPN, MMR/TWR, etc.) so that a subsequent
-        // power-on starts from a clean slate — matches real hardware behavior.
+        // Power off: stop execution and reset all hardware state so that a
+        // subsequent power-on starts from a clean slate.
         fm7.stop();
         fm7.reset();
         if (canvas.getContext) {
@@ -3790,6 +4477,7 @@ function setupDiskEject(btn, fileInput, statusEl, driveNum) {
         fm7.fdc.ejectDisk(driveNum);
         fileInput.value = '';
         _diskHandle[driveNum] = null;
+        _diskRecentId[driveNum] = null;
         _diskName[driveNum] = '';
         _diskModified[driveNum] = false;
         _libBindCache['drive' + driveNum] = null;
@@ -3815,8 +4503,8 @@ function diskBaseName(driveNum) {
     return `${n}.d77`;
 }
 
-// Persist a drive's current (modified) image to IndexedDB so writes survive
-// a page reload. Stored as raw data (supersedes any handle-only entry).
+// Persist a drive's current image to IndexedDB. Stored as raw data
+// (supersedes any handle-only entry).
 async function persistDiskImage(driveNum) {
     const buf = fm7.saveDiskImage(driveNum);
     if (!buf) return;
@@ -3884,9 +4572,6 @@ for (let i = 0; i < 8; i++) {
 
 // =========================================================================
 // Debug: Sound Panel (PSG / OPN registers and per-channel volume)
-//
-// レジスタは毎フレーム読み直すが、DOM へ書き戻すのは値が変わったセルだけ。
-// パネルが閉じている間は更新そのものを行わないので負荷は上がらない。
 // =========================================================================
 
 const opnSsgRegsEl   = document.getElementById('opnSsgRegs');
@@ -3906,8 +4591,7 @@ function _sndSetText(el, text) {
     if (el._sndText !== text) { el._sndText = text; el.textContent = text; }
 }
 
-// YM2203 の有効なレジスタ。$24-$28 / $2D-$2F がモードとタイマ、$30-$AF は
-// 下位 2 ビットがチャンネル番号 (0-2) で 3 は欠番、FB/ALGO は $B0-$B2 のみ。
+// 表示対象の有効な音源レジスタかを判定する。
 function _opnRegValid(addr) {
     if (addr >= 0x24 && addr <= 0x28) return true;
     if (addr >= 0x2D && addr <= 0x2F) return true;
@@ -3916,7 +4600,7 @@ function _opnRegValid(addr) {
     return false;
 }
 
-// 8 列のヘッダ行 + 値行を繰り返す (PSG レジスタ表示の従来の並び)。
+// 8 列のヘッダ行 + 値行を繰り返す。
 // 戻り値は毎フレーム更新する {addr, el} の配列。
 function _sndBuildRegRows(parent, addrs, labelOf, isValid) {
     const cells = [];
@@ -4026,7 +4710,7 @@ const _sndFmLevels  = [0, 0, 0];
 let _sndHasPsg = null, _sndHasOpn = null;
 
 function updateSoundPanel() {
-    // FM77AV には独立した PSG が無く、OPN の SSG 部が $FD0D/$FD0E に応答する。
+    // FM77AV では PSG の表示を出さず、FM 音源の SSG 部で表示する。
     const hasPsg = !fm7.isFM77AV;
     const hasOpn = fm7.fmCardEnabled;
     if (hasPsg !== _sndHasPsg || hasOpn !== _sndHasOpn) {
@@ -4074,9 +4758,10 @@ updateSoundPanel();
 // =========================================================================
 
 // FM-7 keyboard layout
-// Top 2 rows: BRK | PF6-10/PF1-5 | EL,CLS/DUP,HOM | INS,↑,DEL / ←,↓,→
+// Top 2 rows: row 1 = EL,CLS | INS,↑,DEL / row 2 = BRK | PF1-PF10 | DUP,HOM | ←,↓,→
 // Main 5 rows + numpad on RIGHT side
-// Each row has exactly 20 cells (15 main + 1 gap + 4 numpad) for alignment
+// Main rows are 20 cells wide (15 main + 1 gap + 4 numpad); the top rows and
+// the bottom row are shorter
 const K = (label, code, ...cls) => [label, code, ...cls]; // shorthand
 const _ = ['', '']; // spacer
 const FM7_KBD_LAYOUT = [
@@ -4093,8 +4778,7 @@ const FM7_KBD_LAYOUT = [
     // --- Main row 4: SHIFT~SHIFT + numpad 0.+RT ---
     [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('_','IntlRo'),K('SHF','ShiftRight'),_,_,_,K('0','Numpad0'),K('.','NumpadDecimal'),K('+','NumpadAdd'),K('RT','NumpadEnter')],
     // --- Main row 5: CAP/GRP/(無変換)/SPACE/(変換)/カナ (main area only, no numpad) ---
-    // 無変換 / 変換 は FM77AV 以降のみ表示（body.machine-fm7 で CSS が隠し、
-    // SPACE 幅も 8 セル ⇔ 6 セルで切り替えて カナ の位置を揃える）
+    // 無変換 / 変換 は FM77AV 以降のみ表示する
     [K('CAP','CapsLock','led'),K('GRP','AltLeft'),K('無変換','NonConvert','av-key'),K('SPACE','Space','space'),K('変換','Convert','av-key'),K('カナ','AltRight','led')],
 ];
 
@@ -4137,9 +4821,16 @@ function _escKeyCap(code) {
     if (code === 'Escape' && fm7._breakKeyCodes.includes('Escape')) return null;
     return code;
 }
+// 物理キーに対応するキーボード図のキー。日本語配列の ] キー（Backslash）と
+// ¥ キー（IntlYen）は、図ではそれぞれ ] と ¥ のキーを光らせる
+function _panelKeyCap(code) {
+    code = fm7.keyboard.physicalKeyCode(code);
+    if (code === 'IntlYen') code = 'Backslash';
+    return _escKeyCap(code);
+}
 document.addEventListener('keydown', (e) => {
-    // 半角/全角（Backquote）の位置は ESC キー、Escape キーは BREAK
-    const el = kbdKeyMap.get(_escKeyCap(e.code));
+    // 半角/全角（Backquote）の位置は ESC キーを光らせる
+    const el = kbdKeyMap.get(_panelKeyCap(e.code));
     if (el) el.classList.add('active');
     if (fm7._breakKeyCodes.includes(e.code)) {
         fm7KbdEl.querySelector('.break-key')?.classList.add('active');
@@ -4148,19 +4839,15 @@ document.addEventListener('keydown', (e) => {
     keyDisplay.textContent = e.code;
 });
 document.addEventListener('keyup', (e) => {
-    const el = kbdKeyMap.get(_escKeyCap(e.code));
+    const el = kbdKeyMap.get(_panelKeyCap(e.code));
     if (el) el.classList.remove('active');
     if (fm7._breakKeyCodes.includes(e.code)) {
         fm7KbdEl.querySelector('.break-key')?.classList.remove('active');
     }
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') _shiftDown = false;
 });
-// When the window loses focus (Alt+Tab etc.) the keyup is never delivered, so
-// the pressed-key highlight on the Keyboard panel would stick (notably GRPH,
-// since Alt+Tab eats its keyup). Drop the transient highlights on focus-loss;
-// the toggle-backed indicators (CAPS / カナ / sticky Shift) are re-applied so
-// they keep reflecting the real state. The simulator's own GRPH state is
-// cleared separately (FM7 window blur handler -> keyboard.releaseAllHeld()).
+// Drop the transient key highlights when the window loses focus; the
+// toggle-backed indicators are re-applied.
 function _clearStuckKbdHighlights() {
     for (const el of kbdKeyMap.values()) el.classList.remove('active');
     fm7KbdEl.querySelector('.break-key')?.classList.remove('active');
@@ -4169,6 +4856,7 @@ function _clearStuckKbdHighlights() {
     kbdKeyMap.get('AltRight')?.classList.toggle('active', !!fm7.keyboard?.kanaMode);
     kbdKeyMap.get('ShiftLeft')?.classList.toggle('active', _panelShift);
     kbdKeyMap.get('ShiftRight')?.classList.toggle('active', _panelShift);
+    _updatePanelCtrl();
     _refreshKbdLabels(true);
 }
 window.addEventListener('blur', _clearStuckKbdHighlights);
@@ -4178,11 +4866,9 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) _clea
 // Keyboard panel: key-top glyph rendering via CG ROM
 // =========================================================================
 //
-// "Typewriter" keys (alpha/digit/symbol/kana range — keys whose produced
-// character depends on Shift/CAPS/KANA/GRPH) always render a CG ROM glyph
-// matching the current modifier state. Non-typewriter keys (modifiers,
-// function keys, cursor, numpad, ESC/TAB/INS/DEL, EL/CLS/DUP/HOME, BREAK)
-// keep their static text labels and only flash on press.
+// "Typewriter" keys (the keys in TYPEWRITER_CODES) render the key's CG ROM
+// glyphs and highlight the position selected by the current modifier state.
+// The other keys keep their static text labels.
 // Falls back to the static text label when the CG ROM is not yet loaded
 // or the glyph is blank.
 const TYPEWRITER_CODES = new Set([
@@ -4235,7 +4921,7 @@ function _glyphCodesFor(code, label) {
         bottom: KANA_OVERRIDE.get(code) ?? null,
     };
 }
-// Which composite position is the "currently produced" character?
+// Which composite position to highlight for the current modifier state.
 function _activePosition(shift, caps, graph, kana, label) {
     if (graph) return 'right';
     if (kana)  return 'bottom';
@@ -4291,7 +4977,8 @@ setInterval(() => {
     const kana = fm7.keyboard?.kanaMode;
     kbdKeyMap.get('CapsLock')?.classList.toggle('active', !!caps);
     kbdKeyMap.get('AltRight')?.classList.toggle('active', !!kana);
-    // Keyboard mode indicator (ASCII / SCAN) — FM77AV はサブCPUコマンドで動的切替
+    _updatePanelCtrl();
+    // Keyboard mode indicator (ASCII / SCAN)
     const kbdMode = fm7.keyboard?._useScanCodes ? 'SCAN' : 'ASCII';
     const modeEl = document.getElementById('kbdModeVal');
     if (modeEl) modeEl.textContent = kbdMode;
@@ -4300,10 +4987,9 @@ setInterval(() => {
     _refreshKbdLabels();
 }, 100);
 
-// BREAK key: load saved choice. Assigning the BREAK key is now done through
-// the unified key customization UI below (clicking the BRK key on the
-// layout), so there is no separate "Change..." control. BREAK is an interrupt
-// line, not a matrix key, so it is stored separately from _customMap.
+// BREAK key: load saved choice. The BREAK key is assigned through the key
+// customization UI below (clicking the BRK key on the layout) and is stored
+// separately from _customMap.
 const DEFAULT_BREAK_CODE = 'Escape';
 const savedBreakKey = localStorage.getItem('fm7_breakkey');
 if (savedBreakKey) {
@@ -4465,11 +5151,13 @@ function _assignCapture(e) {
         _renderKeymap();
         return;
     }
-    keymapUser[e.code] = _assignTarget.dataset.code;
+    // 日本語配列の ] キーは Backslash として届くので、シミュレータが見る名前で記録する
+    const physCode = fm7.keyboard.physicalKeyCode(e.code);
+    keymapUser[physCode] = _assignTarget.dataset.code;
     _saveKeymap();
     buildAndApplyKeymap();
     _setAssignTarget(null);
-    kbdCustomHint.textContent = `${_physLabel(e.code)} を割り当てました。次の FM-7 キーをクリック`;
+    kbdCustomHint.textContent = `${_physLabel(physCode)} を割り当てました。次の FM-7 キーをクリック`;
     _renderKeymap();
 }
 
@@ -4532,6 +5220,10 @@ _renderKeymap();
 // CAP/カナ/CTR toggle). In customize mode clicks pick the assignment target
 // (handled above), so input is suppressed there.
 // =========================================================================
+// CTR は物理 Ctrl とキーボード図の CTR（スティッキー）をシミュレータ側がまとめて持つ
+function _updatePanelCtrl() {
+    kbdKeyMap.get('ControlLeft')?.classList.toggle('active', !!fm7.keyboard?.ctrlHeld);
+}
 function _updatePanelShift() {
     kbdKeyMap.get('ShiftLeft')?.classList.toggle('active', _panelShift);
     kbdKeyMap.get('ShiftRight')?.classList.toggle('active', _panelShift);
@@ -4548,7 +5240,7 @@ function _panelKeyDown(keyEl) {
     const isToggle = code === 'CapsLock' || code === 'AltRight' || code === 'KanaMode' || code === 'ControlLeft';
     if (isShift)  { _panelShift = !_panelShift; _updatePanelShift(); return; }
     if (isGrph)   { fm7.keyboard.pressKey(code, false); keyEl.classList.add('active'); _refreshKbdLabels(true); return; }
-    if (isToggle) { fm7.keyboard.pressKey(code, false); _refreshKbdLabels(true); return; }
+    if (isToggle) { fm7.keyboard.pressKey(code, false); _updatePanelCtrl(); _refreshKbdLabels(true); return; }
     keyEl.classList.add('active');
     fm7.keyboard.pressKey(code, _panelShift);
 }
@@ -4566,6 +5258,7 @@ function _panelKeyUp(keyEl) {
     keyEl.classList.remove('active');
     fm7.keyboard.releaseKey(code);
     if (_panelShift) { _panelShift = false; _updatePanelShift(); }
+    _updatePanelCtrl();   // スティッキーの CTR はキーを離すと戻る
 }
 fm7KbdEl.addEventListener('pointerdown', (e) => {
     if (_customizing) return;
@@ -4638,7 +5331,7 @@ fm7._frameCallback = () => {
         // Drive LED colour code:
         //   yellow = 2D read, white = 2D DMA, green = 2DD read,
         //   blue = 2DD DMA, red = write (any mode).
-        // FDC states 6/7/10 = WFND/WRIT/WTRK (write path).
+        // Write-path FDC states light the LED red.
         const fdcWriting = (status.fdcState === 6 || status.fdcState === 7 || status.fdcState === 10);
         const dmaNow = fm7.dmaActivityLatch;
         fm7.dmaActivityLatch = false;
@@ -4654,7 +5347,7 @@ fm7._frameCallback = () => {
         // per-drive state as the Disk panel's fdcLed0/fdcLed1 (no separate state).
         tbDrv0Led.className = led0cls;
         tbDrv1Led.className = led1cls;
-        const stateNames = ['IDLE','CMD','SEEK','VRFY','RFND','READ','WFND','WRIT','RADR','RTRK','WTRK','DONE'];
+        const stateNames = ['IDLE','CMD','SEEK','VRFY','RFND','READ','WFND','WRIT','RADR','RTRK','WTRK','DONE','RNFW'];
         fdcTrackInfo.textContent = `T:${status.fdcTrack} S:${status.fdcSector} ${stateNames[status.fdcState] || '??'}`;
         // Clear access latch after reading
         fm7.fdc.accessLatch = false;
@@ -4673,9 +5366,8 @@ fm7._frameCallback = () => {
         const dmaOn = fm7.hasDMAC && dmaNow && accessed;
         tbDrv0Dmac.className = 'fdc-led' + (dmaOn && drive === 0 ? ' active' : '');
         tbDrv1Dmac.className = 'fdc-led' + (dmaOn && drive === 1 ? ' active' : '');
-        // Cycle steal LED: lit while the sub CPU is released from the CRT's
-        // VRAM bus contention (FM-7 never; FM-77 once $D405 bit 0 releases
-        // it; FM77AV+ always, its VRAM bus is separate).
+        // Cycle steal LED (NO STEAL): lit while the sub CPU's VRAM access is
+        // not stolen by the display.
         const stealReleased = fm7.isFM77AV || fm7.display.cycleStealMode;
         tbStealLed.className = 'fdc-led' + (stealReleased ? ' active' : '');
     } else {
@@ -4691,7 +5383,7 @@ fm7._frameCallback = () => {
         fdcTrackInfo.textContent = '--';
     }
 
-    // Disk write detection: mark modified when a SAVE/SAVEM write settles.
+    // Disk write detection: mark modified when a disk write settles.
     // We deliberately do NOT auto-persist to IndexedDB or any library item —
     // the user explicitly commits via the Library "Commit" button so nothing
     // changes silently.
@@ -4741,18 +5433,10 @@ fm7._frameCallback = () => {
     kbdLedKana.className = 'kbd-led' + (fm7.keyboard.kanaMode ? ' on' : '');
     kbdLedIns.className  = 'kbd-led' + ((fm7.keyboard.insMode || fm7.display.insLedOn) ? ' on' : '');
 
-    // Toolbar modifier LEDs (Shift / Ctrl / GRPH) — mirror the exact same
-    // state the Keyboard panel uses, so the two displays stay in sync.
-    //   Shift: _shiftDown || _panelShift  (physical Shift OR sticky panel Shift,
-    //          identical to the value _refreshKbdLabels() feeds the panel)
-    //   GRPH:  fm7.keyboard.graphMode     (the panel's GRPH source)
-    //   Ctrl:  the panel CTR key's own .active class (no separate ctrl state
-    //          exists; this reuses the highlight the panel already maintains
-    //          via the keydown/keyup listeners and the on-screen CTR key)
+    // Toolbar modifier LEDs (Shift / Ctrl / GRPH) mirror the Keyboard panel state.
     const _modShift = _shiftDown || _panelShift;
     const _modGrph  = !!fm7.keyboard?.graphMode;
-    const _modCtrl  = !!(kbdKeyMap.get('ControlLeft')?.classList.contains('active')
-                      || kbdKeyMap.get('ControlRight')?.classList.contains('active'));
+    const _modCtrl  = !!fm7.keyboard?.ctrlHeld;
     tbModShift.classList.toggle('on', _modShift);
     tbModCtrl.classList.toggle('on', _modCtrl);
     tbModGrph.classList.toggle('on', _modGrph);
@@ -4769,9 +5453,10 @@ fm7._frameCallback = () => {
 
     // FM77AV-only debug info
     if (isAVMachine(status.machineType)) {
-        const monNames = ['Type-C', 'Type-A', 'Type-B', 'CG'];
+        // Value 3 is not a separate monitor in the core; it is handled as Type-B.
+        const monNames = ['Type-C', 'Type-A', 'Type-B', 'Type-B (3)'];
         const t = status.subMonitorType;
-        subMonVal.textContent = monNames[t] || (t >= 4 ? `Type-D${t - 4}` : '??');
+        subMonVal.textContent = monNames[t] || (t >= 4 ? 'Type-D/E' : '??');
         initVal.textContent = status.initiatorActive ? 'ACTIVE' : 'OFF';
         initVal.style.color = status.initiatorActive ? '#e8a848' : '#6688aa';
 
@@ -4789,22 +5474,33 @@ fm7._frameCallback = () => {
         mmrMapGrid.style.display  = '';
         physMapLabel.style.display = '';
         physMapGrid.style.display  = '';
-        const bankOff = (fm7._mmrBankReg & 7) * 16;
+        // 表示するバンクとページ番号には、MMR のアドレス変換と同じ制限を掛ける
+        // （拡張が無効の時は 4 バンク・ページ番号 6 ビット）。
+        const mmrExt = !!fm7._mmrExt;
+        const bankOff = (mmrExt ? (fm7._mmrBankReg & 7) : (fm7._mmrBankReg & 3)) * 16;
+        const extRamLen = fm7._extRAM ? fm7._extRAM.length : 0;
         let mmrRows = '';
         let physRows = '';
         for (let seg = 0; seg < 16; seg++) {
-            const phys = fm7._mmrRegs[bankOff + seg] & 0xFF;
+            const rawPage = fm7._mmrRegs[bankOff + seg] & 0xFF;
+            const phys = mmrExt ? rawPage : (rawPage & 0x3F);
             const logHi = (seg * 0x1000).toString(16).toUpperCase().padStart(4, '0');
             const physAddr = (phys * 0x1000).toString(16).toUpperCase().padStart(5, '0');
             const physPg = phys.toString(16).toUpperCase().padStart(2, '0');
-            mmrRows += `$${logHi}-$${((seg*0x1000)+0xFFF).toString(16).toUpperCase().padStart(4,'0')} → page $${physPg}\n`;
+            // MMR が掛かるのは $0000-$FBFF だけ。seg F は $F000-$FBFF までを示す。
+            const logEnd = seg === 15 ? 0xFBFF : (seg * 0x1000) + 0xFFF;
+            mmrRows += `$${logHi}-$${logEnd.toString(16).toUpperCase().padStart(4,'0')} → page $${physPg}\n`;
             let region;
-            if (phys < 0x30) region = 'ext RAM';
-            else if (phys < 0x40) region = 'main RAM';
-            else if (phys >= 0xF8 && phys < 0xFC) region = 'shared';
-            else region = 'other';
-            physRows += `seg ${seg.toString(16).toUpperCase()} → $${physAddr} (${region})\n`;
+            if ((phys & 0x30) === 0x30) region = 'main RAM';
+            else if ((phys & 0xF0) === 0x10) region = 'sub CPU space';
+            else if ((phys === 0x28 || phys === 0x29) && fm7._dicramEn) region = 'learning RAM';
+            else if ((phys & 0xFF) === 0x2E && fm7._dicromEn) region = fm7._extromSel ? 'ext ROM (read)' : 'dictionary ROM (read)';
+            else if ((phys << 12) < extRamLen) region = 'ext RAM';
+            else region = 'unmapped';
+            physRows += `seg ${seg.toString(16).toUpperCase()} → $${physAddr} (${region})${seg === 15 ? ' [$F000-$FBFF]' : ''}\n`;
         }
+        mmrRows  += '$FC00-$FFFF → fixed (not mapped by MMR)\n';
+        physRows += '$FC00-$FFFF → fixed (not mapped by MMR)\n';
         mmrMapGrid.textContent  = mmrRows;
         physMapGrid.textContent = physRows;
 
@@ -4815,7 +5511,7 @@ fm7._frameCallback = () => {
         if (dm === 2) {
             // 262K color mode
             if (palModeLabel) palModeLabel.textContent = '262,144 colors';
-            if (analogPalLabel) analogPalLabel.textContent = 'Analog Palette (262,144 colors)';
+            if (analogPalLabel) analogPalLabel.textContent = 'Analog Palette (4,096 entries)';
         } else if (dm === 1) {
             // 4096 color mode
             if (palModeLabel) palModeLabel.textContent = '4,096 colors';
@@ -4830,9 +5526,9 @@ fm7._frameCallback = () => {
         if (fm7._analogPalette && (dm === 1 || dm === 2)) {
             for (let i = 0; i < 4096; i++) {
                 const entry = fm7._analogPalette[i] || 0;
-                const b8 = ((entry >> 8) & 0xF) * 17;
+                const g8 = ((entry >> 8) & 0xF) * 17;
                 const r8 = ((entry >> 4) & 0xF) * 17;
-                const g8 = (entry & 0xF) * 17;
+                const b8 = (entry & 0xF) * 17;
                 // ABGR for little-endian Uint32Array
                 analogPaletteBuf[i] = 0xFF000000 | (b8 << 16) | (g8 << 8) | r8;
             }
@@ -5011,7 +5707,7 @@ function generateStateDump() {
 
     // --- Main CPU ---
     const mPC = mc.pc & 0xFFFF;
-    lines.push('[Main CPU (MB6809)]');
+    lines.push('[Main CPU (MC6809)]');
     lines.push(`  PC=$${h4(mPC)} SP=$${h4(mc.s||0)} USP=$${h4(mc.u||0)} X=$${h4(mc.x||0)} Y=$${h4(mc.y||0)}`);
     lines.push(`  A=$${h2(mc.a||0)} B=$${h2(mc.b||0)} DP=$${h2(mc.dp||0)} CC=$${h2(mc.cc||0)}  intr=$${h2(mc.intr||0)}`);
     lines.push(`  Code @PC-16: ${mainHex(mPC - 16, 16)}`);
@@ -5021,11 +5717,11 @@ function generateStateDump() {
 
     // --- Sub CPU ---
     const sPC = sc.pc & 0xFFFF;
-    lines.push('[Sub CPU (MB6809)]');
+    lines.push('[Sub CPU (MC6809)]');
     lines.push(`  PC=$${h4(sPC)} SP=$${h4(sc.s||0)} USP=$${h4(sc.u||0)} X=$${h4(sc.x||0)} Y=$${h4(sc.y||0)}`);
     lines.push(`  A=$${h2(sc.a||0)} B=$${h2(sc.b||0)} DP=$${h2(sc.dp||0)} CC=$${h2(sc.cc||0)}  intr=$${h2(sc.intr||0)}`);
     lines.push(`  Halted=${fm7._subHalted} Busy=${fm7._subBusy} Attn=${fm7._subAttn} NMImask=${fm7._nmiMaskSub} BREAK=${fm7._breakKey}`);
-    lines.push(`  Monitor bank: ${fm7._subMonitorType} (0=C,1=A,2=B,4+=D)`);
+    lines.push(`  Monitor bank: ${fm7._subMonitorType} (0=C,1=A,2=B,3=B,4=D/E)`);
     lines.push(`  Code @PC-16: ${subHex(sPC - 16, 16)}`);
     lines.push(`  Code @PC   : ${subHex(sPC, 32)}`);
     lines.push(`  Stack @SP  : ${subHex((sc.s||0), 16)}`);
@@ -5033,7 +5729,7 @@ function generateStateDump() {
     lines.push(`  Vectors: NMI=${sv(0xFFFC)} FIRQ=${sv(0xFFF6)} IRQ=${sv(0xFFF8)} RST=${sv(0xFFFE)}`);
     lines.push('');
 
-    // --- Main I/O ($FD00-$FD1F, $FD30-$FD4F, $FD80-$FD9F) ---
+    // --- Main I/O ---
     lines.push('[Main I/O]');
     const ioLine = (start, n) => {
         const row = [];
@@ -5064,11 +5760,11 @@ function generateStateDump() {
     // --- Display / VRAM ---
     lines.push('[Display]');
     lines.push(`  Mode=${d.displayMode} ActivePage=${d.activeVramPage} DisplayPage=${d.displayVramPage}`);
-    lines.push(`  MISC=$${h2(d.miscReg||0)} multiPage=$${h2(d.multiPage||0)} vramaFlag=${d.vramaFlag}`);
+    lines.push(`  MISC=$${h2(d.miscReg||0)} multiPage=$${h2(d.multiPage||0)} vramAccessEnabled=${d.vramAccessEnabled}`);
     lines.push(`  ALU cmd=$${h2(d.aluCommand||0)} color=$${h2(d.aluColor||0)} mask=$${h2(d.aluMask||0)} disable=$${h2(d.aluDisable||0)}`);
-    const co = d.crtcOffset || [0,0];
+    const co = d.appliedScrollOffset || [0,0];
     const vo = d.vramOffset || [0,0];
-    lines.push(`  crtcOffset=[$${h4(co[0])},$${h4(co[1])}] vramOffset=[$${h4(vo[0])},$${h4(vo[1])}]`);
+    lines.push(`  appliedScrollOffset=[$${h4(co[0])},$${h4(co[1])}] vramOffset=[$${h4(vo[0])},$${h4(vo[1])}]`);
     lines.push('');
 
     // --- Palette ---
@@ -5077,7 +5773,7 @@ function generateStateDump() {
     for (let i = 0; i < 8; i++) pal.push(h2((d.palette && d.palette[i]) || 0));
     lines.push(`  ${pal.join(' ')}`);
     if (fm7.isFM77AV && fm7._analogPalette) {
-        lines.push('[Palette Analog 4096 (12-bit RGB, 16 entries per line)]');
+        lines.push('[Palette Analog 4096 (12-bit GRB, 16 entries per line)]');
         for (let row = 0; row < 4096; row += 16) {
             const ap = [];
             for (let i = 0; i < 16; i++) {
@@ -5088,7 +5784,7 @@ function generateStateDump() {
     }
     lines.push('');
 
-    // --- VRAM (both pages, base64-encoded for compactness) ---
+    // --- VRAM (vram and vramPage1, base64-encoded for compactness) ---
     const vramToB64 = (arr) => {
         if (!arr) return '(none)';
         let bin = '';
@@ -5101,13 +5797,13 @@ function generateStateDump() {
     const p0 = fm7.display && fm7.display.vram;
     const p1 = fm7.display && fm7.display.vramPage1;
     if (p0) {
-        lines.push('[VRAM Page 0 (base64, 48KB raw: plane B $0000-$3FFF, R $4000-$7FFF, G $8000-$BFFF)]');
+        lines.push('[VRAM buffer 0 (base64, 48KB raw)]');
         const b64 = vramToB64(p0);
         for (let i = 0; i < b64.length; i += 76) lines.push('  ' + b64.substr(i, 76));
         lines.push('');
     }
     if (p1) {
-        lines.push('[VRAM Page 1 (base64, 48KB raw: plane B/R/G)]');
+        lines.push('[VRAM buffer 1 (base64, 48KB raw)]');
         const b64 = vramToB64(p1);
         for (let i = 0; i < b64.length; i += 76) lines.push('  ' + b64.substr(i, 76));
         lines.push('');
@@ -5130,7 +5826,7 @@ function generateStateDump() {
         const f = fm7.fdc;
         lines.push('[FDC (MB8877/WD179x)]');
         lines.push(`  status=$${h2(f.statusReg||0)} track=${f.trackReg} sector=${f.sectorReg} data=$${h2(f.dataReg||0)}`);
-        lines.push(`  drq=${f.drqFlag} irq=${f.irqFlag} state=${f.state} motor=${f.motorOn} drive=${f.currentDrive} side=${f.sideReg||0}`);
+        lines.push(`  drq=${f.drqFlag} irq=${f.irqFlag} state=${f.state} motor=${f.motorOn} drive=${f.currentDrive} side=${f.currentSide||0}`);
         const disks = [];
         for (let i = 0; i < 4; i++) {
             const dk = f.disks && f.disks[i];
@@ -5140,7 +5836,7 @@ function generateStateDump() {
         lines.push('');
     }
 
-    // --- OPN/PSG ---
+    // --- OPN ---
     if (fm7.opn) {
         const o = fm7.opn;
         lines.push('[OPN]');
@@ -5245,7 +5941,7 @@ function pollGamepad() {
     jpBtn1.classList.toggle('active', gp.buttons[1] && gp.buttons[1].pressed);
 }
 
-// Input monitor update (faster than debug, 100ms)
+// Input monitor update (100ms interval)
 setInterval(() => {
     // Toolbar: latest FM-7 key code
     const fmKey = fm7.keyboard.currentKey();
@@ -5305,7 +6001,6 @@ helpModal.addEventListener('click', (e) => {
 
 const changelogModal = document.getElementById('changelogModal');
 const changelogBody = document.getElementById('changelogBody');
-let changelogLoaded = false;
 
 // Parse CHANGELOG.md (simple Markdown table → HTML table)
 function parseChangelogMd(md) {
@@ -5336,7 +6031,7 @@ document.getElementById('changelogLink').addEventListener('click', (e) => {
     e.preventDefault();
     changelogModal.querySelector('.modal-content').scrollTop = 0;
     changelogModal.classList.add('open');
-    // Load CHANGELOG.md on first open (and reload each time for freshness)
+    // Reload CHANGELOG.md each time the modal opens
     fetch('CHANGELOG.md')
         .then(r => {
             if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -5362,17 +6057,22 @@ changelogModal.addEventListener('click', (e) => {
 
 // =========================================================================
 // Manual modal — fetch a markdown manual from docs/ and render it.
-// Shared by the tape manual, the tutorial, and the headless test manual
+// Shared by every manual listed in MANUAL_TRIGGERS
 // (one modal, content swapped per trigger).
 // =========================================================================
 
 const tapeManModal = document.getElementById('tapeManModal');
 const tapeManBody  = document.getElementById('tapeManBody');
 
-// Small markdown renderer covering what the tape manual uses: headings (h1-h3),
+// Small markdown renderer covering what the manuals use: headings (h1-h3),
 // paragraphs, ordered/unordered lists, tables, blockquotes, fenced code blocks,
 // horizontal rules, standalone images, and inline **bold** / `code` / [text](url).
-function parseManualMd(md) {
+function parseManualMd(md, path) {
+    // Resolve relative links and images against the manual's own directory
+    // (e.g. docs/), not index.html. External URLs, #anchors and absolute
+    // paths are left as they are.
+    const baseUrl = new URL(path || 'docs/', document.baseURI);
+    const resolve = (h) => /^(?:[a-z][a-z0-9+.-]*:|#|\/)/i.test(h) ? h : new URL(h, baseUrl).href;
     const lines = md.split('\n');
     let html = '';
     let state = 'none';   // 'none' | 'p' | 'ul' | 'ol' | 'table' | 'code'
@@ -5388,7 +6088,7 @@ function parseManualMd(md) {
     const inline = (s) => esc(s)
         .replace(/`([^`]+)`/g, '<code>$1</code>')
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, t, h) => `<a href="${resolve(h)}" target="_blank" rel="noopener">${t}</a>`);
 
     for (let i = 0; i < lines.length; i++) {
         const raw = lines[i];
@@ -5411,12 +6111,12 @@ function parseManualMd(md) {
         if (/^# /.test(line))    { closeState(); html += '<h1>' + inline(line.slice(2)) + '</h1>'; continue; }
         // Blockquote
         if (/^> /.test(line))    { closeState(); html += '<blockquote>' + inline(line.slice(2)) + '</blockquote>'; continue; }
-        // Standalone image: ![alt](src). The manual is fetched from docs/, so
-        // its relative image paths (images/…) resolve against docs/ here.
+        // Standalone image: ![alt](src). Relative paths (images/…) resolve
+        // against the manual's directory.
         const img = /^!\[([^\]]*)\]\(([^)]+)\)$/.exec(line.trim());
         if (img) {
             closeState();
-            const src = /^(?:https?:)?\//.test(img[2]) ? img[2] : 'docs/' + img[2];
+            const src = resolve(img[2]);
             const alt = esc(img[1]).replace(/"/g, '&quot;');
             // SVG 図は白背景前提なので背景を白にする。
             html += `<img src="${src}" alt="${alt}" loading="lazy" style="max-width:100%;background:#fff;border-radius:4px;display:block;margin:10px auto;">`;
@@ -5464,7 +6164,7 @@ function openDocManual(path) {
     tapeManBody.innerHTML = '<p style="color:var(--md-fine, #6688aa);">読み込み中...</p>';
     fetch(path)
         .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-        .then(md => { tapeManBody.innerHTML = parseManualMd(md); })
+        .then(md => { tapeManBody.innerHTML = parseManualMd(md, path); })
         .catch(err => {
             console.error('Manual load error (' + path + '):', err);
             tapeManBody.innerHTML = '<p style="color:#cc6666;">マニュアルの読み込みに失敗しました。</p>';
@@ -5553,7 +6253,7 @@ document.getElementById('copyrightYear').textContent =
     year > 2026 ? '2026-' + year : '2026';
 
 // =========================================================================
-// Mobile: drawer + action bar + footer relocation
+// Mobile: drawer + action bar
 // =========================================================================
 {
     const sidePanel = document.querySelector('.side-panel');
@@ -5594,13 +6294,15 @@ document.getElementById('copyrightYear').textContent =
             mPowerToggle.checked = mainPowerToggle.checked;
         });
     }
-    // Pause/Resume: sync label with main pause button
+    // Pause/Resume: a click is forwarded to the main pause button, and the
+    // label follows the main button's text span.
     if (mPauseBtn && mainPauseBtn) {
         mPauseBtn.addEventListener('click', () => {
             mainPauseBtn.click();
         });
         const syncPauseLabel = () => {
-            mPauseBtn.textContent = mainPauseBtn.textContent === 'Resume' ? 'Resume' : 'Pause';
+            const mainText = mainPauseBtn.querySelector('.btn-text');
+            mPauseBtn.textContent = (mainText && mainText.textContent === 'Resume') ? 'Resume' : 'Pause';
         };
         new MutationObserver(syncPauseLabel).observe(mainPauseBtn, { childList: true, characterData: true, subtree: true });
     }
@@ -5631,11 +6333,8 @@ document.getElementById('copyrightYear').textContent =
 }
 
 // =========================================================================
-// Fit the whole desktop layout to the browser window
-// Scales .main-layout (screen + toolbar + side panel) with `zoom` so the
-// entire UI fits inside the viewport at the largest comfortable size. The
-// side panel scrolls within the scaled height. Disabled on the mobile drawer
-// layout (which has its own responsive rules).
+// Fit the desktop layout to the browser window (not used on the mobile
+// drawer layout).
 // =========================================================================
 (function () {
     const mobileMQ = window.matchMedia('(max-width: 1023px), (any-pointer: coarse)');
@@ -5660,11 +6359,7 @@ document.getElementById('copyrightYear').textContent =
             document.querySelectorAll('.input-panel').forEach((p) => { p.style.transform = ''; });
             return;
         }
-        // Fixed scale modes: x1 (dod) / x2 pin the canvas to an exact pixel
-        // size, so the layout must not be zoomed (zoom would multiply the CSS
-        // pixel size and break the device-pixel mapping). The toolbar wraps
-        // within the stage width so the layout stays as narrow as the screen
-        // allows (x1 then fits a 1280px-wide window on the horizontal skins).
+        // Fixed scale modes (x1 / x2) are not zoomed.
         const scaleMode = document.body.dataset.scaleMode || 'free';
         if (scaleMode !== 'free') {
             layout.style.zoom = '1';
@@ -5676,11 +6371,7 @@ document.getElementById('copyrightYear').textContent =
             document.querySelectorAll('.input-panel').forEach((p) => { p.style.transform = ''; });
             return;
         }
-        // Available size: the full window width (minus the vertical scrollbar,
-        // if any), and the window height minus the app header and the layout's
-        // own vertical padding. The header stays in view; the footer is allowed
-        // to fall below the fold. When a floating debug panel (CPU / Memory /
-        // etc.) is open, use 75% of that so it leaves room for those panels.
+        // Available size: leave room for the header and any open debug panel.
         const debugOpen = !!document.querySelector('.input-panel.open');
         const factor = debugOpen ? 0.75 : 1;
         // Measure natural (unscaled) dimensions.
@@ -5693,8 +6384,7 @@ document.getElementById('copyrightYear').textContent =
         const availW   = Math.max(320, (document.documentElement.clientWidth - 8) * factor);
         const availH   = Math.max(240, (window.innerHeight - headerH - padY) * factor);
 
-        // Scale to fill the width; if that would make the screen + toolbar
-        // column taller than the viewport, limit the scale to the height.
+        // Scale to fill the width, limited by the height.
         const fitScale = () => {
             const naturalW = layout.scrollWidth;      // includes the layout's padding
             const leftH    = leftCol ? leftCol.scrollHeight : 0;
@@ -5702,13 +6392,7 @@ document.getElementById('copyrightYear').textContent =
             if (leftH > 0 && leftH * s > availH) s = availH / leftH;
             return s;
         };
-        // Try both stage widths and keep the one that shows the screen larger:
-        //   - wide: the status bar's content width sets the stage width (the bar
-        //     never wraps; best when the window height is the limit), or
-        //   - wrapped (body.toolbar-wrap): the screen and the front panel set the
-        //     stage width and the status bar wraps within it (narrower but
-        //     taller; best when the window width is the limit, e.g. the FM-7
-        //     skin with its side tower).
+        // Try both stage widths and keep the one that shows the screen larger.
         document.body.classList.remove('toolbar-wrap');
         const wide = fitScale();
         document.body.classList.add('toolbar-wrap');
@@ -5722,10 +6406,7 @@ document.getElementById('copyrightYear').textContent =
         layout.style.zoom = String(scale);
         // Side panel scrolls within the scaled viewport height.
         if (panel) panel.style.maxHeight = Math.max(160, (availH / scale) - 8) + 'px';
-        // Match the floating debug panels (CPU / Memory / etc.) to the same
-        // scale so their text lines up with the Control-bar text. transform
-        // (with transform-origin: top left from CSS) preserves dragging,
-        // which sets style.left/top in layout coordinates.
+        // Scale the floating debug panels to match.
         document.querySelectorAll('.input-panel').forEach((p) => {
             p.style.transform = 'scale(' + scale + ')';
         });
@@ -5746,18 +6427,14 @@ document.getElementById('copyrightYear').textContent =
 })();
 
 // =========================================================================
-// Modern UI: 機種タブ / スキンチップ / 表示倍率 / ハードウェアパネル
-//   - 既存の machineTypeSelect / powerToggle / resetBtn / diskEjectBtn 等へ
-//     委譲するだけで、エミュレーション側のロジックには手を入れない。
+// 機種タブ / スキンチップ / 表示倍率 / ハードウェアパネル
+//   - 機種・電源・リセット・イジェクトの操作は既存の部品へ委譲する。
 //   - LED・ディスク状態は既存表示要素の MutationObserver でミラーする。
 // =========================================================================
 
-// 機種 → 見た目グループのマッピング:
-//   fm77   = FM-77: 白系の横型バー意匠＋前面 BOOT ボタン
-//   av     = FM77AV(初代): 黒筐体 AV 意匠＋フルハイト 3.5 インチ 2D
-//   av2040 = FM77AV20 / FM77AV40: 黒筐体 AV 意匠＋ハーフハイト 2DD（同一見た目）
-//   avex   = FM77AV20EX / FM77AV40EX: 赤ピンストライプの薄型スリムバー（同一見た目）
-//   avsx   = FM77AV40EX の FM77AV40SX スキンとしてのみ存在（御影石＋グリーン電源）
+// 機種 → スキンのマッピング:
+//   fm77 = FM-77 用 / av = FM77AV 用 / av2040 = FM77AV20・FM77AV40 共通 /
+//   avex = FM77AV20EX・FM77AV40EX 共通 / avsx = FM77AV40EX の FM77AV40SX スキン。
 // 銘板の機種名表記のみ各機種のものにする。
 const UI_SKIN_CLASSES = ['ui-skin-fm7', 'ui-skin-new7', 'ui-skin-fm77',
                          'ui-skin-av', 'ui-skin-av2040', 'ui-skin-avex', 'ui-skin-avsx'];
@@ -5810,21 +6487,19 @@ function applyUiSkin() {
             lip.textContent = '';
             note.textContent = '';
         } else if (skin === 'avex' || skin === 'avsx') {
-            // EX グループ（FM77AV20EX、FM77AV40EX / FM77AV40SX スキン）:
-            // 薄型スリムバー意匠。銘板のみ機種名を変える
+            // EX グループ（FM77AV20EX、FM77AV40EX / FM77AV40SX スキン）: 銘板のみ機種名を変える
             np.textContent = skin === 'avsx' ? 'FM77AV40SX'
                            : (machine === 'fm77av20ex' ? 'FM77AV20EX' : 'FM77AV40EX');
             note.textContent = '';   // 右上の注記は出さない
             lip.textContent = '';
         } else if (skin === 'av' || skin === 'av2040') {
-            // 黒筐体 AV 意匠。av = フルハイト 2D（初代のみ）、
-            // av2040 = ハーフハイト 2DD（ベイ形状は CSS 側 machine-av20up）
+            // AV グループ（av / av2040。ベイ形状は CSS 側 machine-av20up）
             np.textContent = UI_NAMEPLATES[machine] || 'FM77AV';
             lip.textContent = '';
             note.textContent = '';   // 右上の注記は出さない
         }
     }
-    // 前面下段の音量ラベル: 初代 AV のみ「音量バランス」、以降は「音量・バランス」
+    // 前面下段の音量ラベルはスキンに応じて切り替える
     const vol = document.getElementById('hwLipVolLabel');
     if (vol) vol.textContent = skin === 'av' ? '音量バランス' : '音量・バランス';
     // レイアウト（右列 ⇔ 下バー）が変わるので再フィット
@@ -5894,19 +6569,12 @@ function uiOnMachineChanged(machine) {
 }
 
 // ---- 表示倍率（Web標準 = free / x2 / x1 = dod）----------------------------
-// 画面上の表記は Web標準 / x2 / x1。内部の値（free / x2 / dod）と保存される設定値は従来のまま。
-// dod (x1): 厳密な 1:1 — 常に 640x400 デバイスピクセル（1 ドット = 1x1 デバイス
-//      ピクセル。200 ライン時は 1 ライン = 2 デバイスピクセル）。CSS サイズは
-//      640/dpr x 400/dpr。高 dpr 環境では小さく表示されるのが正しい仕様。
-// x2 : デバイスピクセル基準の 2 倍 — 常に 1280x800 デバイスピクセル
-//      （1 ドット = 2x2）。CSS サイズは 1280/dpr x 800/dpr。
-// どちらも完全な整数マッピングを保証するため fitMainLayout() の zoom を 1 に
-// 固定し、キャンバス表示位置を整数デバイスピクセルへスナップする（モバイル・
-// フルスクリーン中は既存のサイズ制御を優先し、適用しない）。
+// 画面上の表記は Web標準 / x2 / x1。内部の値と保存される設定値は free / x2 / dod。
+// x1 / x2 はデバイスピクセル基準の整数倍で表示する（モバイル・フルスクリーン中は
+// 既存のサイズ制御を優先し、適用しない）。
 const _scaleMobileMQ = window.matchMedia('(max-width: 1023px), (any-pointer: coarse)');
 
 // キャンバス左上を整数デバイスピクセルへ揃える（サブピクセルずれのにじみ対策）。
-// レイアウト確定後（fitMainLayout の rAF より後）に 1 回測って translate で補正する。
 function _snapCanvasToDevicePixels(mode, canvasEl, sl, dpr) {
     requestAnimationFrame(() => requestAnimationFrame(() => {
         if ((document.body.dataset.scaleMode || 'free') !== mode) return;
@@ -5976,7 +6644,7 @@ function setScaleMode(mode, persist = true) {
         });
     }
     // devicePixelRatio の変化（ブラウザ拡大率変更・モニタ移動）や
-    // モバイル切替で x1 (dod) を再計算。resize は dpr 変化でも発火する。
+    // モバイル切替で固定倍率を再計算。resize は dpr 変化でも発火する。
     window.addEventListener('resize', () => {
         if ((document.body.dataset.scaleMode || 'free') !== 'free') applyScaleMode();
     });
@@ -5994,7 +6662,7 @@ function setScaleMode(mode, persist = true) {
         const el = document.getElementById(id);
         if (el) el.addEventListener('click', () => powerToggle.click());
     }
-    // リセット（実行中のみ有効 — 既存 Reset ボタンと同じ条件）
+    // リセット（既存 Reset ボタンと同じ条件）
     for (const id of ['hwTowerReset', 'hwBarReset', 'hwLipTrioReset', 'hwLipRoundReset', 'hwLipSqReset']) {
         const el = document.getElementById(id);
         if (el) el.addEventListener('click', () => { if (!resetBtn.disabled) resetBtn.click(); });
@@ -6007,8 +6675,8 @@ function setScaleMode(mode, persist = true) {
         });
     });
     // 空のベイ（ディスク未挿入）のクリック → そのドライブの既存ファイル入力
-    // (#diskFile0 / #diskFile1) を代理でクリックし、ファイル選択ダイアログを開く。
-    // 挿入中は何もしない（取り出しは従来どおりレバー / ボタン）
+    // (#diskFile0 / #diskFile1) を代理でクリックする。
+    // 挿入中は何もしない（取り出しはレバー / ボタン）
     document.querySelectorAll('#hwPanel .hw-bay[data-drive], #hwPanel .hw-vbay[data-drive]').forEach(el => {
         el.addEventListener('click', () => {
             if (el.classList.contains('loaded')) return;
@@ -6081,7 +6749,7 @@ function setScaleMode(mode, persist = true) {
     hwUpdatePower();
 }
 
-// ---- 起動モード (Boot Mode) のハードウェア意匠 ---------------------
+// ---- 起動モード (Boot Mode) のハードウェアパネル表示 ---------------------
 // 設定パネルの bootMode ラジオ（非表示・委譲先）を唯一の状態源とし、
 // FM-7 (FM-7 / FM-NEW7 スキン) の DIP スイッチ・FM-77 の BOOT ボタン・FM77AV 系の BASIC/DOS
 // ボタンはいずれもラジオへ委譲する。実行中の切替可否も既存挙動
@@ -6143,12 +6811,11 @@ function hwSetBootMode(v) {
         const savedSkins = await loadSetting('uiSkins');
         if (savedSkins && typeof savedSkins === 'object') {
             _uiSkins = savedSkins;
-            // 旧スキン名（見た目グループ整理前）からの移行
+            // 保存値の互換のための読み替え
             for (const [k, v] of Object.entries(_uiSkins)) {
                 if (v === 'av40ex') _uiSkins[k] = 'avex';
                 else if (v === 'av40sx') _uiSkins[k] = 'avsx';
-                // FM-77 は独立した機種になった。FM-7 に残っている
-                // 旧スキン指定は捨てて FM-7 の既定スキンに戻す。
+                // FM-7 に無効なスキン指定が保存されていれば既定スキンに戻す。
                 else if (k === 'fm7' && v === 'fm77') delete _uiSkins[k];
             }
         }
@@ -6164,9 +6831,7 @@ function hwSetBootMode(v) {
 
 // =========================================================================
 // 更新案内の帯
-// 新しいバージョンを検知したときに画面下部へ控えめな帯を出す。Service Worker の登録は
-// 下の非 module スクリプトが行うが、module のトップレベル束縛はそちらから
-// 見えないため、必要な二つの入口だけ window 経由で公開する。
+// 新しいバージョンを検知したときに画面下部へ控えめな帯を出す。
 // =========================================================================
 const updateBar        = document.getElementById('updateBar');
 const updateBarNote    = document.getElementById('updateBarNote');
@@ -6220,7 +6885,7 @@ initGuideBalloons();
 </script>
 
 <!-- 更新案内の帯: 新しいバージョンが用意できたことを控えめに知らせる。
-     position: fixed で画面外の層に置くため、キャンバスやハードウェアパネルの
+     position: fixed で画面下部に重ねるため、キャンバスやハードウェアパネルの
      採寸 (fitMainLayout) には一切関与しない。 -->
 <div class="update-bar" id="updateBar" role="status" aria-live="polite" hidden>
     <span class="update-bar-dot" aria-hidden="true"></span>
@@ -6241,9 +6906,7 @@ if ('serviceWorker' in navigator) {
         // (初回訪問のインストールを更新と誤って知らせないため)。
         const hadController = !!navigator.serviceWorker.controller;
 
-        // 同一セッションで自動の再読み込みを行ったかどうかの印。
-        // これが無いと controllerchange のたびに再読み込みが起き、
-        // 際限のない繰り返しになりうるため必ず立ててから再読み込みする。
+        // 自動の再読み込みはセッションにつき一度だけ行う。
         const RELOAD_KEY = 'webm7_sw_reloaded';
 
         let notified = false;
@@ -6263,13 +6926,9 @@ if ('serviceWorker' in navigator) {
             } catch (e) { return true; }
         };
 
-        // エンジン (core/*.js) を配備直後の 1 回目から新しくするための仕掛け。
-        // エンジンのモジュールは互いを相対パスで読み合うため取得 URL へビルドスタンプを
-        // 付けられず、旧 Service Worker が制御している 1 回目は旧キャッシュの
-        // エンジンを掴んでしまう。そこで新しい Service Worker が制御を取った
-        // (controllerchange) 時点で 1 セッションにつき 1 回だけ再読み込みし、
-        // その読み込みで新しいエンジンを取り直す。以後の配備では、利用者が
-        // 開いた 1 回目のうちに新しいバージョンへ切り替わる。
+        // 新しい Service Worker が制御を取った (controllerchange) 時点で、1 セッションにつき
+        // 1 回だけ再読み込みして新しい資源へ切り替える。
+        // 動作中なら再読み込みせず、更新案内の帯で知らせる。
         navigator.serviceWorker.addEventListener('controllerchange', () => {
             // 初回訪問は最初から新しい資源を読んでいるので再読み込みは不要。
             if (!hadController) return;

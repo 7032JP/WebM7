@@ -3,13 +3,8 @@
 /**
  * CG ROM glyph renderer
  *
- * FM-7 CG ROM holds ANK (half-width) glyphs in 8×8, 1bpp format.
- * Each character occupies 8 bytes (one byte per row, MSB = leftmost pixel).
- * Bank 0 (offset 0x000–0x7FF) contains ASCII, half-width kana ($A0–$DF),
- * and semi-graphics ($80–$9F / $E0–$FF) — which is what GRPH/KANA keys emit.
- *
- * This module renders a single glyph to a PNG data URL, cached per
- * (code, scale, fg, bg) tuple so repeated lookups are cheap.
+ * Renders a single character glyph from the CG ROM to a PNG data URL,
+ * cached per (code, scale, fg, bg) tuple so repeated lookups are cheap.
  */
 
 const cache = new Map();

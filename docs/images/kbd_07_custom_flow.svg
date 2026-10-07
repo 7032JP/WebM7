@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 412" width="860" height="412">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 395" width="860" height="395">
   <title>キーアサインを変更する手順の図解</title>
   <defs>
     <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
@@ -44,9 +44,8 @@
   <text x="602" y="230" font-family="sans-serif" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">6</text>
   <text x="622" y="230" font-family="sans-serif" font-size="12.5" fill="#1f2328" text-anchor="start" font-weight="bold">「カスタマイズ終了」を押す</text>
   <text x="596" y="252" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">通常の入力に戻る</text>
-  <rect x="30" y="308" width="800" height="92" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1"/>
+  <rect x="30" y="308" width="800" height="75" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1"/>
   <text x="44" y="330" font-family="sans-serif" font-size="12.5" fill="#0a3069" text-anchor="start" font-weight="bold">覚えておくこと</text>
   <text x="44" y="352" font-family="sans-serif" font-size="11" fill="#0a3069" text-anchor="start">・Shift / Ctrl / Alt / Win などの修飾キーは割り当てできません（「修飾キーは割り当てできません」と表示されます）。</text>
   <text x="44" y="369" font-family="sans-serif" font-size="11" fill="#0a3069" text-anchor="start">・割当はブラウザに保存され、次に開いたときも残ります。「リセット」で BREAK キーごと既定に戻ります。</text>
-  <text x="44" y="386" font-family="sans-serif" font-size="11" fill="#0a3069" text-anchor="start">・BRK キーを選んだときだけ BREAK（割込線）の割当になり、ほかのキーの割当とは別に保存されます。</text>
 </svg>

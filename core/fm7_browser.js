@@ -10,7 +10,7 @@
 //     - BEEP tone generation on the PSG's AudioContext
 //     - audio start / resume on user gesture, FDD sound synthesiser
 //     - FDC log download
-//   The emulation itself (memory map, I/O, scheduler, sound generation) is
+//   The emulation itself (memory map, I/O, scheduler, sound generation)
 //   lives in the core FM7 class.
 // =============================================================================
 import { FM7 } from './fm7.js';
@@ -62,9 +62,7 @@ export class FM7Browser extends FM7 {
      */
     _wireBrowserKeyboard() {
         // Bind keyboard events to document
-        // BREAK key (Backquote `) is handled separately — it doesn't go
-        // through the keyboard encoder buffer; instead it directly drives
-        // $FD04 bit 1 (active low).
+        // The configurable BREAK key is checked first; other keys go to the keyboard encoder.
         this._keyDownHandler = (e) => {
             // Start / resume audio on first user gesture
             if (!this.psg._audioCtx) {
@@ -82,10 +80,6 @@ export class FM7Browser extends FM7 {
             if (this._breakKeyCodes.includes(e.code)) {
                 e.preventDefault();
                 this._breakKey = true;
-                // BREAK press asserts main CPU FIRQ (shared line with
-                // sub→main attention). Level-triggered in hardware, but
-                // edge on press is sufficient: FIRQ handler reads $FD04
-                // bit1 to identify BREAK and acts accordingly.
                 this.mainCPU.firq();
                 return;
             }
@@ -102,11 +96,7 @@ export class FM7Browser extends FM7 {
         document.addEventListener('keydown', this._keyDownHandler);
         document.addEventListener('keyup', this._keyUpHandler);
 
-        // When the window loses focus (Alt+Tab, minimize, tab switch) the
-        // browser stops delivering keyup, so a held modifier — notably GRPH,
-        // which is mapped to Alt and whose keyup Alt+Tab consumes — would stay
-        // stuck on.  Release all held keys on focus-loss; toggle states
-        // (CAPS / KANA / INS) are preserved.
+        // Release held keys on focus loss; toggle states are preserved.
         this._blurHandler = () => {
             this.keyboard.releaseAllHeld();
             this._breakKey = false;
@@ -177,14 +167,12 @@ export class FM7Browser extends FM7 {
 
     /**
      * Execute a single emulation frame.
-     * Called by requestAnimationFrame. Frame-limited to ~60fps
-     * so high-refresh displays (120/360Hz) don't speed up emulation.
+     * Called by requestAnimationFrame. Paced by wall-clock time so the
+     * emulation speed stays the same across display refresh rates.
      */
     _frame() {
         if (!this._running) return;
 
-        // Wall-clock based pacing: advance emulation by actual elapsed time
-        // so that low-refresh-rate rAF environments (30 Hz) still run at real-time speed.
         const now = performance.now();
         const elapsed = now - this._lastFrameTime;
         if (elapsed < 15.5) {
@@ -198,8 +186,8 @@ export class FM7Browser extends FM7 {
         // Poll gamepads for joystick input
         this._pollGamepads();
 
-        // Run scheduler for the actual wall-clock interval just elapsed.
-        // CMT turbo: run 50x faster only when actively reading a tape
+        // Run scheduler for the clamped interval, accelerated while a tape
+        // is loaded and its motor is on.
         const cmtTurbo = (this.cmt.motor && this.cmt.loaded) ? 50 : 1;
         try {
             this.scheduler.exec(Math.round(simMs * 1000) * cmtTurbo);
@@ -208,10 +196,6 @@ export class FM7Browser extends FM7 {
             this.stop();
             return;
         }
-        // NOTE: auto-type (TXT/BAS paste) is advanced by the scheduler's
-        // 'autotype' event (see _wireScheduler), not from this render loop, so
-        // it stays on emulated time regardless of display refresh rate.
-
         // Render display to canvas (through the canvas frame sink)
         if (this._canvas) {
             renderToCanvas(this.display, this._canvas);
@@ -295,11 +279,11 @@ export class FM7Browser extends FM7 {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'square';
-        osc.frequency.value = 1200; // FM-7 BEEP frequency ~1.2kHz
+        osc.frequency.value = 1200; // BEEP tone frequency
 
         // Smooth gain ramp to avoid click noise
         gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.15, now + 0.003); // 3ms fade-in
+        gain.gain.linearRampToValueAtTime(0.15, now + 0.003);
 
         osc.connect(gain);
         // Route through PSG volume control so BEEP respects the volume slider
@@ -311,10 +295,10 @@ export class FM7Browser extends FM7 {
         this._beepContinuous = (durationMs < 0);
 
         if (durationMs > 0) {
-            // Use Web Audio API scheduling instead of setTimeout for precise timing
+            // Schedule BEEP stop
             const endTime = now + durationMs / 1000;
             gain.gain.setValueAtTime(0.15, endTime - 0.003);
-            gain.gain.linearRampToValueAtTime(0, endTime); // 3ms fade-out
+            gain.gain.linearRampToValueAtTime(0, endTime);
             osc.stop(endTime + 0.001);
             // Clean up references after oscillator ends
             osc.onended = () => {

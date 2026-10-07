@@ -3,8 +3,7 @@
 // =============================================================================
 // FDD emulation sound synthesizer (Web Audio)
 // =============================================================================
-// Synthesizes realistic mechanical FDD sounds from layered noise, impulses,
-// and filtered oscillators. No external audio assets are used.
+// Synthesizes mechanical FDD sounds. No external audio assets are used.
 //
 // Sound types:
 //   1. Head seek  — multi-step "ガガガ" / "カカカ" with metallic impact layers
@@ -20,8 +19,8 @@
 const HEAD_LOAD_DEBOUNCE_SEC = 0.2;
 const MAX_STEPS_PER_SEEK     = 160;
 const NOISE_BUFFER_SEC       = 0.5;
-const MOTOR_FADE_OUT_SEC     = 0.15;  // motor stops quickly after last access
-const MOTOR_IDLE_TIMEOUT_MS  = 2000;  // stop motor after 2s idle
+const MOTOR_FADE_OUT_SEC     = 0.15;  // fade-out time when the motor sound stops
+const MOTOR_IDLE_TIMEOUT_MS  = 2000;  // stop motor sound when idle
 
 // FM-7: 5-inch external drive — heavy, low-pitched mechanical sounds
 const PROFILE_FM7 = {
@@ -245,17 +244,14 @@ export class FddSound {
     // Composite sounds
     // =========================================================================
 
-    /** Schedule one seek-step click at time t (3 layers: noise + impact + metal) */
+    /** Schedule one seek-step click at time t */
     _scheduleStepClick(t, p) {
-        // Layer 1: Filtered noise burst (main texture)
         this._noiseBurst(t, p.stepDur, p.noiseBpFreq, p.noiseBpQ, p.noiseGain, p.stepAttack);
-        // Layer 2: Low-frequency sine impulse (mechanical thump)
         this._sineImpulse(t, p.impactFreq, p.impactDur, p.impactGain);
-        // Layer 3: Metallic resonance ring
         this._metalRing(t, p.metalFreq, p.metalQ, p.stepDur * 1.5, p.metalGain);
     }
 
-    /** Schedule one head-load click at time t (3 layers, stronger) */
+    /** Schedule one head-load click at time t */
     _scheduleLoadClick(t, p) {
         this._noiseBurst(t, p.loadDur, p.loadNoiseFreq, p.loadNoiseQ, p.loadNoiseGain, p.loadAttack);
         this._sineImpulse(t, p.loadImpactFreq, p.loadDur * 0.8, p.loadImpactGain);
@@ -404,7 +400,7 @@ export class FddSound {
         bp.connect(env);
         env.connect(this._masterGain);
 
-        // Latch click at the end
+        // Latch click near the end
         const clickTime = now + dur * 0.75;
         this._sineImpulse(clickTime, 180, 0.015, p.insertClickGain);
         this._noiseBurst(clickTime, 0.02, 600, 2.0, p.insertClickGain * 0.6, 0.0003);

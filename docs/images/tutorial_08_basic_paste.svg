@@ -22,8 +22,7 @@
 
   <!-- 自動入力 -->
   <rect x="350" y="105" width="240" height="70" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
-  <text x="470" y="133" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">1 文字ずつ自動入力</text>
-  <text x="470" y="157" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">入力先に合わせて速度を自動調整</text>
+  <text x="470" y="145" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">1 文字ずつ自動入力</text>
 
   <line x1="590" y1="140" x2="656" y2="140" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
 
@@ -39,6 +38,6 @@
 
   <!-- 前提・注意 -->
   <rect x="40" y="260" width="800" height="56" rx="8" fill="#f6f8fa" stroke="#57606a"/>
-  <text x="60" y="284" font-family="sans-serif" font-size="13" fill="#1f2328">前提: BASIC が起動して OK プロンプトが出ていること</text>
-  <text x="60" y="306" font-family="sans-serif" font-size="13" fill="#1f2328">注意: BASIC キーワードは大文字推奨（小文字だとトークン化されない場合があります）</text>
+  <text x="60" y="284" font-family="sans-serif" font-size="13" fill="#1f2328">前提: BASIC が起動して Ready プロンプトが出ていること</text>
+  <text x="60" y="306" font-family="sans-serif" font-size="13" fill="#1f2328">注意: BASIC キーワードは大文字推奨（小文字だと命令として解釈されない場合があります）</text>
 </svg>

@@ -25,7 +25,7 @@
 
   <rect x="355" y="104" width="190" height="56" rx="8" fill="#ddf4ff" stroke="#0969da"/>
   <text x="450" y="128" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="middle">形式を自動判別</text>
-  <text x="450" y="148" font-family="sans-serif" font-size="13" fill="#0969da" text-anchor="middle">D77 / 2D / HFE</text>
+  <text x="450" y="148" font-family="sans-serif" font-size="13" fill="#0969da" text-anchor="middle">D77 / 2D / 2DD / HFE</text>
 
   <line x1="545" y1="132" x2="606" y2="124" stroke="#1a7f37" stroke-width="1.5" marker-end="url(#ahg)"/>
 
@@ -40,8 +40,8 @@
   <text x="695" y="252" font-family="sans-serif" font-size="13" fill="#57606a" text-anchor="middle">ドライブ 3</text>
 
   <text x="355" y="190" font-family="sans-serif" font-size="12" fill="#57606a">driveNum は 0〜3。</text>
-  <text x="355" y="208" font-family="sans-serif" font-size="12" fill="#57606a">ディスクなしで reset() すると</text>
-  <text x="355" y="226" font-family="sans-serif" font-size="12" fill="#57606a">ROM BASIC が起動します。</text>
+  <text x="355" y="208" font-family="sans-serif" font-size="12" fill="#57606a">BASIC モードでディスクなしのとき</text>
+  <text x="355" y="226" font-family="sans-serif" font-size="12" fill="#57606a">reset() で ROM BASIC が起動します。</text>
 
   <!-- 連結ディスク -->
   <rect x="40" y="310" width="470" height="76" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>

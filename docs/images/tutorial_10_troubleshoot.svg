@@ -14,8 +14,8 @@
   <text x="220" y="104" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">「先に ROM を読み込んでください」と表示</text>
   <line x1="400" y1="88" x2="476" y2="88" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
   <rect x="480" y="56" width="360" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
-  <text x="660" y="82" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">ROM Files で必須 ROM が「互換」か「OK」か確認</text>
-  <text x="660" y="104" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">FM77AV 系は追加 ROM も必須（→ 3 章）</text>
+  <text x="660" y="82" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">ROM Files で「互換」「OK」「補完」のどれかか確認</text>
+  <text x="660" y="104" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">互換 ROM を取得できないときは通信を確認して開き直す（→ 3 章）</text>
 
   <!-- 症状2 -->
   <rect x="40" y="136" width="360" height="64" rx="8" fill="#ffebe9" stroke="#bc4c00" stroke-width="1.5"/>
@@ -24,7 +24,7 @@
   <line x1="400" y1="168" x2="476" y2="168" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
   <rect x="480" y="136" width="360" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
   <text x="660" y="162" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">画面（Screen）をクリックしてから入力</text>
-  <text x="660" y="184" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">スマートフォンは仮想キーボードをタップ</text>
+  <text x="660" y="184" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">スマートフォンはソフトウェアキーボードをタップ</text>
 
   <!-- 症状3 -->
   <rect x="40" y="216" width="360" height="64" rx="8" fill="#ffebe9" stroke="#bc4c00" stroke-width="1.5"/>
@@ -33,15 +33,15 @@
   <line x1="400" y1="248" x2="476" y2="248" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
   <rect x="480" y="216" width="360" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
   <text x="660" y="242" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">Drive 0 にセット済みか・起動モードを確認</text>
-  <text x="660" y="264" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">DOS にしてリセット（→ 4-1・6 章）</text>
+  <text x="660" y="264" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">リセット。駄目なら電源を切り DOS で起動（→ 4-1・6 章）</text>
 
   <!-- 症状4 -->
   <rect x="40" y="296" width="360" height="64" rx="8" fill="#ffebe9" stroke="#bc4c00" stroke-width="1.5"/>
   <text x="220" y="322" font-family="sans-serif" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">テープが読み込めない</text>
-  <text x="220" y="344" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">LOAD しても OK に戻らない など</text>
+  <text x="220" y="344" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">LOAD しても Ready に戻らない など</text>
   <line x1="400" y1="328" x2="476" y2="328" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
   <rect x="480" y="296" width="360" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
-  <text x="660" y="322" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">OK プロンプト後に LOAD ""・REW で巻き戻し</text>
+  <text x="660" y="322" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">Ready プロンプト後に LOAD ""・REW で巻き戻し</text>
   <text x="660" y="344" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">WAV は取り込み品質も確認（→ テープ操作マニュアル）</text>
 
   <!-- 症状5 -->
@@ -51,7 +51,7 @@
   <line x1="400" y1="408" x2="476" y2="408" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
   <rect x="480" y="376" width="360" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
   <text x="660" y="402" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">リセットを押す → 直らなければ電源を入れ直す</text>
-  <text x="660" y="424" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">それでも駄目なら ROM の供給元を「同梱互換」に戻す</text>
+  <text x="660" y="424" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">駄目なら電源を切り ROM の供給元を「同梱互換」に戻す</text>
 
   <!-- それでも解決しないとき -->
   <line x1="440" y1="440" x2="440" y2="464" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>

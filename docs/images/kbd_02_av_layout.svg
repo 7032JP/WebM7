@@ -7,7 +7,7 @@
   </defs>
   <rect x="0" y="0" width="928" height="478" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
   <text x="464" y="32" font-family="sans-serif" font-size="18" fill="#1f2328" text-anchor="middle" font-weight="bold">FM77AV 系のキーボード</text>
-  <text x="464" y="54" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">Keyboard パネルのキーボード図 / タッチ端末のソフトウェアキーボードと同じ並び</text>
+  <text x="464" y="54" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">Keyboard パネルのキーボード図（タッチ端末のソフトウェアキーボード (横向き) も各段のキーの順は同じ）</text>
   <rect x="16" y="68" width="896" height="324" rx="8" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1"/>
   <rect x="598" y="78" width="40" height="40" rx="4" fill="#ddf4ff" stroke="#0969da" stroke-width="1.2"/>
   <text x="618" y="102.68" font-family="sans-serif" font-size="13" fill="#0a3069" text-anchor="middle" font-weight="bold">EL</text>
@@ -212,12 +212,12 @@
   <rect x="194.2" y="406" width="18" height="13" rx="3" fill="#ddf4ff" stroke="#0969da" stroke-width="1"/>
   <text x="217.2" y="416" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">編集・カーソル</text>
   <rect x="310.2" y="406" width="18" height="13" rx="3" fill="#ffffff" stroke="#8c959f" stroke-width="1"/>
-  <text x="333.2" y="416" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">文字キー (英数・記号・カナ)</text>
+  <text x="333.2" y="416" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">文字・一般キー</text>
   <rect x="501" y="406" width="18" height="13" rx="3" fill="#fbefff" stroke="#8250df" stroke-width="1"/>
   <text x="524" y="416" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">修飾・モード (SHF / CTR / CAP / GRP / カナ)</text>
   <rect x="806.1999999999998" y="406" width="18" height="13" rx="3" fill="#fff1e5" stroke="#bc4c00" stroke-width="1"/>
   <text x="829.1999999999998" y="416" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">テンキー</text>
   <rect x="26" y="426" width="18" height="13" rx="3" fill="#fff8c5" stroke="#9a6700" stroke-width="1"/>
   <text x="49" y="436" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">FM77AV 以降のみ</text>
-  <text x="26" y="460" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ FM77AV 以降は SPACE が 3 分割され、無変換 / SPACE / 変換 の 3 つのキーになります。</text>
+  <text x="26" y="460" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ FM77AV 以降は SPACE が 3 分割され、無変換 / SPACE / 変換 の 3 つのキーになります。凡例の色は種別の区分で、実際の表示色は機種で異なります。</text>
 </svg>

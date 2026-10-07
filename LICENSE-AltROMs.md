@@ -2,12 +2,12 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 上流の名前 | [7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.3) |
+| 上流の名前 | [7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.8) |
 | 作者 | Naomitsu Tsugiiwa |
-| バージョン | v1.0.3（署名付きタグ）。同梱の `assets/altroms/SHA256SUMS` の ROM 行は同タグの `SHA256SUMS` と同じ値 |
+| バージョン | v1.0.8 |
 | ライセンス | MIT License（原文は [`assets/altroms/LICENSE`](assets/altroms/LICENSE)。適用範囲は [`assets/altroms/LICENSE-MIT.md`](assets/altroms/LICENSE-MIT.md)） |
-| 本プロジェクトでの範囲 | `assets/altroms/` 配下の ROM イメージと付属文書 |
-| 改変の有無 | なし（取得時に SHA-256 で検証して同梱） |
+| 本プロジェクトでの範囲 | `assets/altroms/` 配下の ROM イメージと、互換 ROM セットの権利表示文書・ハッシュ一覧（`README.md` は本プロジェクトの文書） |
+| 改変の有無 | なし |
 
 ## 適用範囲
 
@@ -24,28 +24,33 @@ MIT License の対象外です。詳細は [`LICENSE-Shinonome.md`](LICENSE-Shin
 
 ## 同梱ファイル
 
-ROM 本体と併せて、次の権利表示文書と検証用ハッシュを `assets/altroms/` に
-そのまま同梱しています。
+ROM 本体と併せて、次の文書を `assets/altroms/` に同梱しています。`LICENSE`・
+`LICENSE-MIT.md`・`LICENSE-FONT.md`・`SHA256SUMS` は互換 ROM セットのものをそのまま、
+`README.md` は本プロジェクトが添えた説明です。互換 ROM セットの `docs/LEGAL.md` も、
+`assets/altroms/docs/LEGAL.md` にそのまま同梱しています。
 
-- `LICENSE` — 互換 ROM セットの MIT License（末尾に、成果物と第三者素材の
-  どちらにどの文書が対応するかの案内表がある）
+- `LICENSE` — 互換 ROM セットの MIT License
 - `LICENSE-MIT.md` — MIT License の適用範囲（ROM のソースとバイナリ、独自字形など）
 - `LICENSE-FONT.md` — 漢字フォント素材の由来（素材名・バージョン・作者・取得元・改変内容）、
   MIT License との区分、および原ライセンス文の写し
+- `docs/LEGAL.md` — 利用条件・免責・来歴と、漢字系 ROM の字形の区分の詳細
 - `SHA256SUMS` — ROM 本体と権利表示文書の検証用ハッシュ
 - `README.md` — 互換 ROM セットの説明
 
 ## 改変について
 
-互換 ROM セットは改変せずに同梱しています。同梱時に SHA-256 で検証しており、
-`(cd assets/altroms && sha256sum -c SHA256SUMS)` でいつでも再検証できます。
+互換 ROM セットは改変せずに同梱しています。
+`(cd assets/altroms && sha256sum -c SHA256SUMS)` でいつでも検証できます。
 
 ## 相対パスの注記
 
 `assets/altroms/LICENSE`・`assets/altroms/LICENSE-MIT.md`・
-`assets/altroms/LICENSE-FONT.md` に現れる相対パス（`fonts/`、`roms/`、`scripts/`、
-`docs/` 等）は、互換 ROM セット側の配布物（ソース一式）内のパスであり、
-本プロジェクトのパスではありません。
+`assets/altroms/LICENSE-FONT.md`・`assets/altroms/docs/LEGAL.md` に現れる相対パス
+（`fonts/`、`roms/`、`scripts/`、`src/`、`docs/` 等）は、互換 ROM セット側の配布物
+（ソース一式）内のパスであり、本プロジェクトのパスではありません。ただし `docs/LEGAL.md` と、
+`docs/LEGAL.md` から見た `../LICENSE`・`../LICENSE-MIT.md`・`../LICENSE-FONT.md` は、
+`assets/altroms/` の中でそのまま辿れます。
+`docs/LEGAL.md` から見た `../README.md`（申告窓口など）は、`assets/altroms/README.md` ではなく配布元の [README](https://github.com/7032JP/7032AltROMs/blob/v1.0.8/README.md) を指します。
 
-これらの文書中の「本リポジトリ」「this repository / this project」は互換 ROM セット側の配布物を指し、
+これらの文書中の「本リポジトリ」「本プロジェクト」「this repository / this project」は互換 ROM セット側の配布物を指し、
 本プロジェクト（WebM7）全体を指すものではありません。

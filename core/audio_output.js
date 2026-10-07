@@ -3,11 +3,8 @@
 // =============================================================================
 // Web Audio output for the PSG and OPN sound generators.
 //
-//   The core PSG / OPN classes generate samples and hand full chunks to
-//   `_workletNode.port` when one is attached; creating the AudioContext, the
-//   AudioWorkletNode and the GainNode is the host's job. WebPSG / WebOPN add
-//   exactly that (startAudio / resumeAudio / stopAudio) on top of the core
-//   classes. FM7Browser constructs these in place of the core PSG / OPN.
+//   WebPSG / WebOPN add the Web Audio setup and lifecycle (startAudio /
+//   resumeAudio / stopAudio) on top of the core PSG / OPN classes.
 // =============================================================================
 import { PSG } from './psg.js';
 import { OPN } from './opn.js';
@@ -31,9 +28,7 @@ export class WebPSG extends PSG {
             this._gainNode.gain.value = this._volume;
             this._gainNode.connect(this._audioCtx.destination);
 
-            // AudioWorkletNode replaces ScriptProcessorNode (deprecated).
-            // Module load is async; node is wired up once ready. Until then
-            // step() drops samples (audible only as a brief silence at boot).
+            // Connect the audio output once the worklet module has loaded.
             this._audioCtx.audioWorklet
                 .addModule(new URL('./audio-worklet-processor.js', import.meta.url))
                 .then(() => {
@@ -53,7 +48,7 @@ export class WebPSG extends PSG {
                     console.warn('PSG: AudioWorklet load failed:', e);
                 });
 
-            console.log('PSG: audio started (' + this._audioCtx.sampleRate + ' Hz)');
+            console.log('PSG: AudioContext created (' + this._audioCtx.sampleRate + ' Hz)');
         } catch (e) {
             console.warn('PSG: audio init failed:', e);
         }
@@ -94,9 +89,8 @@ export class WebOPN extends OPN {
             this._gainNode.gain.value = this._volume;
             this._gainNode.connect(this._audioCtx.destination);
 
-            // AudioWorkletNode replaces ScriptProcessorNode (deprecated).
-            // See psg.js for the same pattern. Module load is async; node
-            // is wired up once ready and step() drops samples until then.
+            // Connect the audio output once the worklet module has loaded
+            // (same pattern as WebPSG.startAudio above).
             this._audioCtx.audioWorklet
                 .addModule(new URL('./audio-worklet-processor.js', import.meta.url))
                 .then(() => {
@@ -116,7 +110,7 @@ export class WebOPN extends OPN {
                     console.warn('OPN: AudioWorklet load failed:', e);
                 });
 
-            console.log('OPN: audio started (' + this._audioCtx.sampleRate + ' Hz)');
+            console.log('OPN: AudioContext created (' + this._audioCtx.sampleRate + ' Hz)');
         } catch (e) {
             console.warn('OPN: audio init failed:', e);
         }

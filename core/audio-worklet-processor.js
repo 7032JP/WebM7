@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 7032 / Naomitsu Tsugiiwa
 /**
- * AudioWorkletProcessor for ring-buffer playback.
- * Replaces ScriptProcessorNode to avoid deprecation warnings.
+ * AudioWorkletProcessor for queued audio chunk playback.
  * Used by both PSG and OPN audio output.
  *
  * Communication via MessagePort:
@@ -15,12 +14,8 @@ class RingBufferProcessor extends AudioWorkletProcessor {
         this._queue = [];     // Queue of Float32Array chunks
         this._offset = 0;     // Current offset in first chunk
 
-        // Cap queued chunks to bound output latency. Without this,
-        // producers running faster than real-time (e.g. CMT turbo 50×
-        // during tape load) can enqueue many seconds of samples that
-        // the audio thread then drains at 1× — manifesting as BGM
-        // starting only after a long audible delay.
-        // 8 chunks × 1024 samples / 44.1kHz ≈ 186ms max latency.
+        // Cap queued chunks to bound output latency when producers run
+        // faster than real-time.
         const MAX_CHUNKS = 8;
 
         this.port.onmessage = (ev) => {

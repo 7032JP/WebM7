@@ -17,7 +17,7 @@ MIT License（[`LICENSE`](LICENSE)）の対象ではありません。この部�
 fmgen の利用条件が適用されます。`core/opn.js` の先頭には
 `SPDX-License-Identifier: LicenseRef-fmgen AND MIT` を記しています。
 
-同じ `core/opn.js` に含まれる SSG 部と、それが用いる `core/psg.js` は
+同じ `core/opn.js` の FM 合成部以外の部分（SSG 部など）と、それが用いる `core/psg.js` は
 本プロジェクトの独自実装で、MIT License が適用されます。
 
 ## ライセンス文の要旨
@@ -36,9 +36,4 @@ fmgen の利用条件が適用されます。`core/opn.js` の先頭には
 
 - C++ から JavaScript への翻訳。
 - YM2203（OPN）の機能範囲への縮小。
-- 本シミュレータの AudioWorklet 出力段への結合。
-
-## 同梱について
-
-上流の条件に従い、原文の readme を `core/fmgen_readme.txt` として、ソース
-配布物（公開イメージ）にそのまま同梱しています。
+- 本シミュレータのサンプル出力段への結合。

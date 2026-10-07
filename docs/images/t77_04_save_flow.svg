@@ -13,7 +13,7 @@
   <circle cx="100" cy="79" r="14" fill="#0969da"/>
   <text x="100" y="84" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
   <text x="126" y="74" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328">BASIC で SAVE を実行</text>
-  <text x="126" y="96" font-family="monospace" font-size="12" fill="#57606a">SAVE "DEMO" ／ SAVEM "M",&amp;H6000,&amp;H600F,&amp;H6000（3 引数必須）</text>
+  <text x="126" y="96" font-family="monospace" font-size="12" fill="#57606a">SAVE "DEMO" ／ SAVEM "M",&amp;H6000,&amp;H600F,&amp;H6000（アドレス 3 つ必須）</text>
   <line x1="380" y1="108" x2="380" y2="132" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
 
   <!-- 2 -->
@@ -21,7 +21,7 @@
   <circle cx="100" cy="163" r="14" fill="#0969da"/>
   <text x="100" y="168" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
   <text x="126" y="158" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328">書き込み内容が自動で録音される</text>
-  <text x="126" y="180" font-family="sans-serif" font-size="12" fill="#57606a">CMT LED 点灯 → 完了で OK に戻る（rec の数が増える）</text>
+  <text x="126" y="180" font-family="sans-serif" font-size="12" fill="#57606a">CMT LED 点灯 → 完了で Ready に戻る（rec の数が増える）</text>
   <line x1="380" y1="192" x2="380" y2="216" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
 
   <!-- 3 -->
@@ -37,7 +37,7 @@
   <circle cx="100" cy="331" r="14" fill="#1a7f37"/>
   <text x="100" y="336" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
   <text x="126" y="326" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1f2328">tape_&lt;日時&gt;.t77 がダウンロードされる</text>
-  <text x="126" y="348" font-family="sans-serif" font-size="12" fill="#57606a">そのまま Tape Image にセットすれば LOAD で読み戻せる（往復可能）</text>
+  <text x="126" y="348" font-family="sans-serif" font-size="12" fill="#57606a">Tape Image にセットし、BASIC は LOAD、機械語は LOADM で読み戻せる</text>
 
   <!-- note -->
   <rect x="70" y="386" width="620" height="48" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.2" stroke-dasharray="5,3"/>

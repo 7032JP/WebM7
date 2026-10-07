@@ -25,8 +25,8 @@ What this file covers, and where to find the rest / 本ファイルの対象と�
 
 | Covers / 対象 | License / ライセンス | File / ファイル |
 | --- | --- | --- |
-| This project's own work: the alternative ROM sources and built binaries, scripts, documentation, and the original glyphs / 本プロジェクトの成果物（代替 ROM のソースとビルド済みバイナリ、スクリプト、文書、独自字形） | MIT | [LICENSE-MIT.md](LICENSE-MIT.md) |
-| The bundled font in fonts/shinonome/, and roms/kanji.rom / roms/kanji2.rom, which take their glyphs from it / 同梱フォント fonts/shinonome/ と、それを字形の入力とする roms/kanji.rom / roms/kanji2.rom | Public domain (modified) / パブリックドメイン（改変あり） | [LICENSE-FONT.md](LICENSE-FONT.md) |
+| This project's own work: the alternative ROM sources and built binaries, scripts, documentation, the original glyphs (the ANK fonts, and the glyphs listed in docs/LEGAL.md section 9.2), and the layout rule and conversion script that build roms/kanji.rom / roms/kanji2.rom / 本プロジェクトの成果物（代替 ROM のソースとビルド済みバイナリ、スクリプト、文書、独自字形（ANK フォントと、docs/LEGAL.md §9.2 の字形）、roms/kanji.rom / roms/kanji2.rom を組み上げる配置規則の実装と変換スクリプト） | MIT | [LICENSE-MIT.md](LICENSE-MIT.md) |
+| The bundled font in fonts/shinonome/, and the glyphs in roms/kanji.rom / roms/kanji2.rom that are taken from it (all glyphs except the 107 code positions listed in docs/LEGAL.md section 9.2) / 同梱フォント fonts/shinonome/ と、roms/kanji.rom / roms/kanji2.rom に含まれる同フォント由来の字形（docs/LEGAL.md §9.2 の 107 符号位置を除く） | Public domain (modified) / パブリックドメイン（改変あり） | [LICENSE-FONT.md](LICENSE-FONT.md) |
 
 If you redistribute the ROM files on their own, please keep LICENSE, LICENSE-MIT.md, and LICENSE-FONT.md together with them.
 ROM だけを配るときも、LICENSE / LICENSE-MIT.md / LICENSE-FONT.md を一緒に配ってください。

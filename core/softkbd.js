@@ -3,10 +3,7 @@
 /**
  * FM-7 Virtual (Software) Keyboard for mobile/tablet.
  *
- * Uses the exact same layout as the PC Keyboard debug panel
- * (FM7_KBD_LAYOUT: 20-column grid with main keys + numpad).
- * Keytop glyph rendering matches the Keyboard panel exactly:
- * composite 4-corner CG ROM glyphs that update on modifier changes.
+ * Keytop glyphs are rendered from the CG ROM and update on modifier changes.
  */
 
 import { GRPH_OVERRIDE, KANA_OVERRIDE } from './keyboard.js';
@@ -87,8 +84,7 @@ const LAYOUT = [
     // --- Main row 4: SHF~SHF + numpad 0.+RT ---
     [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('_','IntlRo'),K('SHF','ShiftRight'),_,_,_,K('0','Numpad0'),K('.','NumpadDecimal'),K('+','NumpadAdd'),K('RT','NumpadEnter')],
     // --- Main row 5: CAP/GRP/(無変換)/SPACE/(変換)/カナ ---
-    // 無変換 / 変換 は FM77AV 以降のみ表示（body.machine-fm7 で CSS が隠し、
-    // SPACE 幅も 8 セル ⇔ 6 セルで切り替えて カナ の位置を揃える）
+    // 無変換 / 変換 は FM77AV 以降のみ表示
     [K('CAP','CapsLock','led'),K('GRP','AltLeft'),K('\u7121\u5909\u63DB','NonConvert','av-key'),K('SPACE','Space','space'),K('\u5909\u63DB','Convert','av-key'),K('\u30AB\u30CA','AltRight','led')],
 ];
 
@@ -117,7 +113,7 @@ const PORTRAIT_LAYOUT = [
     [K('DUP','PageDown'),_,_,_,K('0','Numpad0'),K('.','NumpadDecimal'),K('+','NumpadAdd'),K('RT','NumpadEnter')],
 ];
 
-// Use the portrait layout on narrow, portrait-oriented touch screens (phones).
+// Use the portrait layout on narrow, portrait-oriented screens.
 function _portraitMode() {
     if (typeof window === 'undefined' || !window.matchMedia) return false;
     return window.matchMedia('(orientation: portrait) and (max-width: 600px)').matches;
@@ -246,6 +242,7 @@ class SoftKeyboard {
             }
             btn.classList.remove('active');
             this._keyboard.releaseKey(code);
+            this._updateModState();
             if (this._shiftHeld) {
                 this._shiftHeld = false;
                 this._updateShiftState();
@@ -264,6 +261,7 @@ class SoftKeyboard {
             }
             btn.classList.remove('active');
             this._keyboard.releaseKey(code);
+            this._updateModState();
         });
 
         btn.addEventListener('contextmenu', e => e.preventDefault());
@@ -280,8 +278,11 @@ class SoftKeyboard {
     _updateModState() {
         const cap = this._keyElements.get('CapsLock');
         const kana = this._keyElements.get('AltRight');
+        const ctrl = this._keyElements.get('ControlLeft');
         if (cap) cap.classList.toggle('active', this._keyboard.capsLock);
         if (kana) kana.classList.toggle('active', this._keyboard.kanaMode);
+        // CTR is sticky: set by the key, released by the simulator after the next key.
+        if (ctrl) ctrl.classList.toggle('active', !!this._keyboard.ctrlHeld);
     }
 
     // --- CG ROM composite glyph system (matches Keyboard panel exactly) ---
@@ -338,7 +339,7 @@ class SoftKeyboard {
             if (portrait === this._portrait) return;
             this._portrait = portrait;
             this._build();
-            // Re-apply held / toggled modifier visuals and refresh keytop glyphs.
+            // Re-apply the SHIFT, CAPS, KANA and CTRL key visuals and refresh keytop glyphs.
             this._updateShiftState();
             this._updateModState();
             this._refreshKeyLabels(true);

@@ -16,12 +16,14 @@ MIT License（[`LICENSE-AltROMs.md`](LICENSE-AltROMs.md)）の対象外です。
 独自字形と変換処理の適用条件は、互換 ROM セットの
 [`LICENSE-MIT.md`](assets/altroms/LICENSE-MIT.md) /
 [`LICENSE-FONT.md`](assets/altroms/LICENSE-FONT.md) を参照してください。
+独自字形の符号位置の一覧は、互換 ROM セットの
+[`docs/LEGAL.md`](assets/altroms/docs/LEGAL.md) の §9.2 にあります。
 
 ## 詳細の所在
 
 素材名・バージョン・作者・取得元・改変内容・MIT License との区分・原ライセンス文の写しは、
 互換 ROM セット側の文書 `assets/altroms/LICENSE-FONT.md` にまとめられています
-（英日併記）。本書はそれを繰り返さず、参照に留めます。
+（英日併記）。
 
 `assets/altroms/LICENSE-FONT.md` に現れる相対パスと § 番号は、互換 ROM
 セット側の配布物（ソース一式）とその文書の中のものです。

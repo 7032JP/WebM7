@@ -10,7 +10,7 @@
 
   <rect x="140" y="50" width="520" height="56" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
   <text x="400" y="73" font-family="monospace" font-size="14" font-weight="bold" fill="#0969da" text-anchor="middle">fm7.display.render(true)</text>
-  <text x="400" y="94" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">true を指定してフレーム全体を描画する</text>
+  <text x="400" y="94" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">現在の画面を frame へ描く（true は全面を描き直す指定）</text>
   <line x1="400" y1="106" x2="400" y2="128" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
 
   <rect x="140" y="132" width="520" height="56" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>
@@ -20,7 +20,7 @@
 
   <rect x="140" y="214" width="520" height="56" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/>
   <text x="400" y="237" font-family="monospace" font-size="14" font-weight="bold" fill="#bc4c00" text-anchor="middle">frame.width / frame.height</text>
-  <text x="400" y="258" font-family="sans-serif" font-size="12" fill="#bc4c00" text-anchor="middle">現在の表示モードの幅と高さを取得する</text>
+  <text x="400" y="258" font-family="sans-serif" font-size="12" fill="#bc4c00" text-anchor="middle">描画後のフレームの幅と高さを取得する</text>
   <line x1="400" y1="270" x2="400" y2="292" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
 
   <rect x="140" y="296" width="520" height="56" rx="8" fill="#f6f8fa" stroke="#0969da" stroke-width="1.5"/>

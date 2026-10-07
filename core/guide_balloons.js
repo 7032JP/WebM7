@@ -25,11 +25,11 @@ export function initGuideBalloons() {
         },
         {
             selector: '#hwDipBoot, #hwLipBoot, #hwLipBootPush',
-            text: '起動モード（BASIC / DOS）はここで切り替えます',
+            text: '起動モード（BASIC / DOS）は電源を切った状態でここで切り替えます',
         },
         {
             selector: '#scaleToggle',
-            text: '表示の大きさとフルスクリーンはここで切り替えます',
+            text: '表示の大きさとフルスクリーンはここで切り替えます（環境によっては使えないものがあります）',
         },
     ];
     const balloon = document.createElement('div');

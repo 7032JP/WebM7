@@ -158,11 +158,8 @@ canvas#screen {
     align-items: flex-start;   /* both rows share the same left edge */
     gap: 5px;
 }
-/* Each row lays its groups out horizontally, left-aligned so the two rows'
-   left edges line up. LEDs sit at the left and never move; the variable
-   readouts to their right reserve a fixed width so changing values (sector
-   count, key code, fps, display mode) cannot push neighbours left or right.
-   On narrow widths a row may wrap without hiding info. */
+/* Status rows: left-aligned groups; the readouts reserve a fixed width so
+   changing values do not shift their neighbours. */
 .status-row {
     display: flex;
     align-items: center;
@@ -183,10 +180,9 @@ canvas#screen {
     gap: 8px;
     flex: 0 0 auto;
 }
-/* Width reservations for the variable-length readouts. Each value is left
-   aligned inside a fixed-min box sized to its longest expected content, with
-   tabular figures so digit-count changes do not alter the rendered width. The
-   box itself does not grow or shrink, so its neighbours stay put. */
+/* Minimum widths for the variable-length readouts. Each value is left aligned
+   inside a non-flexing box whose min-width fits its longest expected content;
+   tabular figures keep every digit the same width. */
 .status-readout .vol-label,
 .fdc-track-info {
     font-variant-numeric: tabular-nums;
@@ -204,7 +200,7 @@ canvas#screen {
 #tbKbdMode    { min-width: 2.375rem; }
 /* "60 fps" (default "--") */
 #fpsLabel     { min-width: 2.75rem; }
-/* longest: "640x400 / 262144色" */
+/* longest: "320x200 / 262144色" */
 #dispModeLabel { min-width: 8.25rem; }
 .status-led-item {
     display: flex;
@@ -387,19 +383,9 @@ input[type="file"]::file-selector-button:hover {
     background: #3a4a6a;
 }
 
-/* ROM list
-   各行を同じ固定テンプレートのグリッドにして、ROM 名や札 (必須 / 任意) の
-   長さ、選んだファイル名に関わらず、全リスト (基本 / KANJI / AV / AV40) で
-   列の位置と幅を一致させる。
-   パネル内幅は約 294px しかなく、ROM 名 + 札 (最長 "BOOT_BAS.ROM BASIC時必須"
-   で約 166px)、供給元セレクト (約 108px)、ファイル選択ボタン (約 96px)、状態
-   タグ (最大約 44px) を 1 行に並べると 400px を超えてしまう。そのため 1 項目を
-   2 段に組む:
-     1 段目: ROM 名 + 札 (左、2 列分)   | 状態タグ (右、固定幅)
-     2 段目: 供給元セレクト (固定幅)     | ファイル選択 (残り幅、右端まで)
-   列幅は .rom-list の変数で共有し、狭い画面用の上書きでも同じ変数だけを
-   差し替える。ファイル選択欄はボタンが常に丸ごと見える幅を確保し、その後ろの
-   ファイル名だけが overflow で切れる。 */
+/* ROM list: 各項目を共通の 2 段構成で表示する
+     1 段目: ROM 名 + 札 | 状態タグ
+     2 段目: 供給元セレクト | ファイル選択 */
 .rom-list {
     --rom-col-src: 108px;     /* 供給元セレクト列 (「自分の ROM」が切れない幅) */
     --rom-col-status: 44px;   /* 状態タグ列 ("--" / "OK" / "互換" / "補完" / "Error") */
@@ -520,7 +506,7 @@ input[type="file"]::file-selector-button:hover {
     color: #7fa6c4;
     border: 1px solid #38506a;
 }
-/* Subtle tint on the whole row so required items stand out at a glance. */
+/* Tint the ROM name so required items stand out at a glance. */
 .rom-item[data-req="required"] .rom-name { color: #c0d4e8; }
 .rom-item[data-req="optional"] .rom-name { color: #5d7790; }
 
@@ -605,7 +591,7 @@ button.rec-empty {
     transition: background 0.05s, box-shadow 0.05s;
 }
 .fdc-led.active {
-    /* 2D access = yellow (disk-mode colour; DMA adds fast blink) */
+    /* 2D access = yellow (default colour of an active drive LED) */
     background: #ffcc22;
     box-shadow: 0 0 6px 2px rgba(255, 204, 34, 0.6);
     border-color: #ffdd55;
@@ -654,10 +640,9 @@ button.rec-empty {
     border-color: #66ee66;
 }
 
-/* LIT color for status-bar LEDs (CAPS/カナ/INS + Drv0/Drv1): red on every
-   machine (the status bar is part of the page, not of the front panel, so it
-   does not follow the machine). Off state stays the shared default.
-   Scoped to .toolbar-status so the Disk/Keyboard panels keep their own colors. */
+/* LIT color for the status-bar keyboard lock LEDs (CAPS/カナ/INS): red on
+   every machine (the status bar is part of the page, not of the front panel,
+   so it does not follow the machine). Off state stays the shared default. */
 .toolbar-status .kbd-led.on {
     background: #ff4422;
     box-shadow: 0 0 5px 1px rgba(255, 68, 34, 0.55);
@@ -870,10 +855,8 @@ button:disabled {
 }
 
 /* ===== Side-panel action buttons & rows =====
-   All side-panel buttons share a readable, comfortably clickable size on
-   desktop, and grow to a 44px touch target on mobile (see media query).
-   Inline font-size/padding overrides were removed from the markup so these
-   rules apply uniformly. */
+   Side-panel buttons share a readable, comfortably clickable size on desktop;
+   on mobile the default grows to a 44px touch target (see media query). */
 .side-panel button {
     font-size: 0.78em;
     padding: 5px 12px;
@@ -892,10 +875,8 @@ button:disabled {
     white-space: nowrap;
 }
 
-/* ===== パネル内の小さな文字 (旧インラインの font-size のクラス化) =====
-   数字はモバイル表示での px 相当 (html の既定 16px のとき)。rem で持つので、
-   PC 表示では末尾の「PC 表示の文字サイズ」で html の font-size を上げた分だけ
-   連動して大きくなる。セレクト・補足・動作情報・デバッグ表示に使う。 */
+/* ===== パネル内の小さな文字 =====
+   セレクト・補足・動作情報・デバッグ表示に使う。 */
 .fs-11 { font-size: 0.6875rem; }
 .fs-10 { font-size: 0.625rem; }
 .fs-9  { font-size: 0.5625rem; }
@@ -1111,9 +1092,7 @@ button:disabled {
 .input-panel {
     display: none;
     position: fixed;
-    /* Top-left anchored so fitMainLayout()'s transform: scale(...) (with
-       transform-origin: top left) magnifies them cleanly without pushing
-       them off the right/bottom edge. */
+    /* Top-left anchored so the layout scaling keeps them inside the viewport. */
     top: 56px;
     left: 16px;
     transform-origin: top left;
@@ -1135,9 +1114,8 @@ button:disabled {
     right: auto;
     width: 336px;
 }
-/* Stagger via `top` only. Setting both top (from .input-panel) and bottom
-   stretches a fixed element to full height on first show; dragging clears
-   bottom (style.bottom='auto') which is why moving "fixed" the size. */
+/* Stagger via `top` only (do not set `bottom` together with `top` on a
+   fixed panel). */
 #debugPanel { left: 16px;  width: 200px; }
 /* Memory は CPU (#debugPanel) の真下。CPU の高さは文字サイズに連動するので、
    ずらし量も rem で持ち、文字を大きくしても重ならないようにする */
@@ -1370,8 +1348,7 @@ button:disabled {
 .modal-content li { margin: 4px 0; }
 
 /* ===== Fullscreen ===== */
-/* Each vendor prefix MUST be a separate rule — an unrecognised selector
-   in a comma list invalidates the entire rule in CSS. */
+/* One rule per vendor prefix. */
 
 /* Container: black background + flex centering */
 .screen-container:fullscreen {
@@ -1397,7 +1374,7 @@ button:disabled {
 .screen-container:-webkit-full-screen::before { display: none; }
 .screen-container:-moz-full-screen::before { display: none; }
 
-/* Canvas + scanlines: sized by JS (fullscreenchange handler) */
+/* Canvas + scanlines: square corners in fullscreen */
 .screen-container:fullscreen canvas#screen { border-radius: 0; }
 .screen-container:-webkit-full-screen canvas#screen { border-radius: 0; }
 .screen-container:-moz-full-screen canvas#screen { border-radius: 0; }
@@ -1586,7 +1563,7 @@ button:disabled {
         box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(0,238,119,0.5);
     }
 
-    /* Footer: relocated into drawer via JS — shrink for panel width */
+    /* Footer: smaller text and padding */
     .footer {
         font-size: 0.7em;
         padding: 8px;
@@ -1611,7 +1588,7 @@ button:disabled {
     .sp-row > input[type="file"] { flex-basis: 100%; }
     .sp-row > button { flex: 0 0 auto; }
 
-    /* Control button row wraps so Pause / Reset / 📷 never overflow. */
+    /* Button rows in the panel wrap so nothing overflows. */
     .side-panel .btn-row { flex-wrap: wrap; gap: 8px; }
 
     /* Larger, easier-to-tap file pickers in the panel. */
@@ -1649,9 +1626,7 @@ button:disabled {
 
     /* === Side-panel form controls: touch-friendly === */
 
-    /* Dropdowns: full 44px touch height and readable text.
-       !important overrides the more specific per-select font-size rules
-       (.rom-item .rom-src etc.). */
+    /* Dropdowns: 44px touch height and readable text. */
     .side-panel select {
         min-height: 44px;
         font-size: 0.95em !important;
@@ -1690,7 +1665,7 @@ button:disabled {
         min-height: 40px;
     }
 
-    /* Range sliders (volume): taller track / thumb for easier dragging. */
+    /* Range sliders (volume): taller input for easier dragging. */
     .side-panel input[type="range"] {
         height: 28px;
         touch-action: manipulation;
@@ -1712,7 +1687,7 @@ button:disabled {
     .rec-label { font-size: 0.78rem; }
 
     /* Library list: roomier rows and bigger per-item action buttons so the
-       tiny ▶0 / Exp / Del controls become tappable (44px target). The list
+       tiny ▶0 / Exp / Del controls become tappable (40px target). The list
        text itself keeps the .fs-11 size. */
     #libList { max-height: 40vh; }
     #libList .lib-row { gap: 6px; padding: 6px 2px; flex-wrap: wrap; }
@@ -1729,9 +1704,8 @@ button:disabled {
 }
 
 /* ===== Narrow phone width: icon-forward, low-text buttons =====
-   On small phones, primary media buttons (record / play / rewind / save /
-   eject / paste-stop) collapse to their glyph to save space and grow the tap
-   target. Every such button keeps title + aria-label so meaning is preserved.
+   On small phones, side-panel buttons that carry a .btn-icon collapse to
+   their glyph to save space and grow the tap target. Every such button keeps title + aria-label so meaning is preserved.
    Desktop and tablet keep the text labels untouched. */
 @media (max-width: 560px) {
     .side-panel button .btn-icon {
@@ -1758,16 +1732,15 @@ button:disabled {
 }
 
 /* =========================================================================
-   Modern UI
+   画面の配色
    配色は 3 層構成。
      1. アプリヘッダー（タイトルバー）: 黒地のダーク配色。全スキン共通。
      2. ページ（背景・右パネル・ツールバー・モーダル・画面のベゼル）:
         クリームホワイト基調のライト配色。全スキン共通。
      3. 前面パネル（#hwBar / #hwTower / #hwTowerBand）: 機種ごとの雰囲気に合わせるため、
         body のスキンクラス（ui-skin-*）ごとに配色・質感を変える。
-   スキンで切り替わるのは 3. の前面パネル専用の変数（--hw-* / --hwbar-* /
-   --hwlip-*）と body.ui-skin-* .hw-* の規則だけで、ページ全体に効く
-   --ui-* はスキンによらず同じ値を使う。フォントは IBM Plex 系が端末にあれば
+   スキンで切り替わるのは 3. の前面パネル（配色・質感・部品の配置）だけで、ページと
+   ヘッダーの配色はスキンによらず同じ。フォントは IBM Plex 系が端末にあれば
    使用し、無ければ system-ui / monospace へフォールバック（外部 CDN 依存なし）。
    ========================================================================= */
 
@@ -1804,7 +1777,7 @@ button:disabled {
     --ui-tab-text: #131316;
 }
 
-/* --- 前面パネル専用の変数（スキンごと）: 電源ランプ・ディスク挿入 LED の色 --- */
+/* --- 前面パネル専用の変数（スキンごと）: 電源ランプ・キーボード LED（かな / INS / CAP）の色 --- */
 body {
     --hw-power-lamp: #f5a623;   /* FM77AV / AV20 / AV40（黒筐体）: 琥珀色 */
     --hw-loaded-led: #ff5a76;
@@ -1895,8 +1868,6 @@ select, textarea, input[type="text"] {
 .vol-label, .fdc-track-info, .status-tag, .disk-geom, .cap-mem, .key-display {
     font-family: var(--font-mono);
 }
-/* デバッグ用フローティングパネルは中身の配色（#cde 等）が濃色前提のため、
-   ライトテーマでも常に固定のダーク配色を維持する（テーマ非連動）。 */
 .screen-container { background: var(--ui-bezel); border-color: var(--ui-border); }
 .footer { color: var(--ui-faint); }
 .footer a { color: var(--ui-muted); }
@@ -1915,11 +1886,8 @@ select, textarea, input[type="text"] {
     position: relative;
     z-index: 1;
 }
-/* ヘッダーのレイアウト寸法は全機種で同一。1 行に収まる幅では高さ 56px 固定で、
-   タブの高さ・縦位置が機種切替で動かない。幅が足りない時は末尾のスキン切替
-   （.skin-chips-wrap）から順に次の行へ回り込み（上下の余白を固定しているので
-   1 行目のタブの位置は変わらない）、それでも収まらない要素は横スクロールで
-   縮退する。 */
+/* ヘッダーの配置は全機種で同一（タブの位置が機種切替で動かない）。幅が足りなければ
+   次の行へ回り込む（狭幅 / モバイルでは 1 行のまま横スクロールする）。 */
 .app-header-inner {
     display: flex;
     align-items: center;
@@ -1932,7 +1900,7 @@ select, textarea, input[type="text"] {
     overflow-y: hidden;
 }
 .app-header-inner > * { flex-shrink: 0; }
-/* 機能ラベル（タブ横へ移設）: ヘッダー内では 1 行固定 */
+/* 機能ラベル（タブの横）: ヘッダー内では 1 行固定 */
 .app-header .cap-badge-row {
     margin: 0;
     flex-wrap: nowrap;
@@ -1986,8 +1954,7 @@ select, textarea, input[type="text"] {
 }
 .machine-tabs.locked { opacity: 0.55; }
 .machine-tabs.locked .machine-tab { cursor: not-allowed; }
-/* スキン切替チップはタイトルバーの右端（.app-header-inner の最後の要素。余白が
-   あれば margin-left: auto で右端へ寄り、足りない時は能力バッジ行の右に続く） */
+/* スキン切替チップはタイトルバーの右端に置く */
 .skin-chips-wrap { display: flex; align-items: center; gap: 7px; margin-left: auto; }
 .skin-chips-label { font-size: 0.625rem; color: var(--ui-header-muted); }
 .skin-chips {
@@ -2092,9 +2059,7 @@ select, textarea, input[type="text"] {
 .stage-main .toolbar { width: 100%; }
 /* FM-7 / FM-NEW7 スキン: 画面列の下に上面帯 (#hwTowerBand)、右列に外付けユニット
    (#hwTower) を置く 2 列 2 行のグリッド。#hwTower は 2 行にまたがり、下端を
-   #hwTowerBand の下端と揃える（縦に伸ばす）。
-   .hw-panel は display: contents で箱を消し、中の #hwTowerBand / #hwTower を
-   .stage のグリッド項目にする（#hwBar は非表示） */
+   #hwTowerBand の下端と揃える（縦に伸ばす）。#hwBar は非表示 */
 body.hw-right .stage {
     display: grid;
     grid-template-columns: minmax(0, auto) 300px;
@@ -2110,15 +2075,13 @@ body:not(.hw-right) .hw-panel { width: 100%; }
 
 /* --- ハードウェアパネル共通 ---
    画面下のパネル (#hwBar / #hwTowerBand) の高さは機種を切り替えても変わらないよう
-   共通の値に固定する。--hw-bottom-h は外枠（上下の 1px 枠線込み）の総高さ、
-   --hw-bottom-lip-h は下段（.hw-bar-lip。FM-7 の .hw-tower-rear は残り全部）の高さ。上段
-   （.hw-bar-main / .hw-tower-cover）は残り全部（= 総高さ − 枠線 2px − 帯 − 下段）。
-   総高さは、内容が最も詰まる組み合わせ（上段: 3.5 インチ フルハイトのベイ、下段:
-   ラベルを部品の上に置く AV40EX / SX）が収まる最小の値 */
+   共通の値に固定する */
 .hw-panel {
     min-width: 0;
     --hw-bottom-h: 216px;
     --hw-bottom-lip-h: 64px;
+    /* ディスク名 (.hw-disk-name) の幅。これより長い名前は省略記号で切る */
+    --hw-disk-name-w: 8.5em;
 }
 #hwTower, #hwTowerBand { display: none; }
 body.hw-right #hwTower, body.hw-right #hwTowerBand { display: flex; }
@@ -2142,10 +2105,10 @@ body.hw-right #hwBar { display: none; }
     background: var(--hw-power-lamp);
     box-shadow: 0 0 8px var(--hw-power-lamp);
 }
-/* ドライブのアクセス LED（実機のアクセスランプ）: .on（アクセス中）で明るく点灯、
+/* ドライブのアクセス LED: .on（アクセス中）で明るく点灯、
    .motor（モーター回転中）で暗めの点灯、それ以外は消灯。ディスクの挿入の有無は
    LED では示さない（ディスク名表示・スロットのディスク縁で分かる）。
-   色分けは既存の Disk パネルの LED をそのまま反映: 黄=2D / 白=2D DMA /
+   色分けは Disk パネルのアクセス LED と同じ: 黄=2D / 白=2D DMA /
    緑=2DD / 青=2DD DMA / 赤=書き込み */
 .hw-drive-lamp.on { background: #ffcc22; box-shadow: 0 0 8px rgba(255, 204, 34, 0.8); }
 .hw-drive-lamp.on.led-white { background: #f4f4f4; box-shadow: 0 0 8px rgba(244, 244, 244, 0.8); }
@@ -2153,7 +2116,7 @@ body.hw-right #hwBar { display: none; }
 .hw-drive-lamp.on.led-red   { background: #ff3322; box-shadow: 0 0 8px rgba(255, 51, 34, 0.8); }
 .hw-drive-lamp.on.led-green { background: #2ecc55; box-shadow: 0 0 8px rgba(46, 204, 85, 0.8); }
 .hw-drive-lamp.motor { background: #884422; }
-/* 空のベイ（ディスク未挿入）はクリックでディスク選択ダイアログが開く */
+/* 空のベイ（ディスク未挿入）はクリックでディスクを選べる */
 .hw-bay:not(.loaded),
 .hw-vbay:not(.loaded) { cursor: pointer; }
 
@@ -2169,11 +2132,8 @@ body.hw-right #hwBar { display: none; }
     color: #3a352c;
     overflow: hidden;
 }
-/* 上面帯 (#hwTowerBand): 横型バー #hwBar と同じ総高さ（--hw-bottom-h）の 2 段構成。
-   上段 .hw-tower-cover は黄色のカバー（左に機種名、右端に電源ロッカー）で 75px、
-   下段 .hw-tower-rear はクリーム色の背面パネル（左端に RESET、右端に BOOT の DIP
-   スイッチ、その間に実機の背面と同じ並びのダミー部品。表記は各部品の上）で残り全部の
-   高さ。部品の列は段の中で縦中央 */
+/* 上面帯 (#hwTowerBand): 横型バー #hwBar と同じ総高さ（--hw-bottom-h）で、
+   カバー（.hw-tower-cover）と背面パネル（.hw-tower-rear）の 2 段構成 */
 .hw-tower-top {
     height: var(--hw-bottom-h);
     flex-shrink: 0;
@@ -2451,7 +2411,11 @@ body.hw-power-on .hw-rocker {
     color: #565043;
     gap: 8px;
     flex-wrap: wrap;
+    /* ディスク名の長さでユニットの幅が変わらないようにする */
+    width: 0;
+    min-width: 100%;
 }
+.hw-tower-names span { min-width: 0; overflow-wrap: anywhere; }
 .hw-tower-foot {
     height: 30px;
     flex-shrink: 0;
@@ -2606,7 +2570,9 @@ body.ui-skin-new7 .hw-rocker-well .hw-power-lamp.on {
     min-width: 0;
 }
 .hw-disk-name {
-    flex: 1;
+    /* 長いディスク名は省略記号で切り、前面パネルの幅は変えない */
+    flex: 1 1 auto;
+    width: var(--hw-disk-name-w);
     min-width: 0;
     font-size: 13px;
     color: var(--hwbar-faint, #6f7078);
@@ -2780,7 +2746,7 @@ body.ui-skin-av .hw-nameplate span { font-size: 14px; line-height: 1; }
 body.ui-skin-av .hw-vent { display: none; }
 /* FM77AV(初代) の右列: 右上に「電源」＋短い横線、その下に角型の電源スイッチ。
    スイッチの左に かな / INS / CAP の LED を上から縦一列（表記が上、LED がその下）。
-   電源ランプは無く、「電源」表記の横線がその代わり */
+   電源ランプは「電源」表記の横の短い横線として描く */
 body.ui-skin-av .hw-bar-right {
     display: grid;
     grid-template-columns: auto auto;
@@ -2800,9 +2766,8 @@ body.ui-skin-av .hw-kbd-leds {
 body.ui-skin-av .hw-kbd-led-item { flex-direction: column-reverse; gap: 2px; }
 body.ui-skin-av .hw-right-power { grid-area: power; justify-self: end; }
 body.ui-skin-av .hw-power-btn-right { grid-area: btn; justify-self: end; }
-/* FM77AV(初代) のみフルハイト 3.5 インチ 2D: 背の高いベイ＋スロット直下の
-   大型イジェクト。av2040 / EX 系は後述の body.machine-av20up 規則が
-   ハーフハイト（薄型）へ上書きする。 */
+/* av スキン: 背の高いベイ＋スロット直下の大型イジェクト。av2040 / EX 系は
+   後述の body.machine-av20up 規則が薄型へ上書きする。 */
 body.ui-skin-av .hw-slot { height: 14px; }
 body.ui-skin-av .hw-eject { width: 88px; height: 34px; }
 
@@ -2894,8 +2859,7 @@ body.ui-skin-avsx .hw-bar-stripe {
     background: linear-gradient(90deg, #2fbf71 0%, #157a44 100%);
 }
 
-/* --- 筐体の黒の色味（機種ごと）: FM77AV はダークブラウン／ダークカッパーがほんのり混じったガンメタブラック、AV20 / AV40 はほんのりチャコールグレーが入った
-   ダークチャコールグレーブラック、AV20EX / AV40EX は紺の入った黒 --- */
+/* --- 前面パネルの黒の色味（スキンごと）: av は茶系、av2040 はグレー系、avex は紺系 --- */
 body.ui-skin-av2040 .hw-bar {
     --hwbar-border: #38383b;
     --hwbar-bg: linear-gradient(180deg, #2b2b2d 0%, #1b1b1d 100%);
@@ -2937,11 +2901,9 @@ body.ui-skin-avsx .hw-left-power .hw-power-caption-jp {
 }
 body.ui-skin-avex .hw-left-power .hw-lamp,
 body.ui-skin-avsx .hw-left-power .hw-lamp { width: 16px; height: 4px; }
-/* --- ハーフハイト 3.5 インチ 2DD ドライブ ---
-   FM77AV20 / 77AV40 / AV20EX / AV40EX / AV40SX（body.machine-av20up）は
-   すべてハーフハイトの薄型ベイ＋小型イジェクト。フルハイトは
-   FM77AV(初代) のみ。ベイ高 46px・イジェクト 18x9（モックアップ準拠）。
-   ここは AV 系フルハイト規則より後方に置いて上書きする。 */
+/* --- 薄型ベイ ---
+   body.machine-av20up は薄型ベイ＋小型イジェクト。AV 系の既定の規則より
+   後方に置いて上書きする。 */
 body.machine-av20up .hw-bar-drives { gap: 14px; align-items: center; }
 body.machine-av20up .hw-bay {
     height: 46px;
@@ -2976,7 +2938,7 @@ body.machine-av20up .hw-bay-info .hw-drive-num {
 }
 body.machine-av20up .hw-bay .hw-drive-lamp { width: 12px; height: 5px; border-radius: 1px; }
 body.machine-av20up .hw-disk-name { text-align: left; font-size: 12px; }
-/* 右列の注記 .hw-right-note はどのスキンも出さない（実機に無い文言。既定の display: none のまま） */
+/* 右列の注記 .hw-right-note はどのスキンも出さない（既定の display: none のまま） */
 body.ui-skin-avex .hw-bar-right,
 body.ui-skin-avsx .hw-bar-right { width: 120px; gap: 8px; }
 body.ui-skin-avex .hw-power-btn-right,
@@ -3023,10 +2985,10 @@ body.ui-skin-avsx .hw-boot-chip {
                  0 -1px 0 rgba(255, 255, 255, 0.85),
                  0 0 3px rgba(255, 255, 255, 0.7);
 }
-/* 暗色地に載る文字（選択中チップ・暗色プレート上の銘板）は白輪郭を打ち消す */
+/* 暗色地に載る文字（暗色プレート上の銘板と、非表示の BASIC / DOS チップの選択中）は白輪郭を打ち消す */
 body.ui-skin-avsx .hw-boot-chip.active,
 body.ui-skin-avsx .hw-nameplate span { text-shadow: none; }
-/* 右側の注記 */
+/* 右列の注記（非表示）の文字色 */
 body.ui-skin-avsx .hw-right-note { color: #33342f; }
 /* 電源・モード・リセットの各ラベルと かな / INS / CAP。tiny-label の
    減光 (opacity 0.75) も解除して薄さを取り除く */
@@ -3035,7 +2997,7 @@ body.ui-skin-avsx .hw-kbd-led-item span:last-child {
     color: #3f4038;
     opacity: 1;
 }
-/* BASIC / DOS ボタンはボタン自身を太字に（フォーム要素は継承しないため明示） */
+/* BASIC / DOS のチップ（非表示）はボタン自身を太字に（フォーム要素は継承しないため明示） */
 body.ui-skin-avsx .hw-boot-chip { font-weight: 700; }
 /* 電源はグリーンの丸みを帯びたボタン */
 body.ui-skin-avsx .hw-left-power .hw-power-btn {
@@ -3049,18 +3011,6 @@ body.ui-skin-avsx .hw-left-power .hw-power-btn {
 
 /* --- FM77AV 系の前面下段 ---
    スキンごとの操作パネル。部品はすべて CSS 描画。
-     av     (FM77AV)        : キーボード端子 → 音量バランス → 高速/低速 → BASIC/DOS
-                              → 赤外線受光口 → リセット → ジョイスティック 1/2
-     av2040 (AV20 / AV40)   : キーボード端子 → 音量・バランス → 赤外線受光口
-                              → 高速/低速 + BASIC/DOS → ジョイスティック 1/2
-                              （リセットは右列: 電源ランプ・CAP・かな・INS の並びの右端）
-     avex   (AV20EX/AV40EX) : av2040 と同じ並び・同じ位置（キーボード端子は丸型）。
-                              赤外線受光口は無く、その位置を含む部品の間は横スリット
-                              （.hw-lip-fins）で埋める。ラベルは部品の上。リセットは
-                              av2040 と同じく右列
-     avsx   (AV40SX)        : avex と同じ並び・位置に 200/400 ライン押しボタンをモードの
-                              左端に追加。帯は平ら（横スリット無し）で、ジョイスティック
-                              端子は横長の四角いカバーで覆われている（ラベル無し）
    機能するのは BASIC / DOS（押し込み = DOS）とリセットのみ。高速 / 低速（押し込み =
    低速）と 200 / 400 ラインは表示のみ。 */
 .hw-lip-av {
@@ -3223,10 +3173,8 @@ body.boot-dos .hw-push-boot {
     gap: 6px;
 }
 /* 右列を「電源ランプ・CAP・かな・INS（・リセット）」の一列にする共通形
-   （av2040 / avex / avsx）。電源スイッチは左列へ。この一列は右列の下端に寄せる。
-   リセットボタンは電源ボタンと同寸（高さ 26px）なので、一列の中心は左列の電源ボタン
-   （列の中央、下端から 13px）と同じ高さになる。
-   ドライブ構成の注記は列の右上に絶対配置し、この一列の高さに影響させない */
+   （av2040 / avex / avsx）。電源スイッチは左列へ。この一列は右列の下端に寄せ、
+   リセットと電源の表示位置を揃える */
 body.ui-skin-av2040 .hw-bar-right,
 body.ui-skin-avex .hw-bar-right,
 body.ui-skin-avsx .hw-bar-right {
@@ -3304,7 +3252,7 @@ body.ui-skin-avsx .hw-right-reset {
     align-items: center;
     gap: 5px;
 }
-/* リセットボタンは電源ボタン（.hw-power-btn）と同じ寸法・同系の描画 */
+/* リセットボタンは電源ボタン（.hw-power-btn）と同系の描画 */
 body.ui-skin-av2040 .hw-reset-btn,
 body.ui-skin-avex .hw-reset-btn,
 body.ui-skin-avsx .hw-reset-btn {
@@ -3329,21 +3277,15 @@ body.ui-skin-avsx .hw-lip-reset-sq { display: none; }
    av2040 と同じ既定の角型（44 × 26px）。SX は緑の丸みボタンで「電源」を左に置く */
 body.ui-skin-avex .hw-left-power,
 body.ui-skin-avsx .hw-left-power { gap: 8px; }
-/* EX / SX: 電源ボタンの行を左列の下端に揃える（右列の LED＋リセットの行も下端寄せなので
-   同じ高さになる。左列の縦中央寄せに頼ると副題の行数で電源の高さがずれる）。
-   SX の丸みボタン（24px）はリセット（26px）との差 2px を下余白 1px で補正 */
+/* EX / SX: 電源ボタンの行を左列の下端に揃え、右列の LED＋リセットの行と同じ高さにする */
 body.ui-skin-avex .hw-bar-left,
 body.ui-skin-avsx .hw-bar-left { justify-content: flex-end; }
 body.ui-skin-avsx .hw-left-power { padding-bottom: 1px; }
 body.ui-skin-avsx .hw-left-power .hw-power-caption-jp { order: -1; }
 /* EX / SX の下段: 部品の並びと位置は av2040 と同じ（キーボード端子 → 音量・バランス
    → [受光口の位置] → モード → ジョイスティック 1/2）。キーボード端子は丸型。
-   受光口は無く、受光口の位置を含む部品の間は横スリット（横方向の細い溝の繰り返し）で
-   埋める。スリットの幅の比は av2040 の space-between による等間隔（4 区間）と同じに
-   なるよう 1 : 2 : 1 にし、部品の位置を av2040 と揃える。
-   ラベルは部品の上に置く（キーボード端子・音量・バランス・ジョイスティックは
-   column-reverse、モードは「モード」＋凡例の .hw-mode-head をボタンの上に出し、
-   av2040 のボタン横表記 .hw-mode-text と下の .hw-mode-foot は隠す） */
+   受光口は無く、部品の間は EX では横スリット（横方向の細い溝の繰り返し）で埋め、部品の位置を
+   av2040 と揃える。ラベルは部品の上に置く */
 body.ui-skin-avex .hw-lip-ir,
 body.ui-skin-avsx .hw-lip-ir,
 body.ui-skin-avex .hw-mode-text,
@@ -3396,7 +3338,7 @@ body.ui-skin-avsx .hw-mode-head {
     align-items: center;
     gap: 2px;
 }
-/* 凡例: 各列 36px（ボタンの真上に来るよう .hw-mode-bezel の間隔と合わせる）。
+/* 凡例: 各列 36px。
    列の間の目印 ■ は上段・下段の 2 個 */
 .hw-mode-lines { display: flex; align-items: stretch; gap: 3px; }
 .hw-mode-line {
@@ -3444,8 +3386,7 @@ body.ui-skin-avsx .hw-mode-mark::before,
 body.ui-skin-avsx .hw-mode-mark::after { background: #3f4038; }
 /* SX の帯は平ら: スリットは描かず、幅配分（1 : 2 : 1）だけ残して部品の位置を EX と揃える */
 body.ui-skin-avsx .hw-lip-fins-strip { display: none; }
-/* SX のジョイスティック端子は横長の四角いカバーで覆われている（端子・ラベルは見えない）。
-   地色よりやや明るい灰ベージュの面に薄い縁、下辺に指掛かりの細い溝 */
+/* SX スキンではジョイスティック端子の位置に横長のカバーを描く（端子・ラベルは出さない） */
 body.ui-skin-avsx .hw-dsub,
 body.ui-skin-avsx .hw-joy-label { display: none; }
 body.ui-skin-avsx .hw-joy-ports::before {
@@ -3574,15 +3515,13 @@ body.ui-skin-avsx .hw-kbd-jack { border-color: #7c7b76; }
 }
 
 /* =========================================================================
-   追加仕様（続き）
+   ハードウェアパネルと配色の補足
    ========================================================================= */
 
-/* コントロールパネルの電源・リセットは撤去（ハードウェアパネルへ一本化）。
-   powerToggle / resetBtn は委譲先として DOM に残るため表示だけ隠す。 */
+/* コントロールパネル側の電源・リセットは表示しない（操作はハードウェアパネルで行う） */
 .ctl-retired { display: none !important; }
 
-/* ROM 未読込で電源投入できない間は、ハードウェアパネルの電源も
-   従来の Power スイッチと同じく減光して知らせる。 */
+/* ROM 未読込で電源投入できない間は、ハードウェアパネルの電源を減光して知らせる。 */
 body.rom-not-ready .hw-rocker-well,
 body.rom-not-ready .hw-power-btn {
     opacity: 0.45;
@@ -3597,7 +3536,7 @@ body.rom-not-ready .hw-power-btn {
     letter-spacing: -0.5px;
 }
 body.machine-fm7 .fm7-key.av-key { display: none; }
-/* 6 セル幅 (6 * 24 + 5 * 1 = 149px) — 無変換 / 変換 が入るぶん狭く */
+/* 無変換 / 変換 が入るぶん SPACE を狭く */
 body.machine-av .fm7-kbd .fm7-key.space { width: 149px; }
 
 /* --- BREAK キーの配色 ---
@@ -3607,7 +3546,7 @@ body.machine-av .fm7-kbd .fm7-key.space { width: 149px; }
 body.machine-av20up .fm7-key.break-key { border-color: #c44; color: #c88; }
 body.machine-av20up .fm7-key.break-key.active { background: #8a2a2a; border-color: #f66; color: #fff; }
 
-/* --- ライトテーマ対応: 固定色だった補助テキストをテーマ変数へ --- */
+/* --- 補助テキストの配色（テーマ変数を使う） --- */
 .vol-label { color: var(--ui-muted); }
 .fdc-track-info { color: var(--ui-muted); }
 .toolbar-debug-label { color: var(--ui-muted); }
@@ -3615,8 +3554,7 @@ body.machine-av20up .fm7-key.break-key.active { background: #8a2a2a; border-colo
 .file-name-row { color: var(--ui-faint); }
 
 /* --- 起動モード (Boot Mode) の表示 ---
-   状態源は Options パネルの非表示 bootMode ラジオ。現在の選択は
-   body.boot-dos と .hw-boot-chip.active で表示する。 */
+   選択中の起動モードは body.boot-dos で表示する。 */
 
 /* FM-7 / FM-NEW7: 上面帯下段（背面パネル）右端の 4 連 DIP スイッチ（左端レバーが BOOT 相当） */
 .hw-dip-wrap {
@@ -3661,7 +3599,7 @@ body:not(.boot-dos) button.hw-lip-boot {
 }
 button.hw-lip-boot:active { box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4); }
 
-/* FM77AV 系: 下部帯 / EX 系右列の BASIC / DOS ボタン */
+/* FM77AV 系: BASIC / DOS のチップ型ボタン（非表示） */
 .hw-lip-left {
     display: flex;
     align-items: center;
@@ -3714,7 +3652,7 @@ body.ui-skin-avsx .hw-boot-chip.active {
 body.ui-skin-avex .hw-boot-chips .hw-tiny-label,
 body.ui-skin-avsx .hw-boot-chips .hw-tiny-label { font-size: 8px; }
 
-/* 実行中（電源 ON）は既存 bootMode と同じくロック — 見た目も減光 */
+/* 電源 ON の間は起動モードの操作部を減光する */
 body.hw-power-on .hw-dip,
 body.hw-power-on button.hw-lip-boot,
 body.hw-power-on .hw-boot-chip,
@@ -3762,7 +3700,7 @@ body {
 .modal-content th, .modal-content td { border-color: var(--md-cell-border); }
 .modal-close { color: var(--md-close); }
 .modal-close:hover { color: var(--md-close-hover); }
-/* モーダル内の補足・細字・注意テキスト（旧インライン色のクラス化） */
+/* モーダル内の補足・細字・注意テキスト */
 .modal-content .md-note { color: var(--md-note); }
 .modal-content .md-fine { color: var(--md-fine); }
 .modal-content .md-warn { color: var(--md-warn); }
@@ -3794,7 +3732,7 @@ body {
     --ui-info-link: #a03428;   /* ROM Info 展開リンク */
     --ui-info-text: #5c5340;   /* ROM Info 本文 */
 }
-/* 変数の適用（従来の固定色ルールを上書き） */
+/* 変数の適用 */
 .sp-section h3 { color: var(--ui-panel-head); }
 .toolbar-debug-label { color: var(--ui-panel-head); }
 .status-led-name { color: var(--ui-muted); }
@@ -3813,14 +3751,13 @@ body {
 .ui-empty { color: var(--ui-empty); }
 .ui-info { color: var(--ui-info-text); }
 .ui-info-link { color: var(--ui-info-link); }
-/* バッジ類は背景付きのため基本は現状配色のまま。ROM Set チップ等の
+/* バッジ類は背景付きのため配色を変えない。ただし ROM Set チップ等の
    status-tag（未設定 "--" 表示）だけライト地で淡すぎるため文字を一段濃くする */
 .status-tag:not(.loaded) { color: var(--ui-note); }
 
 /* =========================================================================
    更新案内の帯
-   新しいバージョンが用意できたことを画面下部の細い帯で知らせる。position: fixed で
-   通常のレイアウトから外れるため main-layout の採寸には関与しない。重なり順は
+   新しいバージョンが用意できたことを画面下部の細い帯で知らせる。重なり順は
    ヘルプモーダル (z-index:100) やモバイルドロワー (900/1000) より下に置き、
    それらの操作を遮らない。配色はページの CSS 変数をそのまま流用する。
    ========================================================================= */
@@ -3894,11 +3831,8 @@ body {
 
 /* =========================================================================
    操作の案内（バルーン）
-   電源や初回操作の対象のそばに小さな吹き出しを出す。position: fixed で
-   通常のレイアウトから外れるため main-layout の採寸には関与しない。重なり順は
-   ハードウェアパネルや更新案内の帯より上、ヘルプモーダル (z-index:100) や
-   モバイルドロワー (900/1000) より下に置く。位置と矢印の向き (data-side) は
-   guide_balloons.js が対象の矩形から決める。
+   電源や初回操作の対象のそばに小さな吹き出しを出す。位置と矢印の向き
+   (data-side) は guide_balloons.js が決める。
    ========================================================================= */
 .guide-balloon {
     position: fixed;
@@ -3921,7 +3855,7 @@ body {
 }
 /* display:flex が UA の [hidden] を打ち消してしまうため明示的に隠す */
 .guide-balloon[hidden] { display: none; }
-/* 矢印: 枠線と同じ色の正方形を 45 度回して、対象側の辺から半分だけ覗かせる */
+/* 矢印: 正方形を 45 度回して、対象側の辺から半分だけ覗かせる */
 .guide-balloon::after {
     content: "";
     position: absolute;
@@ -3961,7 +3895,7 @@ body {
 }
 
 /* ヘルプ内の説明図: 幅いっぱい (最大 800px)。図の背景は透明なので、
-   暗い配色のモーダルでも線と文字が読めるよう明るい下地を敷く。 */
+   線と文字が読めるよう白い下地を敷く。 */
 .modal-content img.help-figure {
     display: block;
     width: 100%;
@@ -3998,29 +3932,121 @@ body {
 }
 
 /* ===== PC 表示の文字サイズ =====
-   マウス主体で幅 1024px 以上 (モバイル判定 `(max-width: 1023px), (any-pointer: coarse)`
-   の裏側) では、UI の文字を 1.5 倍に大きくする。UI の文字サイズは em /
-   rem で書いてあるので、html の font-size を上げるだけで全体が連動する (px の
-   ままの前面パネルの銘板・キーボードパレットのキー・canvas の表示倍率は変わらない)。
-   モバイル判定が効く範囲では html は既定 (16px) のままなので見た目は変わらない。 */
+   マウス主体で幅 1024px 以上では UI の文字を 1.5 倍にし、パネル幅と折り返しを
+   調整する (前面パネルの銘板・キーボードパレット・canvas の表示倍率は変わらない)。 */
 @media (min-width: 1024px) and (not (any-pointer: coarse)) {
     html { font-size: 150%; }
-    /* 側パネル: 18px の文字に合わせて 1.2 倍に広げる (ROM 行の 3 列とファイル選択が
-       収まる幅) */
+    /* 側パネルを広げる */
     .side-panel { width: 384px; min-width: 384px; }
-    /* 自動フィットがステータスバーを折り返す形を選んだ時 (body.toolbar-wrap) は、
-       ツールバー (ステータスバー・Debug Panels) の内容幅をステージ幅の決定から外す。
-       ステージ幅は画面と前面パネルで決まり、ツールバーはその幅の中で折り返す */
+    /* ツールバーを折り返す形 (body.toolbar-wrap) では、ツールバーの幅をステージ幅の決定から外す */
     body.toolbar-wrap .stage-main .toolbar { contain: inline-size; }
-    /* ROM 行の状態タグ ("Error" など) が大きくなった分だけ列幅を広げ、ROM 名 + 札
-       (最長 "BOOT_BAS.ROM BASIC時必須") が残り幅に収まらない時は札を次の行へ折り返す */
+    /* ROM 行: 状態タグの列を広げ、ROM 名 + 札は折り返す */
     .rom-list { --rom-col-status: 64px; }
     .rom-item .rom-name { white-space: normal; }
-    /* Options の行 (Mouse のセレクトと補足など) が行幅に収まらない時は折り返し、
-       右端が欠けないようにする */
+    /* Options の行は折り返す */
     .ctrl-row { flex-wrap: wrap; white-space: normal; }
-    /* Library の行: ボタン列 (最大 7 個) が大きくなり項目名の幅が取れないので、
-       項目名を 1 行目、ボタン列を 2 行目に分けて項目名を読めるようにする */
+    /* Library の行: 項目名とボタン列を 2 行に分ける */
     #libList .lib-row { flex-wrap: wrap; }
     #libList .lib-name { flex-basis: 100%; }
 }
+
+/* =========================================================================
+   Recent popover — Disk / Tape の「最近使ったファイル」。
+   「ファイルを選択」の行の直下にその場で開く小さな一覧。配色はテーマ変数から取り、
+   タッチ環境では行とボタンの最小の高さを 44px にする。
+   ========================================================================= */
+.recent-popover {
+    margin-top: 4px;
+    border: 1px solid var(--ui-border);
+    border-radius: 6px;
+    background: var(--ui-input);
+    color: var(--ui-text);
+    font-size: 0.75em;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+}
+.recent-popover[hidden] { display: none; }
+.recent-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--ui-border-soft);
+    color: var(--ui-muted);
+}
+.side-panel .recent-head .recent-close {
+    background: none;
+    border: none;
+    padding: 0 4px;
+    min-height: 0;
+    font-size: 1.3em;
+    line-height: 1;
+    color: var(--ui-muted);
+    cursor: pointer;
+}
+.side-panel .recent-head .recent-close:hover { color: var(--ui-text); }
+.recent-list {
+    max-height: 240px;
+    overflow-y: auto;
+}
+.recent-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--ui-border-soft);
+    cursor: pointer;
+}
+.recent-row:last-child { border-bottom: none; }
+.recent-row:hover, .recent-row:focus { background: var(--ui-panel2); outline: none; }
+.recent-row:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
+.recent-badge { flex: 0 0 auto; width: 1.5em; text-align: center; }
+.recent-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+.recent-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.recent-meta {
+    color: var(--ui-faint);
+    font-size: 0.9em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.recent-missing { color: var(--ui-warn2); font-size: 0.9em; }
+.side-panel .recent-row button {
+    flex: 0 0 auto;
+    padding: 0 6px;
+    min-height: 24px;
+    font-size: 0.9em;
+}
+.recent-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: space-between;
+    padding: 5px 6px;
+    border-top: 1px solid var(--ui-border-soft);
+}
+@media (max-width: 1023px), (any-pointer: coarse) {
+    .recent-row { min-height: 44px; gap: 8px; }
+    .side-panel .recent-row button { min-width: 44px; min-height: 44px; }
+    .side-panel .recent-head .recent-close { min-width: 44px; min-height: 44px; }
+}
+.recent-notice {
+    padding: 4px 8px;
+    border-top: 1px solid var(--ui-border-soft);
+    color: var(--ui-warn2);
+    line-height: 1.3;
+}
+.recent-notice[hidden] { display: none; }
+.recent-row.is-missing .recent-name { color: var(--ui-faint); }
