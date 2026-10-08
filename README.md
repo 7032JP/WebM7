@@ -5,13 +5,13 @@ GitHub Pages で動くページは https://7032jp.github.io/WebM7/ になりま�
 
 WebM7 は、ブラウザで FM-7 系の動作を体験し、対応ソフトウェアの開発・検証に利用できるシミュレータです。
 
-**既定では、独立実装の互換 ROM セット [7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.8)（本体は MIT License。第三者素材由来の漢字字形は対象外。詳細は [LICENSE-AltROMs.md](LICENSE-AltROMs.md)）を同梱・使用するため、ROM ファイルを用意しなくても初回アクセスだけで起動できます。** お手持ちの ROM ファイルを使う場合は、ROM Files パネルの各 ROM 行にある供給元の選択で、必要な ROM だけを 1 本単位で「自分の ROM」に差し替えられます。
+**既定では、独立実装の互換 ROM セット [7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.9)（本体は MIT License。第三者素材由来の漢字字形は対象外。詳細は [LICENSE-AltROMs.md](LICENSE-AltROMs.md)）を同梱・使用するため、ROM ファイルを用意しなくても初回アクセスだけで起動できます。** お手持ちの ROM ファイルを使う場合は、ROM Files パネルの各 ROM 行にある供給元の選択で、必要な ROM だけを 1 本単位で「自分の ROM」に差し替えられます。
 お手持ちの ROM は、ご自身が適法に所有する実機から取得したものをお使いください。
 
 **ROMファイルの取り扱いについて / ROM File Handling**
 - 本シミュレータが同梱・配信するのは、独立実装の互換 ROM セットのみです。純正 ROM は同梱も配信もしません。漢字系 ROM の字形の扱いは [LICENSE-Shinonome.md](LICENSE-Shinonome.md) を参照してください。
 - 利用者がご用意された ROM ファイルは、ユーザーのブラウザ内（ローカル環境）でのみ処理します。ROMデータがサーバーに送信・保存されることはありません。
-- By default this simulator bundles and uses an independently implemented compatible ROM set ([7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.8); the ROM set itself is under the MIT License, which does not cover third-party glyphs in the kanji ROM images). This project neither bundles nor distributes original ROM files. For the glyphs in the kanji ROM images, see [LICENSE-Shinonome.md](LICENSE-Shinonome.md).
+- By default this simulator bundles and uses an independently implemented compatible ROM set ([7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.9); the ROM set itself is under the MIT License, which does not cover third-party glyphs in the kanji ROM images). This project neither bundles nor distributes original ROM files. For the glyphs in the kanji ROM images, see [LICENSE-Shinonome.md](LICENSE-Shinonome.md).
 - User-supplied ROM files are processed entirely within the user's browser (local environment). ROM data is never transmitted to or stored on any server.
 
 ※機種名・製品名は対応対象を示すために使用しています。本プロジェクトは各メーカーの承認を受けたものではありません。
@@ -42,7 +42,7 @@ WebM7 は、ブラウザで FM-7 系の動作を体験し、対応ソフトウ�
 - VRAMダブルページ、CG ROMバンク切替
 - 機種別の起動モードに対応
 - サブROMバンク切替（Type-A/B/C）
-- MMR（192KB拡張RAM）
+- MMR/TWR（メモリ管理）
 - スキャンコードキーボード
 
 ### FM77AV20
@@ -54,7 +54,7 @@ WebM7 は、ブラウザで FM-7 系の動作を体験し、対応ソフトウ�
 ### FM77AV40
 - 640×400 8色モード（400ライン表示）
 - 320×200 262,144色モード
-- MMR拡張モード（448KB拡張RAM、8バンク）
+- 拡張RAM
 - DMAC によるディスク転送に対応
 
 ### FM77AV40EX/SX
@@ -85,8 +85,8 @@ WebM7 は、ブラウザで FM-7 系の動作を体験し、対応ソフトウ�
 
 WebM7 は**同梱の互換 ROM セットを常に土台**として動作し、そのうえで **ROM 1 本（スロット）ごとに供給元を選べます**。ROM Files パネルの各 ROM 行にある選択で「同梱互換」か「自分の ROM」を指定してください。たとえば `FBASIC30.ROM` だけ、あるいは `KANJI.ROM` だけをお手持ちのものにする、といった使い分けができます。指定はブラウザに保存され、次回以降も維持されます。現在どの組み合わせで動作しているかは、同じ ROM Files パネル上部の **ROM Set** 表示で確認できます。
 
-- **同梱互換（既定）** — 独立実装の互換 ROM セット（本体は MIT License。第三者素材由来の漢字字形は対象外）を使用します。ROM ファイルの用意は不要で、初回アクセスだけで起動できます。漢字 ROM（KANJI.ROM・第1水準）も互換セットに同梱されており、漢字表示に対応しています。第2水準漢字 ROM（KANJI2.ROM）と辞書 ROM（DICROM.ROM）も同梱され、FM77AV40EX/SX で使われます。同梱の辞書 ROM は、かな漢字変換（日本語入力）には対応していません。漢字系 ROM の字形の扱いは [LICENSE-Shinonome.md](LICENSE-Shinonome.md) を参照してください。ソフトウェアの動作条件は、互換 ROM の互換性情報（[COMPATIBILITY.md](https://github.com/7032JP/7032AltROMs/blob/v1.0.8/docs/COMPATIBILITY.md)）を参照してください。
-  - 同梱互換 ROM の BASIC は、プログラムをアスキー形式（`SAVE ,A` と同じ形式）だけで読み書きします。中間コード（バイナリ）形式で保存されたファイルは読み込めません（[COMPATIBILITY.md §3.2](https://github.com/7032JP/7032AltROMs/blob/v1.0.8/docs/COMPATIBILITY.md)）。お手持ちのプログラムファイルをそのまま使う場合は、`FBASIC30.ROM` の行を「自分の ROM」に切り替えてください。保護保存（`SAVE` の `,P` 指定）にも対応していません。機械語ファイル（`SAVEM` / `LOADM`）の形式は従来どおりです
+- **同梱互換（既定）** — 独立実装の互換 ROM セット（本体は MIT License。第三者素材由来の漢字字形は対象外）を使用します。ROM ファイルの用意は不要で、初回アクセスだけで起動できます。漢字 ROM（KANJI.ROM・第1水準）も互換セットに同梱されており、漢字表示に対応しています。第2水準漢字 ROM（KANJI2.ROM）と辞書 ROM（DICROM.ROM）も同梱され、FM77AV40EX/SX で使われます。同梱の辞書 ROM は、かな漢字変換（日本語入力）には対応していません。漢字系 ROM の字形の扱いは [LICENSE-Shinonome.md](LICENSE-Shinonome.md) を参照してください。ソフトウェアの動作条件は、互換 ROM の互換性情報（[COMPATIBILITY.md](https://github.com/7032JP/7032AltROMs/blob/v1.0.9/docs/COMPATIBILITY.md)）を参照してください。
+  - 同梱互換 ROM の BASIC は、プログラムをアスキー形式（`SAVE ,A` と同じ形式）だけで読み書きします。中間コード（バイナリ）形式で保存されたファイルは読み込めません（[COMPATIBILITY.md §3.2](https://github.com/7032JP/7032AltROMs/blob/v1.0.9/docs/COMPATIBILITY.md)）。お手持ちのプログラムファイルをそのまま使う場合は、`FBASIC30.ROM` の行を「自分の ROM」に切り替えてください。保護保存（`SAVE` の `,P` 指定）にも対応していません。機械語ファイル（`SAVEM` / `LOADM`）の形式は従来どおりです
 - **自分の ROM** — お手持ちの ROM ファイルを読み込んで使用します（下記）。ROM ファイルを読み込むと、**その行だけ**自動的に「自分の ROM」へ切り替わります。まだファイルを読み込んでいない行では、選択肢が「自分の ROM（未登録）」と表示されます
 
 供給元を選べる ROM は次の 12 本です。`FBASIC30.ROM` / `BOOT_DOS.ROM` / `BOOT_BAS.ROM` / `SUBSYS_C.ROM` / `KANJI.ROM` / `INITIATE.ROM` / `SUBSYS_A.ROM` / `SUBSYS_B.ROM` / `SUBSYSCG.ROM` / `EXTSUB.ROM` / `DICROM.ROM` / `KANJI2.ROM`（FM77AV 以降でのみ使う ROM の行は、その機種を選んでいるときに表示されます）。
@@ -107,7 +107,7 @@ WebM7 は**同梱の互換 ROM セットを常に土台**として動作し、�
 
 選択した機種に合う ROM を指定してください。
 
-**Clear ROMs** ボタンを押すと、ブラウザに保存した ROM を消去します（ディスクや Library はそのまま残ります）。供給元の指定もすべて「同梱互換」に戻ります。
+**Clear ROMs** ボタンを押すと、ブラウザに保存した ROM を消去します（ディスクや Library はそのまま残ります）。供給元の指定もすべて「同梱互換」に戻ります。実行中に押したときは、電源を切った時点で切り替わります。
 
 ### 2. ROM ファイルを読み込む（「自分の ROM」に指定する行）
 
@@ -170,7 +170,7 @@ FM77AV 系では、以下の 5 本がいずれも必須です。
 
 1. ヘッダーの**機種タブ**で機種を選択（FM77AV40EX タブは FM77AV40EX / FM77AV40SX を兼ねます）。機種ごとの機能差はタブの右に並ぶ能力バッジで確認できます
 2. 機種別**ハードウェアパネル**で**起動モード**を選択（操作部の位置は機種・スキンによって変わります。下記「画面の構成」を参照）
-   - **BASIC** — BASIC モードで起動します。ディスクイメージがセットされていればディスクから、なければ BASIC が起動します（同梱互換 ROM では [7T-BASIC](https://github.com/7032JP/7032AltROMs/blob/v1.0.8/docs/BASIC_REFERENCE.md)、お手持ちの BASIC ROM を指定した行ではその BASIC）。テープからのプログラム読み込み（`RUN ""`、`LOAD`、`LOADM`）やBASICプログラミングが可能です
+   - **BASIC** — BASIC モードで起動します。ディスクイメージがセットされていればディスクから、なければ BASIC が起動します（同梱互換 ROM では [7T-BASIC](https://github.com/7032JP/7032AltROMs/blob/v1.0.9/docs/BASIC_REFERENCE.md)、お手持ちの BASIC ROM を指定した行ではその BASIC）。テープからのプログラム読み込み（`RUN ""`、`LOAD`、`LOADM`）やBASICプログラミングが可能です
    - **DOS** — DOS モードで起動します。起動可能なディスクイメージをセットしておいてください
 3. ハードウェアパネルの**電源スイッチ**を押して起動
    - 起動に必要な ROM がまだ読み込まれていないときは、電源スイッチは淡色表示になり、押しても「ROMを設定してください」の案内が出ます
@@ -217,7 +217,7 @@ FM-7 では **FM-7 / FM-NEW7**、FM77AV40EX では **FM77AV40EX / FM77AV40SX** �
 > キー配置の全体図、FM-7 固有のキー（BREAK / GRPH / カナ / HOME など）が日本語配列・英語配列のどのキーに当たるか、キーの割り当ての変え方は、**[キーボードマニュアル](docs/Keyboard_Manual.md)** に図入りでまとめています。
 
 - **キー入力方式** — 押されたキーを**キーボード上の位置**で判定します。日本語配列（JIS 106/109）・英語配列（ASCII / US 101/104）のどちらでも、同じ場所のキーが同じ FM-7 キーになります
-- **クリックで入力（ソフトウェアキーボード）** — Keyboard パネル（ツールバー2行目の **Keyboard** ボタン）のキーボード図のキーをクリックすると、その文字がシミュレータに入力されます（テンキーの `=` と EL / CLS / DUP は入力に対応していません。スキャンコード方式ではテンキーの `+` も入力できず、HOM は DEL と同じ入力になります）。Shift と CTR はスティッキー（次のキーを押して離すと戻ります。CTR は入力コードの無いキーでは戻りません）、GRPH は押している間のみ、CAP / カナ はトグル動作です。タッチ端末では画面下部のソフトウェアキーボードでも同様に入力できます
+- **クリックで入力（ソフトウェアキーボード）** — Keyboard パネル（ツールバー2行目の **Keyboard** ボタン）のキーボード図のキーをクリックすると、その文字がシミュレータに入力されます（テンキーの `=` と EL / CLS / DUP は入力に対応していません）。Shift と CTR はスティッキー（次のキーを押して離すと戻ります。CTR は入力コードの無いキーでは戻りません）、GRPH は押している間のみ、CAP / カナ はトグル動作です。タッチ端末では画面下部のソフトウェアキーボードでも同様に入力できます
 - **キーカスタマイズ** — Keyboard パネルの「キーカスタマイズ」で、お使いの物理キーボードを **配列**（日本語配列 / 英語配列）と **種別**（フルキー / テンキーレス / コンパクト）で選択できます。「カスタマイズ開始」を押し、割り当てたい FM-7 キーをクリックしてから物理キーを押すと、そのキーが割り当てられます。割当はブラウザに保存され、「リセット」で既定に戻せます。FM-7 / FM77AV 共通の設定です
 - **英語配列向けの代替入力** — `_` キーが無い配列では `Ctrl + /` で `_` を入力できます（`@` は P の右の `[` キーにそのまま割り当たっています）
 - **機種によるキー構成の違い** — **無変換** / **変換** キーは FM77AV 以降でのみ表示されます（FM-7 / FM-77 では非表示で、SPACE キーがその分広くなります）
@@ -259,4 +259,4 @@ PCのゲームパッドを接続すると、FM-7/FM77AV のジョイスティッ
 - 同梱の互換 ROM セット（`assets/altroms/`）の条件は、同梱の `assets/altroms/LICENSE` に従います。詳細は [LICENSE-AltROMs.md](LICENSE-AltROMs.md)。
 - 互換 ROM セットの漢字系 ROM に含まれる第三者素材由来の字形は MIT License の対象外です。詳細は [LICENSE-Shinonome.md](LICENSE-Shinonome.md)。
 
-同梱の互換 ROM セット（本体は MIT License）は本プロジェクトとは別の配布物 [7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.8) で、ソースと文書はそちらにあります。配布物には ROM 本体と併せて LICENSE / LICENSE-MIT.md / LICENSE-FONT.md / docs/LEGAL.md / SHA256SUMS / README.md（`assets/altroms/`）を同梱しています。ファイルの検証手順は [LICENSE-AltROMs.md](LICENSE-AltROMs.md) を参照してください。
+同梱の互換 ROM セット（本体は MIT License）は本プロジェクトとは別の配布物 [7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.9) で、ソースと文書はそちらにあります。配布物には ROM 本体と併せて LICENSE / LICENSE-MIT.md / LICENSE-FONT.md / docs/LEGAL.md / SHA256SUMS / README.md（`assets/altroms/`）を同梱しています。ファイルの検証手順は [LICENSE-AltROMs.md](LICENSE-AltROMs.md) を参照してください。

@@ -52,7 +52,8 @@ is this project's own work under the MIT License (see LICENSE).
       SHA-256 of the upstream archive and of the unmodified bdf/shnmk16.bdf
       (this project's own file).
   fonts/SHA256SUMS
-      SHA-256 of the bundled BDF and license text (this project's own file).
+      SHA-256 of the bundled BDF, the license text and the generated ANK
+      font images (this project's own file).
 
   The upstream archive itself, the unmodified BDF, and the other fonts,
   sizes and scripts in the archive are not bundled.
@@ -72,7 +73,8 @@ is this project's own work under the MIT License (see LICENSE).
       上流のアーカイブと、改変前の bdf/shnmk16.bdf の SHA-256
       (本プロジェクトの文書)。
   fonts/SHA256SUMS
-      同梱する BDF とライセンス文の SHA-256 (本プロジェクトの文書)。
+      同梱する BDF・ライセンス文と ANK フォント生成物の SHA-256
+      (本プロジェクトの文書)。
 
   上流のアーカイブそのもの、改変前の BDF、アーカイブ中の他のフォント・
   サイズ・スクリプトは同梱していません。

@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 916 647" width="916" height="647">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 916 630" width="916" height="630">
   <title>日本語配列 (JIS 106/109) の物理キーと FM-7 キーの対応図</title>
   <defs>
     <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
     </marker>
   </defs>
-  <rect x="0" y="0" width="916" height="647" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
+  <rect x="0" y="0" width="916" height="630" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
   <text x="458" y="32" font-family="sans-serif" font-size="18" fill="#1f2328" text-anchor="middle" font-weight="bold">日本語配列（JIS 106/109）との対応</text>
   <text x="458" y="54" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">お使いのキーボードのどのキーが FM-7 のどのキーになるか</text>
   <text x="458" y="72" font-family="sans-serif" font-size="11" fill="#8c959f" text-anchor="middle">上段＝物理キーの刻印 / 下段＝割り当たる FM-7 キー（「—」は割当なし）</text>
@@ -261,5 +261,4 @@
   <text x="26" y="571" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ ASCII 方式では、Ctrl を押しながら英字キーを押すと、制御コード（Ctrl + C など）が入力されます。</text>
   <text x="26" y="588" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ 記号キーはキーボードやブラウザによって送られるキーの位置情報が異なることがあります。図のとおりに</text>
   <text x="26" y="605" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">　 入力できないときは、キーカスタマイズでそのキーを割り当ててください。</text>
-  <text x="26" y="622" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ ^ キーは、現在、ASCII 方式では =、Shift を押しながらでは + が入力されます。</text>
 </svg>

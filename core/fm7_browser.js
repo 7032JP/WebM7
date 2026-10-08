@@ -79,8 +79,13 @@ export class FM7Browser extends FM7 {
 
             if (this._breakKeyCodes.includes(e.code)) {
                 e.preventDefault();
-                this._breakKey = true;
-                this.mainCPU.firq();
+                if (e.repeat) {
+                    // Auto-repeat: FIRQ only; the make code is sent once.
+                    this._breakKey = true;
+                    this.mainCPU.firq();
+                } else {
+                    this.pressBreak();
+                }
                 return;
             }
             this.keyboard.keyDown(e);
@@ -88,7 +93,7 @@ export class FM7Browser extends FM7 {
         this._keyUpHandler = (e) => {
             if (this._breakKeyCodes.includes(e.code)) {
                 e.preventDefault();
-                this._breakKey = false;
+                this.releaseBreak();
                 return;
             }
             this.keyboard.keyUp(e);

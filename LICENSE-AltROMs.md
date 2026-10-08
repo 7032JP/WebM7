@@ -2,9 +2,9 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 上流の名前 | [7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.8) |
+| 上流の名前 | [7032 Alternative ROMs](https://github.com/7032JP/7032AltROMs/tree/v1.0.9) |
 | 作者 | Naomitsu Tsugiiwa |
-| バージョン | v1.0.8 |
+| バージョン | v1.0.9 |
 | ライセンス | MIT License（原文は [`assets/altroms/LICENSE`](assets/altroms/LICENSE)。適用範囲は [`assets/altroms/LICENSE-MIT.md`](assets/altroms/LICENSE-MIT.md)） |
 | 本プロジェクトでの範囲 | `assets/altroms/` 配下の ROM イメージと、互換 ROM セットの権利表示文書・ハッシュ一覧（`README.md` は本プロジェクトの文書） |
 | 改変の有無 | なし |
@@ -50,7 +50,7 @@ ROM 本体と併せて、次の文書を `assets/altroms/` に同梱していま
 （ソース一式）内のパスであり、本プロジェクトのパスではありません。ただし `docs/LEGAL.md` と、
 `docs/LEGAL.md` から見た `../LICENSE`・`../LICENSE-MIT.md`・`../LICENSE-FONT.md` は、
 `assets/altroms/` の中でそのまま辿れます。
-`docs/LEGAL.md` から見た `../README.md`（申告窓口など）は、`assets/altroms/README.md` ではなく配布元の [README](https://github.com/7032JP/7032AltROMs/blob/v1.0.8/README.md) を指します。
+`docs/LEGAL.md` から見た `../README.md`（申告窓口など）は、`assets/altroms/README.md` ではなく配布元の [README](https://github.com/7032JP/7032AltROMs/blob/v1.0.9/README.md) を指します。
 
 これらの文書中の「本リポジトリ」「本プロジェクト」「this repository / this project」は互換 ROM セット側の配布物を指し、
 本プロジェクト（WebM7）全体を指すものではありません。

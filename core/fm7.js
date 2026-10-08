@@ -67,7 +67,7 @@ const FD32_APAL_BLUE     = 0xFD32;   // Analog palette Blue data
 const FD33_APAL_RED      = 0xFD33;   // Analog palette Red data
 
 // FM77AV MMR (Memory Management Register)
-const FD92_TWR_OFFSET    = 0xFD92;   // TWR (Text Window RAM) offset register
+const FD92_TWR_OFFSET    = 0xFD92;   // TWR (Text Window Register) offset register
 const FD93_MMR_CTRL      = 0xFD93;   // MMR control register
 const MMR_WINDOW_SIZE    = 0x1000;   // 4KB per MMR window
 const MMR_NUM_SEGMENTS   = 16;       // 16 × 4KB = 64KB logical space
@@ -240,7 +240,7 @@ export class FM7 {
         this._initiateROMSize = 0;       // Actual size of loaded Initiator ROM
         this._subROM_ASize    = 0;       // Actual size of loaded Type-A ROM
         this._subROM_BSize    = 0;       // Actual size of loaded Type-B ROM
-        this._initiatorActive = false;   // Initiator ROM mapped at $FE00-$FFFF
+        this._initiatorActive = false;   // Initiator ROM mapped at $6000-$7FFF and $FFFE/$FFFF
         this._initiatorHandoffDone = false; // Sub-monitor switch + log only on first disable
         this._fd10Reg         = 0;       // FM77AV extended sub CPU mode register ($FD10)
         this._subMonitorType  = SUB_MONITOR_C; // Sub monitor: C=0, A=1, B=2
@@ -291,7 +291,7 @@ export class FM7 {
         // Maps 16 × 4KB windows in logical $0000-$FFFF to physical extended RAM
         this._mmrEnabled   = false;        // MMR active flag
         this._mmrBankReg   = 0;            // $FD90: bank select (0-7) for register access AND address translation
-        this._twrFlag      = false;        // $FD93 bit 6: TWR (Text Window RAM) enable
+        this._twrFlag      = false;        // $FD93 bit 6: TWR (Text Window Register) enable
         this._twrReg       = 0;            // $FD92: TWR offset register
         this._mmrRegs      = new Uint8Array(128); // 8 banks × 16 segments
         this._mmrExt       = false;            // $FD94 bit 7: extended MMR (8 banks; off = 4 banks)
@@ -421,14 +421,15 @@ export class FM7 {
 
         // FM77AV: Initiator ROM overlay takes priority over MMR.
         // When active, $6000-$7FFF always reads from Initiator ROM.
-        // The upper 512 bytes of the 8KB ROM ($1E00-$1FFF) are also mirrored
-        // at $FE00-$FFFF so the reset vector resolves to the initiator entry.
+        // The reset vector ($FFFE/$FFFF) also shows the last two bytes of the
+        // ROM ($7FFE/$7FFF) so it resolves to the initiator entry.  The rest
+        // of $FE00-$FFFF stays RAM.
         if (this.isFM77AV && this._initiatorActive && this.romLoaded.initiate) {
             if (addr >= 0x6000 && addr < 0x8000) {
                 return this.initiateROM[addr - 0x6000];
             }
-            if (addr >= 0xFE00 && addr <= 0xFFFF) {
-                return this.initiateROM[(addr - 0xFE00) + 0x1E00];
+            if (addr >= 0xFFFE) {
+                return this.initiateROM[addr - 0xE000];
             }
         }
 
@@ -1065,7 +1066,7 @@ export class FM7 {
 
         // FM77AV: $FD10 write - Mode control / Initiator ROM overlay toggle
         // bit 1 controls the Initiator ROM overlay:
-        //   bit 1 = 0: Initiator ROM overlay active at $6000-$7FFF / $FE00-$FFFF
+        //   bit 1 = 0: Initiator ROM overlay active at $6000-$7FFF / $FFFE-$FFFF
         //   bit 1 = 1: Initiator disabled, underlying RAM/ROM visible
         // The overlay can be toggled both ways (software may temporarily
         // re-enable it), so both transitions are supported.
@@ -1377,13 +1378,14 @@ export class FM7 {
                 this._twrReg = val & 0xFF;
                 return;
             }
-            // $FD94: Extended MMR / CPU speed — FM77AV family only.
+            // $FD94: Extended MMR / CPU speed — FM77AV20EX / AV40 / AV40EX only.
             // bit 7 widens the segment table from 4 banks to 8 and lifts the
-            // 6-bit cap on the physical page number.  The FM-77 has the
-            // 4-bank MMR only, so the register is ignored there and _mmrExt
-            // stays false, keeping it at 4 banks / 6-bit pages.
+            // 6-bit cap on the physical page number.  The FM-77, FM77AV and
+            // FM77AV20 have the 4-segment MMR only (2-bit MSR, 6 address
+            // lines out of the MMR), so the register is ignored there and
+            // _mmrExt stays false, keeping it at 4 banks / 6-bit pages.
             if (addr === 0xFD94) {
-                if (this.isFM77AV) {
+                if (this.hasExtendedMMR) {
                     this._mmrExt = (val & 0x80) !== 0;
                     // bit2: refresh speed, bit0: window speed — no effect in simulator
                 }
@@ -1418,7 +1420,7 @@ export class FM7 {
     }
 
     // =========================================================================
-    // TWR (Text Window RAM) Address Translation
+    // TWR (Text Window Register) Address Translation
     // Add the TWR offset in 256-byte units and wrap at 64 KB.
     // FM77AV: window bank 0 selects extended RAM bank 0.
     // =========================================================================
@@ -2776,19 +2778,25 @@ export class FM7 {
 
 
     /**
-     * Simulate BREAK key press (for virtual keyboard).
-     * Asserts main CPU FIRQ, same as physical BREAK key.
+     * BREAK key press (physical or virtual keyboard).
+     * Asserts main CPU FIRQ; in scan code mode the encoder also sends the
+     * BREAK make code (nothing in ASCII mode).
      */
     pressBreak() {
         this._breakKey = true;
         this.mainCPU.firq();
+        this.keyboard.breakKeyEvent(true);
     }
 
     /**
-     * Simulate BREAK key release (for virtual keyboard).
+     * BREAK key release (physical or virtual keyboard).
+     * In scan code mode the encoder also sends the BREAK break code
+     * (only when the key was down, so a stray release sends nothing).
      */
     releaseBreak() {
+        const wasDown = this._breakKey;
         this._breakKey = false;
+        if (wasDown) this.keyboard.breakKeyEvent(false);
     }
 
     /**
@@ -3167,6 +3175,11 @@ export class FM7 {
 
     /** DMAC HD6844 present: AV20EX/AV40/AV40EX */
     get hasDMAC() {
+        return this._machineType === MACHINE_FM77AV20EX || this.isAV40;
+    }
+
+    /** 8-segment extended MMR ($FD94 bit7): AV20EX/AV40/AV40EX */
+    get hasExtendedMMR() {
         return this._machineType === MACHINE_FM77AV20EX || this.isAV40;
     }
 

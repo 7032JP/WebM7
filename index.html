@@ -33,7 +33,7 @@
         </div>
         <!-- 機種の機能ラベル -->
         <div class="ctrl-row cap-badge-row" id="capBadgeRow">
-            <span class="cap-badge" id="capBadgeMMR" title="メモリ管理（MMR）とテキストウィンドウ RAM（TWR）">MMR/TWR</span>
+            <span class="cap-badge" id="capBadgeMMR" title="メモリ管理（MMR）とテキストウィンドウレジスタ（TWR）">MMR/TWR</span>
             <span class="cap-badge" id="capBadgeAV" title="4096色表示・キースキャン読込・ALU/ハードウェア直線描画">77AV機能</span>
             <span class="cap-badge" id="capBadge2DD" title="2DD ディスク対応（ドライブモード切替 対応）">2DD</span>
             <span class="cap-badge" id="capBadgeDMAC" title="DMAC による DMA 転送">DMAC</span>
@@ -136,7 +136,7 @@
                     </div>
                     <span class="status-divider"></span>
                     <!-- MMR / TWR: memory mapper activity -->
-                    <div class="status-led-item" title="メモリ管理 (MMR) / テキストウィンドウ RAM (TWR) 使用中に点灯。緑=高速MMR動作中">
+                    <div class="status-led-item" title="メモリ管理 (MMR) / テキストウィンドウレジスタ (TWR) 使用中に点灯。緑=高速MMR動作中">
                         <span class="fdc-led" id="tbMmrLed"></span>
                         <span class="status-led-name">MMR</span>
                     </div>
@@ -907,7 +907,7 @@
         既定では同梱の互換 ROM セット（独立実装。本体は MIT License、第三者素材由来の漢字字形は対象外。詳細は <code>LICENSE-AltROMs.md</code>）で動作するため、ROM ファイルの用意は不要です。お手持ちの ROM ファイルを使うこともできます。</p>
 
         <p class="md-note" style="font-size:0.85em;"><strong>ROMファイルの取り扱いについて</strong><br>
-        ・本シミュレータが同梱・配信するのは、独立実装の互換 ROM セット（本体は MIT License。配布元は <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.8" target="_blank" rel="noopener">7032 Alternative ROMs</a>）のみです。純正 ROM は同梱も配信もしません。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>
+        ・本シミュレータが同梱・配信するのは、独立実装の互換 ROM セット（本体は MIT License。配布元は <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.9" target="_blank" rel="noopener">7032 Alternative ROMs</a>）のみです。純正 ROM は同梱も配信もしません。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>
         ・利用者がご用意されたROMファイルはユーザーのブラウザ内（ローカル環境）でのみ処理します。ROMデータがサーバーに送信・保存されることはありません。</p>
 
         <p class="md-note" style="font-size:0.85em;">選択した機種に合う ROM を指定してください。</p>
@@ -925,7 +925,7 @@
         <h3 id="help-rom">1. ROM の供給元を選ぶ / ROMファイルを読み込む（ROM Files パネル）</h3>
         <p>本シミュレータは<strong>同梱の互換 ROM セットを常に土台</strong>として動作します。そのうえで、<strong>ROM 1 本ごとに供給元を選べます</strong>。各 ROM の行にある選択で「同梱互換」か「自分の ROM」を指定してください（例: <code>FBASIC30.ROM</code> だけ、あるいは <code>KANJI.ROM</code> だけをお手持ちのものにする、といった使い分けができます）。指定はブラウザに保存され、次回以降も維持されます。現在どの組み合わせで動作しているかは、同じパネル上部の <strong>ROM Set</strong> 表示で確認できます。</p>
         <ul>
-        <li><strong>同梱互換（既定）</strong> — 独立実装の互換 ROM セット（本体は MIT License）を使用します。ROM ファイルの用意は不要で、そのまま起動できます（行の横に「互換」と表示されます）。漢字 ROM（第1水準・全機種）も同梱されており、漢字表示に対応しています。ソフトウェアの動作条件は、下記の互換 ROM の互換性情報を参照してください（辞書 ROM を使うかな漢字変換には対応していません）。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>同梱互換 ROM の BASIC は、プログラムをアスキー形式（<code>SAVE ,A</code> と同じ形式）だけで読み書きします。中間コード（バイナリ）形式で保存されたファイルは読み込めません（<a href="https://github.com/7032JP/7032AltROMs/blob/v1.0.8/docs/COMPATIBILITY.md" target="_blank" rel="noopener">COMPATIBILITY.md §3.2</a>）。お手持ちのプログラムファイルをそのまま使う場合は、<code>FBASIC30.ROM</code> の行を「自分の ROM」に切り替えてください。機械語ファイル（<code>SAVEM</code> / <code>LOADM</code>）の形式は従来どおりです</li>
+        <li><strong>同梱互換（既定）</strong> — 独立実装の互換 ROM セット（本体は MIT License）を使用します。ROM ファイルの用意は不要で、そのまま起動できます（行の横に「互換」と表示されます）。漢字 ROM（第1水準・全機種）も同梱されており、漢字表示に対応しています。ソフトウェアの動作条件は、下記の互換 ROM の互換性情報を参照してください（辞書 ROM を使うかな漢字変換には対応していません）。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>同梱互換 ROM の BASIC は、プログラムをアスキー形式（<code>SAVE ,A</code> と同じ形式）だけで読み書きします。中間コード（バイナリ）形式で保存されたファイルは読み込めません（<a href="https://github.com/7032JP/7032AltROMs/blob/v1.0.9/docs/COMPATIBILITY.md" target="_blank" rel="noopener">COMPATIBILITY.md §3.2</a>）。お手持ちのプログラムファイルをそのまま使う場合は、<code>FBASIC30.ROM</code> の行を「自分の ROM」に切り替えてください。機械語ファイル（<code>SAVEM</code> / <code>LOADM</code>）の形式は従来どおりです</li>
         <li><strong>自分の ROM</strong> — お手持ちの ROM ファイルを読み込んで使用します。ROM ファイルを読み込むと、その行は自動的に「自分の ROM」に切り替わります（行の横に「OK」と表示されます）</li>
         </ul>
         <p>「自分の ROM」に指定する行には以下の ROM ファイルが必要です（ご自身が適法に所有する実機から取得したものを用意してください）。</p>
@@ -972,7 +972,7 @@
         </table>
         <p>ROM 名の横の <strong>必須</strong> / <strong>任意</strong> バッジは、選択中の機種の ROM 構成を示します。</p>
         <p>「自分の ROM」に指定した行のファイルがまだ読み込まれていない場合は、<strong>その行だけ</strong>同梱の互換 ROM で自動的に補って起動します（パネル上部の <strong>ROM Set</strong> に補完中の件数が出ます）。</p>
-        <p><strong>Clear ROMs</strong> ボタンを押すと、ブラウザに保存した ROM だけを消去できます（ディスクや Library はそのまま残ります）。供給元の指定もすべて「同梱互換」に戻ります。</p>
+        <p><strong>Clear ROMs</strong> ボタンを押すと、ブラウザに保存した ROM だけを消去できます（ディスクや Library はそのまま残ります）。供給元の指定もすべて「同梱互換」に戻ります。実行中に押したときは、電源を切った時点で切り替わります。</p>
 
         <h3 id="help-library">2. メディアイメージを管理する（Library パネル）</h3>
         <p><strong>Library</strong> は、ディスク (D77) とテープ (T77) を<strong>ブラウザ内</strong>で管理する仮想メディアの棚です。</p>
@@ -1000,7 +1000,7 @@
         <ul>
         <li>ファイル選択で <code>.d77</code> / <code>.2d</code> を読み込み、<strong>Eject</strong> で取り出し</li>
         <li><strong>最近使ったファイル</strong> — 一度読み込んだファイルは履歴に残り、次に「ファイルを選択」を押すと先に一覧が開きます。行を押すだけで同じファイルを再度セットできます（Drive 0 / 1 で共通の一覧。Library から挿入したものも含まれます）。「Choose a new file…」でファイル選択ダイアログ、「✎」で表示名（メモ）、「×」で 1 件削除、「Clear history」で全消去。↑ / ↓ と Enter でも選べます</li>
-        <li>履歴は PC のファイルへの参照と、開いた時点の中身の控えをブラウザ内に保存します（ディスク・テープそれぞれ 20 件まで）。参照を保持できるブラウザでは履歴から開くたびに PC の最新のファイルを読み直し（権限の確認が出ることがあります）、読み直せないときは開いた時点の控えが残っていればそこから復元します。<strong>履歴の中身は BASIC からの書き込みで更新されず、PC のファイルへ書き戻されることもありません</strong></li>
+        <li>履歴は PC のファイルへの参照と、開いた時点の中身の控えをブラウザ内に保存します（ディスク・テープそれぞれ 20 件まで。テープの WAV は中身を控えません）。参照を保持できるブラウザでは履歴から開くたびに PC の最新のファイルを読み直し（権限の確認が出ることがあります）、読み直せないときは開いた時点の控えが残っていればそこから復元します。<strong>履歴の中身は BASIC からの書き込みで更新されず、PC のファイルへ書き戻されることもありません</strong></li>
         <li><strong>Clear Disk Cache</strong> ボタンは、ブラウザにキャッシュしたディスクイメージ・ファイル参照と、最近使ったファイルの履歴（ディスク・テープ）を消去します（ROM と Library は残ります）</li>
         <li><code>SAVE "0:NAME"</code> / <code>SAVEM</code> で書き込まれた内容はブラウザ内にのみ反映されます。PC へ書き出すのは <strong>Save</strong> ボタン（<code>.d77</code>。Library の項目は <strong>Exp</strong>）を押したときだけです。</li>
         <li>セット中のディスク情報（2D / 2DD、シリンダ数 C・サイド数 H・トラック当たりセクタ数 R・セクタ当たりバイト数 N）をドライブごとに表示</li>
@@ -1100,7 +1100,7 @@
         <p>キー配置の全体図、FM-7 固有のキー（BREAK / GRPH / カナ / HOME など）が日本語配列・英語配列のどのキーに当たるか、キーの割り当ての変え方は <a href="#" class="keyboard-manual-trigger">キーボードマニュアル</a> に図入りでまとめています。</p>
         <ul>
         <li><strong>キー入力方式</strong> — 物理キーの位置でマッピングしています。JIS配列（106/109キー）・US配列（101/104キー）のどちらでも同じ配置で使えます</li>
-        <li><strong>クリックで入力（ソフトウェアキーボード）</strong> — Keyboard パネルのキーボード図のキーをクリックすると、その文字がシミュレータに入力されます（テンキーの <code>=</code> と EL / CLS / DUP は入力に対応していません。スキャンコード方式ではテンキーの <code>+</code> も入力できず、HOM は DEL と同じ入力になります）。Shift と CTR はスティッキー（押すたびに ON / OFF が切り替わり、次のキーを押して離すと自動で戻ります。CTR は入力コードの無いキーでは戻りません）、GRPH は押している間のみ、CAP / カナ はトグル動作です。タッチ端末では画面下部のソフトウェアキーボードでも同様に入力できます</li>
+        <li><strong>クリックで入力（ソフトウェアキーボード）</strong> — Keyboard パネルのキーボード図のキーをクリックすると、その文字がシミュレータに入力されます（テンキーの <code>=</code> と EL / CLS / DUP は入力に対応していません）。Shift と CTR はスティッキー（押すたびに ON / OFF が切り替わり、次のキーを押して離すと自動で戻ります。CTR は入力コードの無いキーでは戻りません）、GRPH は押している間のみ、CAP / カナ はトグル動作です。タッチ端末では画面下部のソフトウェアキーボードでも同様に入力できます</li>
         <li><strong>Cursor → Ten Key</strong> — テンキーのないキーボード向けのオプションです。サイドパネルの Options セクションでチェックを入れると、カーソルキー（↑↓←→）がテンキーの 8/2/4/6 として動作します。テンキーを使うプログラムに便利です</li>
         <li><strong>キーカスタマイズ</strong> — Keyboard パネルの「キーカスタマイズ」で、お使いの物理キーボードを配列（日本語配列 / 英語配列）と種別（フルキー / テンキーレス / コンパクト）で選べます。「カスタマイズ開始」を押し、割り当てたい FM-7 キーをクリックしてから物理キーを押すと、そのキーが割り当てられます。割当は保存され、「リセット」で既定に戻せます（手順は <a href="#" class="keyboard-manual-trigger">キーボードマニュアル</a> の第 5 章）</li>
         <li><strong>BREAK キー</strong> — デフォルトでは <code>Esc</code> キーまたは <code>Pause</code> キーが BREAK キーに割り当てられています（PC の Esc の位置が BREAK です）。FM-7 の ESC キーは、日本語配列の <code>半角/全角</code>（英語配列の <code>`</code>）の位置です。変更は「キーカスタマイズ」と共通で、「カスタマイズ開始」を押してキーボード図の <strong>BRK</strong> キーをクリックし、割り当てたい物理キーを押します（<code>Pause</code> は常に予備として有効）。「リセット」で既定に戻ります</li>
@@ -1165,7 +1165,7 @@
         <h2>同梱互換 ROM セット</h2>
         <p class="md-note" style="font-size:0.85em;">本シミュレータには、独立実装の互換 ROM セット（本体は MIT License）を同梱しており、既定ではこの互換 ROM セットで動作します。
         ROM 本体と併せてライセンス文（LICENSE・その適用範囲を記した LICENSE-MIT.md）・同梱フォントの由来と原ライセンス文（LICENSE-FONT.md）・利用条件と来歴、字形の区分の詳細（docs/LEGAL.md）・検証用ハッシュ（SHA256SUMS）・説明（README.md）を
-        <code>assets/altroms/</code> に同梱しています。互換 ROM セットのソースと文書は配布元 <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.8" target="_blank" rel="noopener">7032 Alternative ROMs</a> にあります。</p>
+        <code>assets/altroms/</code> に同梱しています。互換 ROM セットのソースと文書は配布元 <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.9" target="_blank" rel="noopener">7032 Alternative ROMs</a> にあります。</p>
         <p class="md-note" style="font-size:0.85em;">ただし、<strong>漢字系 ROM（KANJI・KANJI2）に含まれる第三者素材由来の字形は、上記 MIT License の対象ではありません。</strong>
         独自字形と変換処理の適用条件は、同梱の <code>assets/altroms/LICENSE-MIT.md</code> / <code>assets/altroms/LICENSE-FONT.md</code> を参照してください。
         これらの文書に現れる相対パスは互換 ROM セット側の配布物（ソース一式）内のパスです。</p>
@@ -2351,7 +2351,7 @@ for (const [filename, entry] of Object.entries(ROM_FILE_MAP)) {
 // 'user': 利用者の ROM ファイル (IndexedDB に保存) を使用。
 
 // ビルドスタンプ。
-const BUILD_STAMP = '20261007201858';
+const BUILD_STAMP = '20261008135559';
 
 const ALTROM_DIR = 'assets/altroms/';
 
@@ -2366,6 +2366,8 @@ let romSlotSource = {};
 // 実際にコアへ読み込んだ ROM の供給元 (slot → 'user' | 'builtin')。
 // ROM Set 表示はこの実績値から決める。
 let activeRomOrigins = {};
+// 実行中に供給元の指定を変えたため、電源を切ったときに ROM セットを組み直す。
+let romSetRebuildPending = false;
 
 // IndexedDB に保存済みの利用者 ROM があるスロットの集合 (UI 表示用のキャッシュ)。
 // refreshSavedRomSlots() で更新する。
@@ -2606,6 +2608,7 @@ function updateRomSourceUI(ok) {
 // 上書きすることも、その逆も起こらない。
 // persist: true のときは、最初に romSlotSource を保存する。
 async function applyRomSet({ persist = false } = {}) {
+    romSetRebuildPending = false;
     if (persist) await saveRomSlotSource();
     await refreshSavedRomSlots();
     fm7.clearROMs();
@@ -3749,7 +3752,9 @@ document.getElementById('clearDiskCacheBtn').addEventListener('click', async () 
 
 // Clear cached ROM files only (keep disks and Library).
 document.getElementById('clearRomsBtn').addEventListener('click', async () => {
-    if (!confirm('Clear cached ROM files from browser storage?\n(Disks and Library are kept.)')) return;
+    const romRunning = (typeof emuState !== 'undefined') && emuState !== 'stopped';
+    if (!confirm('Clear cached ROM files from browser storage?\n(Disks and Library are kept.)' +
+        (romRunning ? '\nThe ROMs in use are switched at the next power off.' : ''))) return;
     try {
         const db = await openDB();
         await new Promise((resolve, reject) => {
@@ -3758,20 +3763,10 @@ document.getElementById('clearRomsBtn').addEventListener('click', async () => {
             tx.oncomplete = resolve;
             tx.onerror = () => reject(tx.error);
         });
-        // Reset ROM status tags to unloaded (補完タグもここで消える).
-        for (const key in ROM_FILE_MAP) {
-            const entry = ROM_FILE_MAP[key];
-            const el = entry.status && entry.status();
-            if (el) {
-                el.textContent = '--';
-                el.classList.remove('loaded');
-                el.classList.remove('filled');
-                el.classList.remove('builtin');
-                el.removeAttribute('title');
-            }
-        }
         // 消えた ROM を指し続けないよう、スロット単位の供給元も空に戻して
         // 保存する (= すべて同梱互換 ROM)。停止中はそのまま組み直す。
+        // 実行中は動いている ROM に合わせてタグと ROM Set 表示を残し、
+        // 電源を切ったときに組み直す。
         romSlotSource = {};
         await saveRomSlotSource();
         // Clear file inputs.
@@ -3781,14 +3776,11 @@ document.getElementById('clearRomsBtn').addEventListener('click', async () => {
             romCGInput, romKanjiInput, romExtSubInput, romDicromInput, romKanji2Input
         ];
         for (const inp of romInputs) { if (inp) inp.value = ''; }
-        if (romStatusEl) {
-            romStatusEl.textContent = '';
-            romStatusEl.classList.remove('loaded');
-        }
         const romStopped = (typeof emuState === 'undefined') || (emuState === 'stopped');
         if (romStopped) {
             await applyRomSet();
         } else {
+            romSetRebuildPending = true;
             await refreshSavedRomSlots();
             updateRomSlotSelectUI();
         }
@@ -4438,6 +4430,7 @@ powerToggle.addEventListener('change', async () => {
             if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
         setEmuState('stopped');
+        if (romSetRebuildPending) await applyRomSet();
     }
 });
 
@@ -4777,9 +4770,9 @@ const FM7_KBD_LAYOUT = [
     [K('CTR','ControlLeft','ctrl'),K('A','KeyA'),K('S','KeyS'),K('D','KeyD'),K('F','KeyF'),K('G','KeyG'),K('H','KeyH'),K('J','KeyJ'),K('K','KeyK'),K('L','KeyL'),K(';','Semicolon'),K(':','Quote'),K(']','IntlBackslash'),_,_,_,K('1','Numpad1'),K('2','Numpad2'),K('3','Numpad3'),K('=','NumpadEqual')],
     // --- Main row 4: SHIFT~SHIFT + numpad 0.+RT ---
     [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('_','IntlRo'),K('SHF','ShiftRight'),_,_,_,K('0','Numpad0'),K('.','NumpadDecimal'),K('+','NumpadAdd'),K('RT','NumpadEnter')],
-    // --- Main row 5: CAP/GRP/(無変換)/SPACE/(変換)/カナ (main area only, no numpad) ---
+    // --- Main row 5: CAP/GRP/(無変換)/(変換)/SPACE/カナ (main area only, no numpad) ---
     // 無変換 / 変換 は FM77AV 以降のみ表示する
-    [K('CAP','CapsLock','led'),K('GRP','AltLeft'),K('無変換','NonConvert','av-key'),K('SPACE','Space','space'),K('変換','Convert','av-key'),K('カナ','AltRight','led')],
+    [K('CAP','CapsLock','led'),K('GRP','AltLeft'),K('無変換','NonConvert','av-key'),K('変換','Convert','av-key'),K('SPACE','Space','space'),K('カナ','AltRight','led')],
 ];
 
 const fm7KbdEl = document.getElementById('fm7Kbd');
@@ -6294,15 +6287,14 @@ document.getElementById('copyrightYear').textContent =
             mPowerToggle.checked = mainPowerToggle.checked;
         });
     }
-    // Pause/Resume: a click is forwarded to the main pause button, and the
-    // label follows the main button's text span.
+    // Pause/Resume: a click is forwarded to the main pause button. The label
+    // follows the emulator state, not the main button's text.
     if (mPauseBtn && mainPauseBtn) {
         mPauseBtn.addEventListener('click', () => {
             mainPauseBtn.click();
         });
         const syncPauseLabel = () => {
-            const mainText = mainPauseBtn.querySelector('.btn-text');
-            mPauseBtn.textContent = (mainText && mainText.textContent === 'Resume') ? 'Resume' : 'Pause';
+            mPauseBtn.textContent = emuState === 'paused' ? 'Resume' : 'Pause';
         };
         new MutationObserver(syncPauseLabel).observe(mainPauseBtn, { childList: true, characterData: true, subtree: true });
     }
