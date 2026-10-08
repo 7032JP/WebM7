@@ -47,6 +47,9 @@ const STATUS = {
     NOT_READY:      0x80,
 };
 
+// Type I status bits that follow the drive signals.
+const TYPE_I_DRIVE_BITS = STATUS.INDEX | STATUS.TRACK0 | STATUS.WRITE_PROTECT | STATUS.NOT_READY;
+
 // Accelerated seek step rates in CPU cycles, used in fast-read mode.
 const STEP_RATES = [200, 400, 600, 1000];
 
@@ -472,6 +475,8 @@ export class FDC {
         this.currentDrive = 0;
         this.currentSide = 0;
         this.motorOn = false;
+        // $FD1D bit6: drive disable (no drive is selected while set).
+        this.driveDisabled = false;
         // Optional motor spin-up delay (strictSpinup); the default keeps the
         // drive instantly ready.
         this.strictSpinup = false;
@@ -545,6 +550,11 @@ export class FDC {
         // IRQ / DRQ status
         this.irqFlag = false;
         this.drqFlag = false;
+
+        // Force Interrupt conditions waiting for an event (I0: READY rising,
+        // I1: READY falling, I2: every index pulse) and the last READY level.
+        this._forceIntCond = 0;
+        this._forceIntReady = false;
 
         // Pending DRQ for byte-level transfer timing
         this._pendingDrq = false;
@@ -800,6 +810,9 @@ export class FDC {
     static SEEK_END_STAY_CYCLES = Math.round(300 * 1.794);
     static WAIT60_US = 60000;
     static WAIT60_CYCLES = Math.round(60000 * 1.794);
+    // Width of the INDEX pulse seen in the Type I status (once per revolution).
+    static INDEX_PULSE_US = 4000;
+    static INDEX_PULSE_CYCLES = Math.round(4000 * 1.794);
 
     /** Update timing constants for actual CPU clock frequency */
     static setCPUClock(hz) {
@@ -814,6 +827,7 @@ export class FDC {
         FDC.SPINUP_CYCLES = Math.round(FDC.SPINUP_US * cpm);
         FDC.E_SETTLE_CYCLES = Math.round(FDC.E_SETTLE_US * cpm);
         FDC.WAIT60_CYCLES = Math.round(FDC.WAIT60_US * cpm);
+        FDC.INDEX_PULSE_CYCLES = Math.round(FDC.INDEX_PULSE_US * cpm);
         FDC.E_SETTLE_FAST_CYCLES = Math.round(FDC.E_SETTLE_FAST_US * cpm);
         FDC.SEEK_END_MOVED_CYCLES = Math.round(FDC.SEEK_END_MOVED_US * cpm);
         FDC.SEEK_END_STAY_CYCLES = Math.round(FDC.SEEK_END_STAY_US * cpm);
@@ -1047,6 +1061,12 @@ export class FDC {
             case 0xFD18: // Status Register
                 // Reading status clears IRQ
                 this.irqFlag = false;
+                // Type I status: INDEX, TRACK00, WRITE PROTECT and NOT READY
+                // follow the drive signals at the time of the read.
+                if (this.commandType === CMD_TYPE.TYPE_I) {
+                    this.statusReg = (this.statusReg & ~TYPE_I_DRIVE_BITS)
+                                   | this._typeIDriveBits();
+                }
                 value = this.statusReg;
                 break;
 
@@ -1081,7 +1101,8 @@ export class FDC {
                 break;
 
             case 0xFD1D: // Drive select readback
-                value = (this.currentDrive & 0x03) | (this.motorOn ? 0x80 : 0x00);
+                value = (this.currentDrive & 0x03) | (this.driveDisabled ? 0x40 : 0x00)
+                      | (this.motorOn ? 0x80 : 0x00);
                 break;
 
             case 0xFD1F: // DRQ/IRQ status
@@ -1169,6 +1190,7 @@ export class FDC {
                     if (newDrive !== this.currentDrive || !(value & 0x80)) this._headLoaded = false;
                     if (!this.fastReadMode) this._settleRemaining = FDC.WAIT60_CYCLES;
                     this.currentDrive = newDrive;
+                    this.driveDisabled = (value & 0x40) !== 0;
                 }
                 {
                     const newMotor = (value & 0x80) !== 0;
@@ -1210,7 +1232,10 @@ export class FDC {
         if (this.logEnabled) this._logCycle += cycles;
 
         // Advance disk rotation phase (continuous, wraps at one revolution)
+        const indexPassed = this._rotationPhase + cycles >= FDC.REVOLUTION_CYCLES;
         this._rotationPhase = (this._rotationPhase + cycles) % FDC.REVOLUTION_CYCLES;
+
+        if (this._forceIntCond) this._checkForceIntConditions(indexPassed);
 
         // Burn down the cold spin-up window while the motor is running.
         if (this._spinupRemaining > 0 && this.motorOn) {
@@ -1380,6 +1405,9 @@ export class FDC {
             return;
         }
 
+        // A new command cancels the Force Interrupt conditions.
+        this._forceIntCond = 0;
+
         // Set access latch for UI LED
         this.accessLatch = true;
 
@@ -1464,7 +1492,7 @@ export class FDC {
             if (this.onHeadLoadSound) this.onHeadLoadSound();
 
             // No disk inserted: return NOT_READY.
-            if (!this.currentDisk || !this.currentDisk.loaded) {
+            if (this._noMedia()) {
                 this._completeCommand(STATUS.NOT_READY);
                 return;
             }
@@ -1500,7 +1528,7 @@ export class FDC {
             // FDD sound: head-load click for Type III.
             if (this.onHeadLoadSound) this.onHeadLoadSound();
 
-            if (!this.currentDisk || !this.currentDisk.loaded) {
+            if (this._noMedia()) {
                 this._completeCommand(STATUS.NOT_READY);
                 return;
             }
@@ -1514,7 +1542,7 @@ export class FDC {
             // Read Track
             this.commandType = CMD_TYPE.TYPE_III;
             if (this.onHeadLoadSound) this.onHeadLoadSound();
-            if (!this.currentDisk || !this.currentDisk.loaded) {
+            if (this._noMedia()) {
                 this._completeCommand(STATUS.NOT_READY);
                 return;
             }
@@ -1527,7 +1555,7 @@ export class FDC {
             // Write Track (Format)
             this.commandType = CMD_TYPE.TYPE_III;
             if (this.onHeadLoadSound) this.onHeadLoadSound();
-            if (!this.currentDisk || !this.currentDisk.loaded) {
+            if (this._noMedia()) {
                 this._completeCommand(STATUS.NOT_READY);
                 return;
             }
@@ -1724,16 +1752,18 @@ export class FDC {
         // Reset PLL drift counter — Type I commands (RESTORE/SEEK) establish
         // a new head position; the PLL re-locks from scratch on the next read.
         this._pllDrift = 0;
-        let status = 0;
-
-        // Track 0 bit
-        if (this.headPosition[this.currentDrive] === 0) {
-            status |= STATUS.TRACK0;
-        }
+        // INDEX, TRACK00, WRITE PROTECT, NOT READY from the drive signals.
+        let status = this._typeIDriveBits();
 
         // Head engaged
         if (this.cmdFlags.h) {
             status |= STATUS.HEAD_ENGAGED;
+        }
+
+        // V flag: the track under the head must carry an ID field whose
+        // track number equals the Track Register.
+        if (this.cmdFlags.v && !this._verifyTrack()) {
+            status |= STATUS.SEEK_ERROR;
         }
 
         if (!this.fastReadMode && (this._stepped || this.cmdFlags.h)) {
@@ -1742,11 +1772,55 @@ export class FDC {
         if (this.cmdFlags.h) this._headLoaded = true;
         this._stepped = false;
 
-        // Type I commands do not check for media, so a missing disk never
-        // reports NOT_READY here (the drive is physically present).  Type II/III
-        // report NOT_READY when no disk is inserted (see _executeCommand).
-
         this._completeCommand(status);
+    }
+
+    /**
+     * Type I verify: true when the media track under the head (current side)
+     * has an ID field whose track number matches the Track Register.
+     */
+    _verifyTrack() {
+        if (this._driveNotReady()) return false;
+        const disk = this.currentDisk;
+        const track = this._mediaTrackIndex();
+        if (track < 0) return false;
+        const side = this.currentSide;
+        for (const n of disk.getSectorList(track, side)) {
+            const sec = disk.getSector(track, side, n);
+            if (sec && sec.c === (this.trackReg & 0xFF)) return true;
+        }
+        return false;
+    }
+
+    /** True when no drive is selected (drive disable) or no disk is inserted. */
+    _noMedia() {
+        if (this.driveDisabled) return true;
+        const disk = this.currentDisk;
+        return !disk || !disk.loaded;
+    }
+
+    /** True when the selected drive is not ready (no media, or still spinning up). */
+    _driveNotReady() {
+        if (this._noMedia()) return true;
+        return this.strictSpinup && this._spinupRemaining > 0;
+    }
+
+    /**
+     * Drive signal bits of the Type I status: INDEX (pulse once per
+     * revolution while the disk turns), TRACK00, WRITE PROTECT, NOT READY.
+     */
+    _typeIDriveBits() {
+        let bits = 0;
+        const notReady = this._driveNotReady();
+        if (notReady) bits |= STATUS.NOT_READY;
+        if (!this.driveDisabled && this.currentDisk && this.currentDisk.writeProtect) {
+            bits |= STATUS.WRITE_PROTECT;
+        }
+        if (this.headPosition[this.currentDrive] === 0) bits |= STATUS.TRACK0;
+        if (!notReady && this.motorOn && this._rotationPhase < FDC.INDEX_PULSE_CYCLES) {
+            bits |= STATUS.INDEX;
+        }
+        return bits;
     }
 
     // =========================================================================
@@ -2157,9 +2231,16 @@ export class FDC {
     // =========================================================================
 
     /**
-     * Force Interrupt command. Returns the state to idle, clears DRQ and
-     * rebuilds the status register (Type I style). The pending-DRQ flag
-     * and its timer are left as they are.
+     * Force Interrupt command. Terminates the command in progress: returns
+     * the state to idle, clears DRQ, cancels the pending DRQ and the
+     * remaining command delay. No further data request follows the
+     * termination.
+     * Status: when a command was in progress, its status is kept with only
+     * BUSY (and DATA REQUEST) cleared; otherwise the Type I status (HEAD
+     * ENGAGED, WRITE PROTECT, NOT READY, INDEX, TRACK00) is returned.
+     * IRQ: I3 raises it at once; I0 / I1 / I2 arm the READY rising edge,
+     * the READY falling edge and every index pulse (see
+     * _checkForceIntConditions).
      * @param {number} cmd - Command byte ($D0-$DF)
      * @private
      */
@@ -2176,26 +2257,65 @@ export class FDC {
             });
         }
 
-        // Abort current command
+        const wasBusy = (this.statusReg & STATUS.BUSY) !== 0;
+
+        // Abort current command. Cancel the scheduled DRQ and the remaining
+        // delay as well, so that no DRQ is raised after the termination.
         this.state = FDC_STATE.IDLE;
         this.drqFlag = false;
+        this._pendingDrq = false;
+        this._drqTimer = 0;
+        this._drqAge = 0;
+        this.delayCycles = 0;
 
-        // Build status as if Type I (track 0, etc.)
-        // Drive is always READY (physically present)
-        this.statusReg = 0;
-        if (this.headPosition[this.currentDrive] === 0) {
-            this.statusReg |= STATUS.TRACK0;
+        if (wasBusy) {
+            // Keep the status of the interrupted command; drop BUSY and,
+            // for Type II/III, DATA REQUEST.
+            let clear = STATUS.BUSY;
+            if (this.commandType !== CMD_TYPE.TYPE_I) clear |= STATUS.DRQ;
+            this.statusReg &= ~clear;
+        } else {
+            // Not executing: Type I status.
+            this.commandType = CMD_TYPE.TYPE_I;
+            this.statusReg = this._typeIDriveBits()
+                           | (this._headLoaded ? STATUS.HEAD_ENGAGED : 0);
         }
 
-        if (conditions !== 0) {
-            // Any non-zero condition bits raise the interrupt immediately
-            this.irqFlag = true;
-            if (this.onIRQ) {
-                this.onIRQ();
-            }
-        }
+        // I0 / I1 / I2 wait for their events; I3 interrupts at once.
+        this._forceIntCond = conditions & 0x07;
+        this._forceIntReady = !this._driveNotReady();
+        if (conditions & 0x08) this._raiseForceInt();
 
         if (this.logEnabled) this._logEdges();
+    }
+
+    /** Raise the IRQ for a Force Interrupt condition. */
+    _raiseForceInt() {
+        this.irqFlag = true;
+        if (this.onIRQ) {
+            this.onIRQ();
+        }
+    }
+
+    /**
+     * Watch the armed Force Interrupt conditions: I0 = READY rising edge,
+     * I1 = READY falling edge, I2 = every index pulse.
+     * @param {boolean} indexPassed - the index position passed in this step
+     * @private
+     */
+    _checkForceIntConditions(indexPassed) {
+        const ready = !this._driveNotReady();
+        let fire = false;
+        if (ready !== this._forceIntReady) {
+            if (ready && (this._forceIntCond & 0x01)) fire = true;
+            if (!ready && (this._forceIntCond & 0x02)) fire = true;
+            this._forceIntReady = ready;
+        }
+        if (indexPassed && (this._forceIntCond & 0x04) && ready && this.motorOn) fire = true;
+        if (fire) {
+            this._raiseForceInt();
+            if (this.logEnabled) this._logEdges();
+        }
     }
 
     // =========================================================================
@@ -2287,9 +2407,12 @@ export class FDC {
         this.commandType = 0;
         this.irqFlag = false;
         this.drqFlag = false;
+        this._forceIntCond = 0;
+        this._forceIntReady = false;
         this._pendingDrq = false;
         this._drqTimer = 0;
         this.motorOn = false;
+        this.driveDisabled = false;
         this._spinupRemaining = 0;
         this._settleRemaining = 0;
         this._headLoaded = false;

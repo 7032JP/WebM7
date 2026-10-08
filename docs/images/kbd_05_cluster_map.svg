@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 759.5999999999999 492" width="759.5999999999999" height="492">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 759.5999999999999 486" width="759.5999999999999" height="486">
   <title>編集キー・カーソルキー・テンキーが FM-7 のどのキーに当たるかの対応図</title>
   <defs>
     <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
     </marker>
   </defs>
-  <rect x="0" y="0" width="759.5999999999999" height="492" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
+  <rect x="0" y="0" width="759.5999999999999" height="486" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
   <text x="379.79999999999995" y="32" font-family="sans-serif" font-size="16" fill="#1f2328" text-anchor="middle" font-weight="bold">編集キー・カーソルキー・テンキーの対応（日本語配列 / 英語配列 共通）</text>
   <text x="379.79999999999995" y="54" font-family="sans-serif" font-size="11" fill="#8c959f" text-anchor="middle">上段＝物理キーの刻印 / 下段＝割り当たる FM-7 キー（「—」は割当なし。灰色の枠は押しても入力されないキー）</text>
   <text x="26" y="78" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">最上段（PrintScreen 列）</text>
@@ -112,5 +112,4 @@
   <text x="471.59999999999997" y="352" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">入力コードを割り当てていません。</text>
   <text x="471.59999999999997" y="406" font-family="sans-serif" font-size="11.5" fill="#1f2328" text-anchor="start" font-weight="bold">EL / CLS / DUP には現在</text>
   <text x="471.59999999999997" y="424" font-family="sans-serif" font-size="11.5" fill="#57606a" text-anchor="start">入力コードを割り当てていません。</text>
-  <text x="26" y="474" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ 現在、スキャンコード方式（FM77AV 系）では、テンキーの + は入力できず、Home は DEL と同じ入力になります。</text>
 </svg>

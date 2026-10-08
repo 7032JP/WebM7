@@ -29,9 +29,21 @@ export function initGuideBalloons() {
         },
         {
             selector: '#scaleToggle',
-            text: '表示の大きさとフルスクリーンはここで切り替えます（環境によっては使えないものがあります）',
+            // 倍率の選択肢が隠れている表示や、フルスクリーンを使えない環境では、使えるものだけを案内する。
+            text: () => {
+                const scale = firstVisible('#scaleToggle .scale-btn');
+                const fs = firstVisible('#fullscreenBtn');
+                const full = fs && !fs.disabled;
+                if (scale && full) return '表示の大きさとフルスクリーンはここで切り替えます';
+                if (scale) return '表示の大きさはここで切り替えます';
+                if (full) return 'フルスクリーンはここで切り替えます';
+                return null;
+            },
         },
     ];
+    function stepText(s) {
+        return typeof s.text === 'function' ? s.text() : s.text;
+    }
     const balloon = document.createElement('div');
     balloon.className = 'guide-balloon';
     balloon.hidden = true;
@@ -100,14 +112,15 @@ export function initGuideBalloons() {
             // 表示されない項目は飛ばす。電源を切った間は進めない。
             while (step < steps.length) {
                 target = firstVisible(steps[step].selector);
-                if (target) break;
+                text = target ? stepText(steps[step]) : null;
+                if (target && text) break;
+                target = null;
                 step++;
             }
             if (step === steps.length) {
                 tourCompleted = true;
                 saveFlag('localStorage', TOUR_KEY);
             } else {
-                text = steps[step].text;
                 activeKind = 'tour';
             }
         }

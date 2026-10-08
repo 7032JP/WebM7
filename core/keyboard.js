@@ -36,8 +36,8 @@ const FM7_KEY_RIGHT   = 0x51;
 const FM7_KEY_UP      = 0x4D;
 const FM7_KEY_DOWN    = 0x50;
 
-// Home / Cls
-const FM7_KEY_HOME    = 0x4B;  // HOME → same as DEL scan code
+// HOME
+const FM7_KEY_HOME    = 0x4E;
 
 // Function keys PF1-PF10 (scan codes)
 const FM7_KEY_F1      = 0x5D;
@@ -84,7 +84,7 @@ const CODE_TO_FM7_ASCII = new Map([
     //   IntlBackslash = ] key (home row; a Japanese keyboard reports this key
     //                  as 'Backslash', see physicalKeyCode)
     //   IntlYen      = ¥ key (Japanese keyboard); Backslash = \ key (US)
-    ['Minus', 0x2D], ['Equal', 0x3D], ['BracketLeft', 0x40],
+    ['Minus', 0x2D], ['Equal', 0x5E], ['BracketLeft', 0x40],
     ['BracketRight', 0x5B], ['IntlBackslash', 0x5D], ['Backslash', 0x5C],
     ['IntlYen', 0x5C], ['Semicolon', 0x3B],
     ['Quote', 0x3A], ['Comma', 0x2C], ['Period', 0x2E], ['Slash', 0x2F],
@@ -147,19 +147,20 @@ const CODE_TO_FM7_SCAN = new Map([
     ['NonConvert', 0x57], ['Convert', 0x58],
     ['Space',      0x35],  // SPACE
 
-    // Numpad
+    // Numpad (top row: * / + -, then 7 8 9 =, 4 5 6 ',', 1 2 3 RETURN, 0 .)
+    ['NumpadMultiply', 0x36], ['NumpadDivide', 0x37],
+    ['NumpadAdd',      0x38], ['NumpadSubtract', 0x39],
     ['Numpad7',        0x3A], ['Numpad8',    0x3B], ['Numpad9',        0x3C],
-    ['NumpadDivide',   0x3D],
     ['Numpad4',        0x3E], ['Numpad5',    0x3F], ['Numpad6',        0x40],
-    ['NumpadMultiply', 0x41],
     ['Numpad1',        0x42], ['Numpad2',    0x43], ['Numpad3',        0x44],
-    ['NumpadSubtract', 0x45],
+    ['NumpadEnter',    0x45],  // RETURN of the numeric keypad
     ['Numpad0',        0x46],
     ['NumpadDecimal',  0x47],
+
+    // Editing keys
     ['Insert',         0x48],  // INS
-    ['NumpadEnter',    0x49],
     ['Delete',         0x4B],  // DEL
-    ['Home',           0x4B],  // HOME → DEL (FM-7 CLS/HOME)
+    ['Home',           0x4E],  // HOME
 
     // Cursor keys
     ['ArrowUp',    0x4D],
@@ -195,7 +196,7 @@ const SHIFTED_OVERRIDE = new Map([
     //   BracketLeft  = @ key → ` (0x60)
     //   BracketRight = [ key → { (0x7B)
     //   IntlBackslash = ] key → } (0x7D)
-    ['Minus', 0x3D], ['Equal', 0x2B], ['Semicolon', 0x2B], ['Quote', 0x2A],
+    ['Minus', 0x3D], ['Equal', 0x7E], ['Semicolon', 0x2B], ['Quote', 0x2A],
     ['Comma', 0x3C], ['Period', 0x3E], ['Slash', 0x3F],
     ['BracketLeft', 0x60], ['BracketRight', 0x7B], ['IntlBackslash', 0x7D],
     ['Backslash', 0x7C], ['IntlYen', 0x7C],
@@ -227,6 +228,22 @@ const CTRL_OVERRIDE = new Map([
 
 /** CTRL + / in scan code mode: the scan code of the _ key. */
 const CTRL_SLASH_SCAN = 0x34;
+
+/**
+ * Scan codes of the CTRL, SHIFT, CAP and GRAPH keys. In scan code mode
+ * these keys send their own make and break codes; in ASCII mode they only
+ * modify the other keys and send nothing.
+ */
+const MODIFIER_SCAN = new Map([
+    ['ControlLeft', 0x52], ['ControlRight', 0x52],  // CTRL
+    ['ShiftLeft',   0x53],                          // left SHIFT
+    ['ShiftRight',  0x54],                          // right SHIFT
+    ['CapsLock',    0x55],                          // CAP
+    ['AltLeft',     0x56],                          // GRAPH
+]);
+
+/** Scan code of the BREAK key. */
+const SCAN_BREAK_KEY = 0x5C;
 
 /**
  * KANA mode key mapping (JIS X 0201 half-width katakana).
@@ -459,6 +476,17 @@ export class Keyboard {
             return;
         }
 
+        // Scan code mode: CTRL / SHIFT / CAP / GRAPH send their own make code.
+        if (this._useScanCodes && MODIFIER_SCAN.has(code)) {
+            event.preventDefault();
+            if (this._heldKeys.has(code)) return;   // key repeat
+            if (code === 'CapsLock') this.capsLock = !this.capsLock;
+            else if (code === 'AltLeft') this.graphMode = true;
+            this._heldKeys.add(code);
+            this._pushKey(MODIFIER_SCAN.get(code));
+            return;
+        }
+
         // Toggle LED keys and the GRPH modifier before mapping.
         if (code === 'CapsLock') {
             this.capsLock = !this.capsLock;
@@ -593,11 +621,23 @@ export class Keyboard {
         } else if (code === 'AltLeft') {
             this.graphMode = true;
             this._heldKeys.add(code);
-            return; // GRPH is modifier-only, no key code emitted
+            // GRPH emits a code only in scan code mode.
+            if (this._useScanCodes) this._pushKey(MODIFIER_SCAN.get(code));
+            return;
         } else if (code === 'ControlLeft' || code === 'ControlRight') {
             // Sticky CTRL: toggled by the virtual key, released after the
             // next key (see releaseKey). No key code is emitted.
             this._ctrlSticky = !this._ctrlSticky;
+            return;
+        }
+
+        // The virtual CAP key is a toggle with no release event: in scan code
+        // mode it sends its make and break codes together.
+        if (code === 'CapsLock') {
+            if (this._useScanCodes) {
+                this._pushKey(MODIFIER_SCAN.get(code));
+                if (this._enableBreakCodes) this._pushKey(MODIFIER_SCAN.get(code) | FM7_KEY_BREAK);
+            }
             return;
         }
 
@@ -632,6 +672,22 @@ export class Keyboard {
             if (fm7Code !== FM7_KEY_NONE) {
                 this._pushKey((fm7Code & 0x7F) | FM7_KEY_BREAK);
             }
+        }
+    }
+
+    /**
+     * BREAK key press / release. The host calls this alongside its BREAK
+     * handling (FIRQ); it sends the BREAK make / break code in scan code
+     * mode and nothing in ASCII mode.
+     *
+     * @param {boolean} pressed - true on press, false on release
+     */
+    breakKeyEvent(pressed) {
+        if (!this._useScanCodes) return;
+        if (pressed) {
+            this._pushKey(SCAN_BREAK_KEY);
+        } else if (this._enableBreakCodes) {
+            this._pushKey(SCAN_BREAK_KEY | FM7_KEY_BREAK);
         }
     }
 
@@ -897,6 +953,7 @@ export class Keyboard {
         // CTRL + / stands in for the _ key, which US layouts lack.
         if (this._useScanCodes) {
             if (ctrl && remapped === 'Slash') return CTRL_SLASH_SCAN;
+            if (MODIFIER_SCAN.has(code)) return MODIFIER_SCAN.get(code);
             return CODE_TO_FM7_SCAN.has(remapped)
                 ? CODE_TO_FM7_SCAN.get(remapped) : FM7_KEY_NONE;
         }

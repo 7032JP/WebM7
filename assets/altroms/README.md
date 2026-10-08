@@ -1,6 +1,6 @@
 # 互換 ROM セット (assets/altroms)
 
-このフォルダには、独立実装の互換 ROM セット 7032 Alternative ROMs v1.0.8（<https://github.com/7032JP/7032AltROMs/tree/v1.0.8>）を同梱しています。
+このフォルダには、独立実装の互換 ROM セット 7032 Alternative ROMs v1.0.9（<https://github.com/7032JP/7032AltROMs/tree/v1.0.9>）を同梱しています。
 互換 ROM セットは本プロジェクトとは別の配布物です。
 
 ## ライセンス
@@ -13,7 +13,7 @@
 - 利用条件・免責・来歴と、漢字系 ROM の字形の区分の詳細（独自字形の符号位置の一覧など）は、
   同梱の `docs/LEGAL.md` に記されています。`LICENSE` などが参照する `docs/LEGAL.md` は、
   配布元と同じ相対位置に同梱しているので、そのまま辿れます。
-- `docs/LEGAL.md` から見た `../README.md`（申告窓口など）は、このファイルではなく配布元の README（<https://github.com/7032JP/7032AltROMs/blob/v1.0.8/README.md>）を指します。
+- `docs/LEGAL.md` から見た `../README.md`（申告窓口など）は、このファイルではなく配布元の README（<https://github.com/7032JP/7032AltROMs/blob/v1.0.9/README.md>）を指します。
 - 同梱の `LICENSE` / `LICENSE-MIT.md` / `LICENSE-FONT.md` / `docs/LEGAL.md` に現れる
   それ以外の相対パス（`fonts/`・`roms/`・`scripts/`・`src/`、`docs/LEGAL.md` 以外の
   `docs/` の文書など）は**互換 ROM セット側の配布物（ソース一式）内のパス**です。このフォルダには
