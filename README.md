@@ -50,7 +50,7 @@ WebM7 は、ブラウザで FM-7 系の動作を体験し、対応ソフトウ�
 
 ### FM77AV20EX
 - FM77AV20 の全機能に加え、DMAC に対応（高速MMR のモードの切り替えは受け付けますが、メイン CPU の速さは変えていません）
-- 第 2 水準漢字 ROM（KANJI2.ROM）
+- 第 2 水準漢字 ROM（KANJI2.ROM。オプション）
 
 ### FM77AV40
 - 640×400 8色モード（400ライン表示）
@@ -144,7 +144,7 @@ FM77AV 系では、以下の 5 本がいずれも必須です。
 
 | ファイル名 | 内容 |
 |---|---|
-| `KANJI2.ROM` | 漢字 ROM（JIS第二水準、FM77AV20EX・FM77AV40・FM77AV40EX/SX で必須） |
+| `KANJI2.ROM` | 漢字 ROM（JIS第二水準。FM77AV40・FM77AV40EX/SX は本体に搭載、FM77AV20EX はオプション。任意） |
 | `EXTSUB.ROM` | 拡張サブシステムROM（FM77AV40EX/SX で必須） |
 | `DICROM.ROM` | 辞書 ROM（FM77AV40EX/SX で必須） |
 

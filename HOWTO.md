@@ -90,7 +90,7 @@ core/               共有エンジン（View 横断で再利用する中核）�
 | FM-77 | 640×200 8色 | PSG (AY-3-8910)。FM 音源カード (OPN) はオプション | ASCIIコード |
 | FM77AV | 640×200 8色 / 320×200 4096色 | PSG + OPN FM (YM2203) | スキャンコード |
 | FM77AV20 | FM77AV + 2DD 対応 | PSG + OPN FM (YM2203) | スキャンコード |
-| FM77AV20EX | FM77AV20 + DMAC（高速MMR はモードの切り替えのみ）、KANJI2.ROM（第 2 水準漢字 ROM） | PSG + OPN FM (YM2203) | スキャンコード |
+| FM77AV20EX | FM77AV20 + DMAC（高速MMR はモードの切り替えのみ）、KANJI2.ROM（第 2 水準漢字 ROM。オプション） | PSG + OPN FM (YM2203) | スキャンコード |
 | FM77AV40 | 640×200 / 320×200 4096色 / 262,144色 / 640×400 8色、2DD、DMAC、KANJI2.ROM（第 2 水準漢字 ROM） | PSG + OPN FM (YM2203) | スキャンコード |
 | FM77AV40EX/SX | FM77AV40 + EXTSUB.ROM（拡張サブシステム ROM）。ハードウェアウィンドウは未対応（設定を受け付けるだけ） | PSG + OPN FM (YM2203) | スキャンコード |
 

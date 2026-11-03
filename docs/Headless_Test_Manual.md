@@ -119,8 +119,8 @@ cd test && node your_test.mjs
 | サブシステム ROM（新サブモニタ 640×200） | `loadSubROM_A()` | `subsys_a.rom` | 8KB | FM77AV 系（必須） |
 | サブシステム ROM（新サブモニタ 320×200） | `loadSubROM_B()` | `subsys_b.rom` | 8KB | FM77AV 系（必須） |
 | CG ROM | `loadCGROM()` | `subsyscg.rom` | 最大 8KB | FM77AV 系（必須） |
-| 漢字 ROM（第1水準） | `loadKanjiROM()` | `kanji.rom` | 128KB | FM-7 系では任意（漢字表示用）、FM77AV 系では必須 |
-| 漢字 ROM（第2水準） | `loadKanji2ROM()` | `kanji2.rom` | 128KB | FM77AV20EX・FM77AV40・FM77AV40EX/SX（必須） |
+| 漢字 ROM（第1水準） | `loadKanjiROM()` | `kanji.rom` | 128KB | FM-7 では任意（漢字表示用）、FM-77 と FM77AV 系では必須 |
+| 漢字 ROM（第2水準） | `loadKanji2ROM()` | `kanji2.rom` | 128KB | FM77AV40・FM77AV40EX/SX（必須）、FM77AV20EX（任意。オプション） |
 | 辞書 ROM | `loadDicromROM()` | `dicrom.rom` | 256KB | FM77AV40EX/SX（必須） |
 | 拡張サブ ROM | `loadExtSubROM()` | `extsub.rom` | 48KB | FM77AV40EX/SX（必須） |
 
