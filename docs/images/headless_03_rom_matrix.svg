@@ -53,7 +53,7 @@
 
   <!-- 行4 subsys_c -->
   <rect x="30" y="188" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
-  <text x="40" y="210" font-family="monospace" font-size="13" fill="#1f2328">subsys_c.rom <tspan font-family="sans-serif" fill="#57606a">サブ Type-C</tspan></text>
+  <text x="40" y="210" font-family="monospace" font-size="13" fill="#1f2328">subsys_c.rom <tspan font-family="sans-serif" fill="#57606a">旧サブ</tspan></text>
   <rect x="280" y="188" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
   <text x="345" y="210" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
   <rect x="410" y="188" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
@@ -77,7 +77,7 @@
 
   <!-- 行6 subsys_a -->
   <rect x="30" y="256" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
-  <text x="40" y="278" font-family="monospace" font-size="13" fill="#1f2328">subsys_a.rom <tspan font-family="sans-serif" fill="#57606a">サブ Type-A</tspan></text>
+  <text x="40" y="278" font-family="monospace" font-size="13" fill="#1f2328">subsys_a.rom <tspan font-family="sans-serif" fill="#57606a">新サブ 640</tspan></text>
   <rect x="280" y="256" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
   <text x="345" y="278" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
   <rect x="410" y="256" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
@@ -89,7 +89,7 @@
 
   <!-- 行7 subsys_b -->
   <rect x="30" y="290" width="250" height="34" fill="#ffffff" stroke="#d0d7de"/>
-  <text x="40" y="312" font-family="monospace" font-size="13" fill="#1f2328">subsys_b.rom <tspan font-family="sans-serif" fill="#57606a">サブ Type-B</tspan></text>
+  <text x="40" y="312" font-family="monospace" font-size="13" fill="#1f2328">subsys_b.rom <tspan font-family="sans-serif" fill="#57606a">新サブ 320</tspan></text>
   <rect x="280" y="290" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
   <text x="345" y="312" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
   <rect x="410" y="290" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
@@ -130,8 +130,8 @@
   <text x="345" y="414" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
   <rect x="410" y="392" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
   <text x="475" y="414" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
-  <rect x="540" y="392" width="130" height="34" fill="#f6f8fa" stroke="#d0d7de"/>
-  <text x="605" y="414" font-family="sans-serif" font-size="13" fill="#8b949e" text-anchor="middle">―</text>
+  <rect x="540" y="392" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
+  <text x="605" y="414" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
   <rect x="670" y="392" width="130" height="34" fill="#dafbe1" stroke="#d0d7de"/>
   <text x="735" y="414" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1a7f37" text-anchor="middle">必須</text>
 

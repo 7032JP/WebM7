@@ -4,7 +4,7 @@
 // MB8877 FDC Simulator + D77 Disk Image Parser for FM-7
 // =============================================================================
 
-import { decodeHFE } from './hfe.js';
+import { decodeHFE, crc16 } from './hfe.js';
 
 // FDC State Machine
 const FDC_STATE = {
@@ -46,14 +46,24 @@ const STATUS = {
     WRITE_PROTECT:  0x40,
     NOT_READY:      0x80,
 };
+// [bit, name for Type I commands, name for the others]
+const STATUS_WORDS = [
+    [STATUS.RNF, 'seek-error', 'not-found'],
+    [STATUS.CRC_ERROR, 'crc', 'crc'],
+    [STATUS.LOST_DATA, 'track0', 'lost'],
+    [STATUS.WRITE_PROTECT, 'protected', 'protected'],
+    [STATUS.NOT_READY, 'not-ready', 'not-ready'],
+    [STATUS.RECORD_TYPE, 'head-loaded', 'deleted-mark'],
+];
 
 // Type I status bits that follow the drive signals.
 const TYPE_I_DRIVE_BITS = STATUS.INDEX | STATUS.TRACK0 | STATUS.WRITE_PROTECT | STATUS.NOT_READY;
 
-// Accelerated seek step rates in CPU cycles, used in fast-read mode.
-const STEP_RATES = [200, 400, 600, 1000];
+// Accelerated seek step rates (µs), used in fast-read mode.
+const STEP_RATES_FAST_US = [100, 200, 300, 500];
 
-// Step rates used outside fast-read mode (µs; cycle values are derived in setCPUClock()).
+// Step rates at the 1 MHz clock (µs): MB8877A data sheet, Table 1
+// "Stepping Rates" (the 1 MHz column); FM77AV Hardware Manual 5.9.4.
 const STEP_RATES_REAL_US = [6000, 12000, 20000, 30000];
 
 // D77 header size
@@ -61,29 +71,44 @@ const D77_HEADER_SIZE = 0x2B0;
 const D77_TRACK_TABLE_OFFSET = 0x20;
 const D77_MAX_TRACKS = 164;
 const D77_SECTOR_HEADER_SIZE = 0x10;
+const D77_MEDIA_2DD = 0x10;          // header media type of a 2DD disk
 
-// Sector size lookup by N value
-const SECTOR_SIZES = [128, 256, 512, 1024];
+const hexByte = (v) => '$' + (v & 0xFF).toString(16).toUpperCase().padStart(2, '0');
+const hexWord = (v) => '$' + (v & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
 
-// 2D raw image constants
-const RAW_2D_SIZE = 327680;   // 40 tracks * 16 sectors * 256 bytes * 2 sides
-const RAW_2DD_SIZE = 655360;  // 80 tracks * 16 sectors * 256 bytes * 2 sides
-const RAW_1S_SIZE = 163840;   // 40 tracks * 16 sectors * 256 bytes * 1 side
+// Trace words for the command byte (upper 4 bits) and the status bits.
+const COMMAND_WORDS = ['restore', 'seek', 'step', 'step', 'step-in', 'step-in', 'step-out', 'step-out',
+                       'read', 'read-multi', 'write', 'write-multi', 'read-id', 'interrupt',
+                       'read-track', 'write-track'];
+
+
+// Raw (headerless) image geometry. A 2D disk has 40 tracks per side, 2
+// sides, 16 sectors of 256 bytes per track (FM-7 User's Manual System
+// Description, chapter 13, the floppy disk structure); 2DD doubles the
+// tracks, 1S is one side of a 2D disk.
+const RAW_SECTORS_PER_TRACK = 16;
+const RAW_SECTOR_BYTES = 256;
+const RAW_GEOMETRIES = [
+    { name: 'RAW2D',  tracks: 40, sides: 2, densityByte: 0x00 },
+    { name: 'RAW2DD', tracks: 80, sides: 2, densityByte: 0x10 },
+    { name: 'RAW2D',  tracks: 40, sides: 1, densityByte: 0x00 },
+];
+const rawImageBytes = (g) => g.tracks * g.sides * RAW_SECTORS_PER_TRACK * RAW_SECTOR_BYTES;
 
 
 // =============================================================================
 // D77 Disk Image Parser
 // =============================================================================
 
-export class D77Disk {
+export class FloppyImage {
     constructor() {
         this.name = '';
         this.writeProtect = false;
-        this.mediaType = 0;
+        this.densityByte = 0;
         this.diskSize = 0;
-        this.numTracks = 0;
+        this.trackTotal = 0;
         this.numSides = 1;
-        // sectors[track][side][sectorNum] = { c, h, r, n, data, size, density, deleted, status }
+        // sectors[track][side][sectorNum] = { c, h, r, n, data, size, density, deleted, status, physIdx }
         this.sectors = {};
         this.loaded = false;
         // Set true when a sector/track write modifies this image (for SAVE).
@@ -104,6 +129,10 @@ export class D77Disk {
             return false;
         }
 
+        // The D77 disk image format fixes the header layout: name (17 bytes,
+        // null-terminated) at 0, write-protect at $1A, media type at $1B,
+        // image size at $1C, track offset table from $20. The offsets are a
+        // requirement of reading existing images.
         // Parse disk name (up to 17 bytes, null-terminated; bytes kept as-is)
         let nameBytes = [];
         for (let i = 0; i < 17; i++) {
@@ -117,7 +146,7 @@ export class D77Disk {
         this.writeProtect = (bytes[0x1A] !== 0);
 
         // Media type
-        this.mediaType = bytes[0x1B];
+        this.densityByte = bytes[0x1B];
 
         // Disk size (32-bit LE)
         this.diskSize = view.getUint32(0x1C, true);
@@ -148,14 +177,14 @@ export class D77Disk {
                 break;
             }
         }
-        this.numTracks = Math.floor((maxTrackIndex + this.numSides) / this.numSides);
+        this.trackTotal = Math.floor((maxTrackIndex + this.numSides) / this.numSides);
 
         this.sectors = {};
 
         // Parse each track
         for (let idx = 0; idx <= maxTrackIndex; idx++) {
-            const trackOffset = trackOffsets[idx];
-            if (trackOffset === 0) continue;
+            const trackStart = trackOffsets[idx];
+            if (trackStart === 0) continue;
 
             const track = Math.floor(idx / this.numSides);
             const side = idx % this.numSides;
@@ -163,22 +192,22 @@ export class D77Disk {
             if (!this.sectors[track]) this.sectors[track] = {};
             if (!this.sectors[track][side]) this.sectors[track][side] = {};
 
-            let pos = trackOffset;
+            let pos = trackStart;
             if (pos >= buffer.byteLength) continue;
 
             // Read the first sector header to get number of sectors in this track
             if (pos + D77_SECTOR_HEADER_SIZE > buffer.byteLength) continue;
 
-            const numSectors = view.getUint16(pos + 0x04, true);
+            const sectorTotal = view.getUint16(pos + 0x04, true);
 
-            for (let s = 0; s < numSectors; s++) {
+            for (let s = 0; s < sectorTotal; s++) {
                 if (pos + D77_SECTOR_HEADER_SIZE > buffer.byteLength) break;
 
                 const c = bytes[pos + 0x00];       // Cylinder
                 const h = bytes[pos + 0x01];       // Head
                 const r = bytes[pos + 0x02];       // Sector number (R)
                 const n = bytes[pos + 0x03];       // Size code (N)
-                // numSectors at pos+0x04 already read
+                // sectorTotal at pos+0x04 already read
                 const density = bytes[pos + 0x06];
                 const deleted = bytes[pos + 0x07];
                 const status = bytes[pos + 0x08];
@@ -233,40 +262,35 @@ export class D77Disk {
         const bytes = new Uint8Array(buffer);
         const size = buffer.byteLength;
 
-        let numSides;
-        let numTracks;
-        let mediaType;
-        let name;
-        if (size === RAW_2D_SIZE) {
-            numSides = 2; numTracks = 40; mediaType = 0x00; name = 'RAW2D';
-        } else if (size === RAW_2DD_SIZE) {
-            numSides = 2; numTracks = 80; mediaType = 0x10; name = 'RAW2DD';
-        } else if (size === RAW_1S_SIZE) {
-            numSides = 1; numTracks = 40; mediaType = 0x00; name = 'RAW2D';
-        } else {
-            console.error(`FDC: Raw image size ${size} does not match 2D (${RAW_2D_SIZE}), 2DD (${RAW_2DD_SIZE}), or 1S (${RAW_1S_SIZE})`);
+        const geometry = RAW_GEOMETRIES.find((g) => rawImageBytes(g) === size);
+        if (!geometry) {
+            console.error(`FDC: Raw image size ${size} matches none of ${RAW_GEOMETRIES.map(rawImageBytes).join(', ')}`);
             return false;
         }
+        const numSides = geometry.sides;
+        const trackTotal = geometry.tracks;
+        const densityByte = geometry.densityByte;
+        const name = geometry.name;
 
         this.name = name;
         this.writeProtect = false;
-        this.mediaType = mediaType;
+        this.densityByte = densityByte;
         this.diskSize = size;
-        this.numTracks = numTracks;
+        this.trackTotal = trackTotal;
         this.numSides = numSides;
         this.sectors = {};
 
-        const sectorsPerTrack = 16;
-        const sectorSize = 256;
+        const sectorsInTrack = 16;
+        const sectorBytes = 256;
         let pos = 0;
 
-        for (let track = 0; track < numTracks; track++) {
+        for (let track = 0; track < trackTotal; track++) {
             this.sectors[track] = {};
             for (let side = 0; side < numSides; side++) {
                 this.sectors[track][side] = {};
-                for (let sec = 1; sec <= sectorsPerTrack; sec++) {
-                    const dataCopy = new Uint8Array(sectorSize);
-                    dataCopy.set(bytes.subarray(pos, pos + sectorSize));
+                for (let sec = 1; sec <= sectorsInTrack; sec++) {
+                    const dataCopy = new Uint8Array(sectorBytes);
+                    dataCopy.set(bytes.subarray(pos, pos + sectorBytes));
 
                     this.sectors[track][side][sec] = {
                         c: track,
@@ -274,14 +298,14 @@ export class D77Disk {
                         r: sec,
                         n: 1,       // 256 bytes
                         data: dataCopy,
-                        size: sectorSize,
+                        size: sectorBytes,
                         density: 0x00, // MFM
                         deleted: false,
                         status: 0x00,
                         physIdx: sec - 1,   // raw images are sequential (no interleave)
                     };
 
-                    pos += sectorSize;
+                    pos += sectorBytes;
                 }
             }
         }
@@ -293,7 +317,7 @@ export class D77Disk {
     /**
      * Populate this disk from a decoded HFE structure (see hfe.js).
      * Sectors come straight from the MFM decoder.
-     * @param {object} decoded - { numTracks, numSides, sectors, header }
+     * @param {object} decoded - { trackTotal, numSides, sectors, header }
      * @returns {boolean}
      */
     loadFromDecodedHFE(decoded) {
@@ -301,8 +325,8 @@ export class D77Disk {
         this.name = 'HFE';
         this.writeProtect = false;
         this.numSides = decoded.numSides;
-        this.numTracks = decoded.numTracks;
-        this.mediaType = decoded.numTracks > 45 ? 0x10 : 0x00; // 2DD vs 2D
+        this.trackTotal = decoded.trackTotal;
+        this.densityByte = decoded.trackTotal > 45 ? 0x10 : 0x00; // 2DD vs 2D
         this.sectors = decoded.sectors;
         this.loaded = true;
         return true;
@@ -315,7 +339,7 @@ export class D77Disk {
      * @param {number} sectorNum - Sector number (usually 1-based)
      * @returns {object|null} Sector object or null if not found
      */
-    getSector(track, side, sectorNum) {
+    lookupSector(track, side, sectorNum) {
         if (!this.sectors[track]) return null;
         if (!this.sectors[track][side]) return null;
         return this.sectors[track][side][sectorNum] || null;
@@ -350,45 +374,36 @@ export class D77Disk {
     }
 
     /**
-     * Logically format the disk for F-BASIC DISK BASIC use.
-     *
-     * Writes an empty filesystem (disk information record, FAT with every
-     * cluster free, empty directory) and clears the write-protect flag so
-     * the disk is immediately usable.
+     * Logical format of an empty F-BASIC disk:
+     * the ID sector, the FAT and the directory of an empty disk. Sectors are
+     * numbered 1-32 per track as F-BASIC does (17-32 are sectors 1-16 of
+     * side 1). The write-protect mark is also cleared.
      *
      * @returns {boolean} true on success
      */
-    logicalFormat() {
+    formatForFBasic() {
         if (!this.sectors[0] || !this.sectors[1]) return false;
-        const fill = (track, side, sec, value) => {
-            const s = this.getSector(track, side, sec);
-            if (s && s.data) s.data.fill(value);
-            return s;
+        const fbasicSector = (track, n) => this.lookupSector(track, (n - 1) >> 4, ((n - 1) & 15) + 1);
+        const fill = (track, from, to, value) => {
+            for (let n = from; n <= to; n++) {
+                const sec = fbasicSector(track, n);
+                if (sec && sec.data) sec.data.fill(value);
+            }
         };
-
-        // (1) Clear write-protect.
         this.writeProtect = false;
-
-        // (2) Disk information record.
-        const sir = this.getSector(0, 0, 3);
-        if (sir && sir.data) {
-            sir.data.fill(0x00);
-            sir.data[0] = 0x53; // 'S'
-            sir.data[1] = 0x20; // ' '
-            sir.data[2] = 0x20; // ' '
-        }
-
-        // (3) Allocation tables, every cluster free.
-        for (const sec of [1, 2, 3]) fill(1, 0, sec, 0xFF);
-        const fat = this.getSector(1, 0, 1);
-        if (fat && fat.data) fat.data[0] = 0x00; // FAT control byte
-
-        // (4) Directory, all entries unused.
-        const lastSec = Math.max(...this.getSectorList(1, 0));
-        for (let sec = 4; sec <= lastSec; sec++) fill(1, 0, sec, 0xFF);
-        if (this.numSides > 1) {
-            for (const sec of this.getSectorList(1, 1)) fill(1, 1, sec, 0xFF);
-        }
+        // F-BASIC disk layout (FM-7 User's Manual System Description,
+        // chapter 13, the floppy disk structure): the ID sector, the FAT and
+        // the directory.
+        // ID sector (track 0, sector 3): starts with "S", the rest is 0.
+        fill(0, 3, 3, 0x00);
+        const id = fbasicSector(0, 3);
+        if (id && id.data) id.data[0] = 0x53;
+        // FAT (track 1, sector 1) and the reserved sectors 2-3: every cluster free.
+        fill(1, 1, 3, 0xFF);
+        const fat = fbasicSector(1, 1);
+        if (fat && fat.data) fat.data[0] = 0x00;
+        // Directory (track 1, sectors 4-32): every slot unused.
+        fill(1, 4, 32, 0xFF);
         return true;
     }
 
@@ -429,21 +444,21 @@ export class D77Disk {
             bytes[i] = this.name.charCodeAt(i) & 0xFF;
         }
         bytes[0x1A] = this.writeProtect ? 0x10 : 0x00;
-        bytes[0x1B] = this.mediaType & 0xFF;
+        bytes[0x1B] = this.densityByte & 0xFF;
         view.setUint32(0x1C, fileSize, true);
 
         // Track offset table + track data.
         let pos = D77_HEADER_SIZE;
         for (const e of entries) {
             view.setUint32(D77_TRACK_TABLE_OFFSET + e.idx * 4, pos, true);
-            const numSectors = e.secNums.length;
+            const sectorTotal = e.secNums.length;
             for (const sn of e.secNums) {
                 const sec = this.sectors[e.track][e.side][sn];
                 bytes[pos + 0x00] = sec.c & 0xFF;
                 bytes[pos + 0x01] = sec.h & 0xFF;
                 bytes[pos + 0x02] = sec.r & 0xFF;
                 bytes[pos + 0x03] = sec.n & 0xFF;
-                view.setUint16(pos + 0x04, numSectors, true);
+                view.setUint16(pos + 0x04, sectorTotal, true);
                 bytes[pos + 0x06] = sec.density & 0xFF;
                 bytes[pos + 0x07] = sec.deleted ? 0x10 : 0x00;
                 bytes[pos + 0x08] = sec.status & 0xFF;
@@ -467,20 +482,20 @@ export class FDC {
     constructor() {
         // Drives (up to 4): active disk (references entry in diskSlots)
         this.disks = [null, null, null, null];
-        // Multi-disk D77 containers: array of D77Disk per drive
+        // Multi-disk D77 containers: array of FloppyImage per drive
         this.diskSlots     = [[], [], [], []];
         this.diskSlotIndex = [0, 0, 0, 0];
 
         // Currently selected drive and head
         this.currentDrive = 0;
         this.currentSide = 0;
-        this.motorOn = false;
+        this.motorRunning = false;
         // $FD1D bit6: drive disable (no drive is selected while set).
         this.driveDisabled = false;
         // Optional motor spin-up delay (strictSpinup); the default keeps the
         // drive instantly ready.
         this.strictSpinup = false;
-        this._spinupRemaining = 0;   // CPU cycles left until motor is up to speed
+        this._spinupRemaining = 0;   // ticks left until the motor is up to speed
         this._settleRemaining = 0;   // pending drive settle wait (fastReadMode OFF only)
         this._headLoaded = false;
         this._stepped = false;
@@ -491,8 +506,8 @@ export class FDC {
         // Drive type. Defaults to 2D; models that support drive-mode
         // switching change it through $FD1E (see supportsDriveModeSwitch).
         this.driveModeIs2dd = false;
-        // True when this machine wires $FD1E bit6 to the drive-mode flag
-        // (AV20/AV40/AV20EX/AV40EX).  Set by fm7.js setMachineType.
+        // True when $FD1E bit 6 selects the drive mode (machines with 2DD
+        // drives; fm7.js supports2DD). Set by fm7.js setMachineType.
         this.supportsDriveModeSwitch = false;
 
         // Registers
@@ -521,8 +536,9 @@ export class FDC {
             v: false,       // Verify (Type I)
             r: 0,           // Step rate (Type I)
             m: false,       // Multiple sectors (Type II)
-            s: false,       // Side compare (Type II)
+            s: false,       // Side number to compare (Type II)
             e: false,       // Settle delay (Type II/III)
+            c: false,       // Compare the side with S (Type II)
             a0: false,      // Address mark (Type II write)
             u: false,       // Update track (Type I step)
         };
@@ -537,7 +553,7 @@ export class FDC {
         this.idIndex = 0;
 
         // Timing
-        this.delayCycles = 0;       // Remaining delay in main CPU cycles (at the current clock; see FDC.setCPUClock)
+        this.delayCycles = 0;       // Remaining delay in ticks (see FDC.setTickRate)
         this.cyclesToDrq = 0;       // Cycles between DRQ assertions
 
         // Fast-read mode selects accelerated STEP_RATES.
@@ -565,7 +581,7 @@ export class FDC {
         this._readStatusExtra = 0;
 
         // Callback for IRQ generation
-        this.onIRQ = null;
+        this.onIntrqRise = null;
 
         // Callbacks for FDD sound synthesis (see fdd_sound.js).
         // onSeekSound(steps) — Type I command; `steps` may be zero.
@@ -574,273 +590,208 @@ export class FDC {
         this.onSeekSound     = null;
         this.onHeadLoadSound = null;
         this.onDiskInsert    = null;
-        this.onDiskEject     = null;
+        this.onMediaRemoved     = null;
 
-        // Sector iteration for Read Address
-        this.readAddrSectorIndex = 0;
-
-        // ---- Diagnostic logging (OFF by default) ----
-        this.logEnabled = false;
-        this.log = [];
-        this._logCycle = 0;              // Master cycle counter (monotonic)
-        this._logDrqPrev = false;
-        this._logIrqPrev = false;
-        this._logBusyPrev = false;
-        this._logBusyStart = 0;
-        this._logCmdStart = 0;
-        this._logCmdName = '';
-        this._logCmdByte = 0;
-        this._logByteCount = 0;          // Bytes transferred in current sector op
-        this._logTotalBytes = 0;         // Bytes transferred in current multi-op
+        // ---- Development trace (off by default) ----
+        this.traceOn = false;
+        this.trace = [];                 // { ticks, kind, ...fields }
+        this._traceTicks = 0;            // time units since clearTrace()
+        this._seenLines = { drq: false, irq: false, busy: false };
+        this._busySince = 0;
+        this._commandSince = 0;
+        this._commandWord = '';
+        this._commandByte = 0;
+        this._sectorBytes = 0;           // bytes moved in the current sector
+        this._commandBytes = 0;          // bytes moved by the current command
     }
 
     // =========================================================================
-    // Logging helpers
+    // Development trace
     // =========================================================================
 
-    _logCmdNameOf(cmd) {
-        const h = cmd & 0xF0;
-        if (h === 0x00) return 'RESTORE';
-        if (h === 0x10) return 'SEEK';
-        if (h === 0x20 || h === 0x30) return 'STEP';
-        if (h === 0x40 || h === 0x50) return 'STEP_IN';
-        if (h === 0x60 || h === 0x70) return 'STEP_OUT';
-        if (h === 0x80) return 'READ_SEC';
-        if (h === 0x90) return 'READ_MULTI';
-        if (h === 0xA0) return 'WRITE_SEC';
-        if (h === 0xB0) return 'WRITE_MULTI';
-        if (h === 0xC0) return 'READ_ADDR';
-        if (h === 0xD0) return 'FORCE_INT';
-        if (h === 0xE0) return 'READ_TRACK';
-        if (h === 0xF0) return 'WRITE_TRACK';
-        return '???';
+    /** Short word for a command byte (upper 4 bits). */
+    static commandWord(cmd) {
+        return COMMAND_WORDS[cmd >> 4];
     }
 
-    /**
-     * Name the status bits for the log only. Bits 2, 4 and 5 mean different
-     * things for Type I (RESTORE/SEEK/STEP) and Type II/III commands.
-     * @param {number} bits - Status bits
-     * @returns {string[]} Flag names
-     * @private
-     */
-    _logStatusFlags(bits) {
-        const typeI = (this._logCmdByte & 0x80) === 0;
-        const flags = [];
-        if (bits & STATUS.RNF) flags.push(typeI ? 'SEEK' : 'RNF');
-        if (bits & STATUS.CRC_ERROR) flags.push('CRC');
-        if (bits & STATUS.LOST_DATA) flags.push(typeI ? 'TR0' : 'LOST');
-        if (bits & STATUS.WRITE_PROTECT) flags.push('WP');
-        if (bits & STATUS.NOT_READY) flags.push('NRDY');
-        if (bits & STATUS.RECORD_TYPE) flags.push(typeI ? 'HLD' : 'DDM');
-        return flags;
-    }
-
-    _logPush(entry) {
-        if (!this.logEnabled) return;
-        entry.cyc = this._logCycle;
-        this.log.push(entry);
-    }
-
-    /** Detect and log DRQ/IRQ/BUSY edges since last call. */
-    _logEdges() {
-        if (!this.logEnabled) return;
-        const drq = this.drqFlag;
-        const irq = this.irqFlag;
-        const busy = (this.statusReg & STATUS.BUSY) !== 0;
-        if (drq !== this._logDrqPrev) {
-            this.log.push({ cyc: this._logCycle, t: drq ? 'DRQ+' : 'DRQ-' });
-            this._logDrqPrev = drq;
+    /** Status bits named for the trace; Type I commands use other names for bits 2, 4, 5. */
+    _statusWords(bits) {
+        const seekType = (this._commandByte & 0x80) === 0;
+        const words = [];
+        for (const [bit, typeOne, other] of STATUS_WORDS) {
+            if (bits & bit) words.push(seekType ? typeOne : other);
         }
-        if (irq !== this._logIrqPrev) {
-            this.log.push({ cyc: this._logCycle, t: irq ? 'IRQ+' : 'IRQ-' });
-            this._logIrqPrev = irq;
-        }
-        if (busy !== this._logBusyPrev) {
-            if (busy) {
-                this._logBusyStart = this._logCycle;
-                this.log.push({ cyc: this._logCycle, t: 'BUSY+' });
-            } else {
-                const dur = this._logCycle - this._logBusyStart;
-                this.log.push({
-                    cyc: this._logCycle, t: 'BUSY-',
-                    durCyc: dur, durUs: +(dur / FDC.CYCLES_PER_US).toFixed(1),
-                });
+        return words;
+    }
+
+    /** Add one trace record (only while the trace is on). */
+    _note(kind, fields) {
+        if (!this.traceOn) return;
+        this.trace.push({ ticks: this._traceTicks, kind, ...fields });
+    }
+
+    /** Record changes of the DRQ, IRQ and BUSY lines since the last look. */
+    _noteLines() {
+        if (!this.traceOn) return;
+        const now = { drq: this.drqFlag, irq: this.irqFlag, busy: (this.statusReg & STATUS.BUSY) !== 0 };
+        for (const name of ['drq', 'irq', 'busy']) {
+            if (now[name] === this._seenLines[name]) continue;
+            this._seenLines[name] = now[name];
+            const fields = { line: name, level: now[name] ? 1 : 0 };
+            if (name === 'busy') {
+                if (now.busy) this._busySince = this._traceTicks;
+                else fields.lastedUs = this._ticksToUs(this._traceTicks - this._busySince);
             }
-            this._logBusyPrev = busy;
+            this._note('line', fields);
         }
     }
 
-    /** Clear log and reset cycle counter. */
-    clearLog() {
-        this.log = [];
-        this._logCycle = 0;
-        this._logDrqPrev = this.drqFlag;
-        this._logIrqPrev = this.irqFlag;
-        this._logBusyPrev = (this.statusReg & STATUS.BUSY) !== 0;
-        this._logBusyStart = 0;
-        this._logByteCount = 0;
-        this._logTotalBytes = 0;
+    _ticksToUs(ticks) {
+        return Math.round(ticks / FDC.CYCLES_PER_US * 10) / 10;
+    }
+
+    /** Empty the trace and start the clock again. */
+    clearTrace() {
+        this.trace = [];
+        this._traceTicks = 0;
+        this._seenLines = { drq: this.drqFlag, irq: this.irqFlag, busy: (this.statusReg & STATUS.BUSY) !== 0 };
+        this._busySince = 0;
+        this._sectorBytes = 0;
+        this._commandBytes = 0;
     }
 
     /**
-     * Format log as plain text, one event per line.
+     * The trace as text: one record per line, "time_us kind fields".
+     * Consecutive reads of the same register are folded into one line that
+     * counts each value read ("$80*12 $00*3"), from the first to the last.
      * @param {Object} [opts]
-     * @param {boolean} [opts.compress=true] Collapse consecutive identical
-     *   events (same type + same details) into one line with ×N count.
-     *   Dramatically shrinks $FD1F polling noise.
-     * @param {string[]} [opts.skipTypes] Event type names to exclude
-     *   (e.g. ['R','W']). Applied before compression.
-     * @param {string[]} [opts.includeTypes] If set, only these event types
-     *   are emitted (whitelist, takes precedence over skipTypes).
-     * @param {string[]} [opts.skipReg] Register names to exclude from
-     *   R/W events (e.g. ['IRQDRQ']). Non-R/W events are untouched.
-     * @param {string[]} [opts.includeReg] If set, only R/W events whose
-     *   reg matches are emitted (whitelist, takes precedence over skipReg).
+     * @param {boolean} [opts.fold=true] fold repeated register reads
+     * @param {string[]} [opts.kinds] only these kinds (e.g. ['command', 'end'])
+     * @param {string[]} [opts.ports] only register accesses to these addresses (e.g. ['$FD18'])
      */
-    dumpLogText(opts = {}) {
-        const compress = opts.compress !== false;
-        const skipTypes  = new Set(opts.skipTypes    || []);
-        const inclTypes  = opts.includeTypes ? new Set(opts.includeTypes) : null;
-        const skipReg    = new Set(opts.skipReg      || []);
-        const inclReg    = opts.includeReg    ? new Set(opts.includeReg)    : null;
-        const lines = [];
-        lines.push('# WebM7 FDC log');
-        lines.push(`# cyc = main CPU cycles at ${FDC.CPU_CLOCK_HZ} Hz`
-                 + ` (${FDC.CYCLES_PER_US} cycles/µs; divide by that for µs)`);
-        lines.push(`# compress=${compress}`);
-        if (inclTypes) lines.push(`# includeTypes=${[...inclTypes].join(',')}`);
-        else if (skipTypes.size) lines.push(`# skipTypes=${[...skipTypes].join(',')}`);
-        if (inclReg) lines.push(`# includeReg=${[...inclReg].join(',')}`);
-        else if (skipReg.size) lines.push(`# skipReg=${[...skipReg].join(',')}`);
-        lines.push('# columns: cyc\tevent\tdetails');
-        const fmtDetails = (e) => {
-            const d = [];
-            for (const k of Object.keys(e)) {
-                if (k === 'cyc' || k === 't') continue;
-                d.push(`${k}=${e[k]}`);
-            }
-            return d.join(' ');
-        };
-        const keyOf = (e) => `${e.t || ''}|${fmtDetails(e)}`;
-        const isRW = (e) => e.t === 'R' || e.t === 'W';
-        const keep = (e) => {
-            const t = e.t || '';
-            if (inclTypes) { if (!inclTypes.has(t)) return false; }
-            else if (skipTypes.has(t)) return false;
-            if (isRW(e)) {
-                const reg = e.reg || '';
-                if (inclReg) { if (!inclReg.has(reg)) return false; }
-                else if (skipReg.has(reg)) return false;
-            }
+    traceText(opts = {}) {
+        const fold = opts.fold !== false;
+        const kinds = opts.kinds ? new Set(opts.kinds) : null;
+        const ports = opts.ports ? new Set(opts.ports) : null;
+        const wanted = (r) => {
+            if (kinds && !kinds.has(r.kind)) return false;
+            if (ports && (r.kind === 'in' || r.kind === 'out') && !ports.has(r.port)) return false;
             return true;
         };
-        const filtered = this.log.filter(keep);
-        if (!compress) {
-            for (const e of filtered) {
-                const parts = [e.cyc.toString(), e.t || ''];
-                const d = fmtDetails(e);
-                if (d) parts.push(d);
-                lines.push(parts.join('\t'));
-            }
-        } else {
-            let i = 0;
-            const N = filtered.length;
-            while (i < N) {
-                const e = filtered[i];
-                const k = keyOf(e);
-                let j = i + 1;
-                while (j < N && keyOf(filtered[j]) === k) j++;
-                const run = j - i;
-                const parts = [e.cyc.toString(), e.t || ''];
-                const d = fmtDetails(e);
-                if (d) parts.push(d);
-                if (run > 1) {
-                    parts.push(`×${run}`);
-                    parts.push(`lastCyc=${filtered[j - 1].cyc}`);
+        const fieldsOf = (r) => Object.entries(r)
+            .filter(([k]) => k !== 'ticks' && k !== 'kind')
+            .map(([k, v]) => `${k}=${v}`).join(' ');
+        const out = [
+            '; WebM7 floppy controller trace',
+            '; time_us   kind   fields',
+        ];
+        const records = this.trace.filter(wanted);
+        for (let i = 0; i < records.length; i++) {
+            const r = records[i];
+            const at = this._ticksToUs(r.ticks).toFixed(1).padStart(10);
+            if (fold && r.kind === 'in') {
+                let j = i;
+                const tally = new Map();
+                while (j < records.length && records[j].kind === 'in' && records[j].port === r.port) {
+                    tally.set(records[j].value, (tally.get(records[j].value) || 0) + 1);
+                    j++;
                 }
-                lines.push(parts.join('\t'));
-                i = j;
+                if (j - i > 1) {
+                    const values = [...tally].map(([v, n]) => `${v}*${n}`).join(' ');
+                    const until = this._ticksToUs(records[j - 1].ticks).toFixed(1);
+                    out.push(`${at}  in     port=${r.port} reads=${j - i} values=${values} until=${until}`);
+                    i = j - 1;
+                    continue;
+                }
             }
+            out.push(`${at}  ${r.kind.padEnd(6)} ${fieldsOf(r)}`.trimEnd());
         }
-        return lines.join('\n') + '\n';
+        return out.join('\n') + '\n';
     }
 
-    // Timing parameters in microseconds (converted to CPU cycles dynamically)
-    // Average rotational latency per sector
-    static ROTATE_DELAY_US = 6000;
-    // MFM byte transfer delay per byte
+    // Timing parameters in microseconds (converted to ticks by setTickRate)
+    // MFM byte transfer delay per byte: a DRQ every 32 us
+    // (FM77AV Hardware Manual 5.9.4 (3)).
     static BYTE_DELAY_US = 32;
     // Inter-sector gap delay for multi-sector reads/writes
     static MULTI_SECTOR_GAP_US = 6000;
     // RNF search time: 5 index pulses (5 revolutions)
     static RNF_TIMEOUT_US = 1000000;
 
-    // Current main CPU clock (set by setCPUClock). Used for cycle <-> µs
-    // conversion in log headers and warning messages.
-    static CPU_CLOCK_HZ = 1794000;
-    static CYCLES_PER_US = 1.794;
+    // Rate of the time units the FDC is stepped with (master clock periods,
+    // set by setTickRate). Every *_CYCLES value below is in those units.
+    static TICK_RATE_HZ = 8000000;
+    static CYCLES_PER_US = 8;
 
-    // CPU-clock-dependent cycle counts (set by setCPUClock)
-    // Initial values assume the FM-7 main CPU clock (1.794 MHz = 1.794 cycles/µs);
-    // setCPUClock() recomputes them for the current clock.
-    static ROTATE_DELAY = Math.round(6000 * 1.794);       // 10764
-    static BYTE_DELAY = Math.round(32 * 1.794);           // 57
-    static MULTI_SECTOR_GAP = Math.round(6000 * 1.794);   // 10764
-    static RNF_TIMEOUT = Math.round(1000000 * 1.794);     // 1794000
+    static BYTE_DELAY = 0;
+    static MULTI_SECTOR_GAP = 0;
+    static RNF_TIMEOUT = 0;
     // Full revolution at 300 RPM = 200 ms
     static REVOLUTION_US = 200000;
-    static REVOLUTION_CYCLES = Math.round(200000 * 1.794); // 358800
-    // Realistic Type-I step delays (6/12/20/30 ms) in CPU cycles (per clock).
-    static STEP_RATES_REAL = STEP_RATES_REAL_US.map(us => Math.round(us * 1.794));
+    static REVOLUTION_CYCLES = 0;
+    static STEP_RATES_REAL = [];
+    static STEP_RATES_FAST = [];
     // Sectors per track (standard FM-7 2D/2DD format)
-    static SECTORS_PER_TRACK = 16;
+    static SECTORS_IN_TRACK = 16;
     // Cold spin-up time before the motor reaches a stable speed.
     static SPINUP_US = 500000;
-    static SPINUP_CYCLES = Math.round(500000 * 1.794); // 897000
-    // E flag wait (Type II / III) used when fast-read mode is off.
+    static SPINUP_CYCLES = 0;
+    // E flag wait (Type II / III) used when fast-read mode is off: about
+    // 30 ms at 1 MHz (FM77AV Hardware Manual 5.9.5).
     static E_SETTLE_US = 30000;
-    static E_SETTLE_CYCLES = Math.round(30000 * 1.794);
+    static E_SETTLE_CYCLES = 0;
     // fastReadMode ON: accelerated E flag wait.
     static E_SETTLE_FAST_US = 16700;
-    static E_SETTLE_FAST_CYCLES = Math.round(16700 * 1.794);
-    // Wait after a seek finishes (fastReadMode OFF only): head moved / not moved.
-    static SEEK_END_MOVED_US = 20000;
-    static SEEK_END_MOVED_CYCLES = Math.round(20000 * 1.794);
-    static SEEK_END_STAY_US = 300;
-    static SEEK_END_STAY_CYCLES = Math.round(300 * 1.794);
+    static E_SETTLE_FAST_CYCLES = 0;
+    // Head settling after the last step of a verifying Type I command:
+    // 15 ms at 2 MHz, 30 ms with the 1 MHz clock (FD179X-01 data sheet,
+    // "Head Positioning" and "Verification").
+    static HEAD_SETTLE_US = 30000;
+    static HEAD_SETTLE_CYCLES = 0;
+    // fastReadMode ON: short end-of-seek waits (moved / not moved).
+    static SEEK_END_FAST_MOVED_US = 1000;
+    static SEEK_END_FAST_STAY_US = 100;
+    static SEEK_END_FAST_MOVED_CYCLES = 0;
+    static SEEK_END_FAST_STAY_CYCLES = 0;
+    // HLT hardware timer (HLTIME): 60 ms after a STEP pulse, a head load or
+    // a drive register write (FM77AV Hardware Manual 5.9.4 (1)).
     static WAIT60_US = 60000;
-    static WAIT60_CYCLES = Math.round(60000 * 1.794);
+    static WAIT60_CYCLES = 0;
     // Width of the INDEX pulse seen in the Type I status (once per revolution).
     static INDEX_PULSE_US = 4000;
-    static INDEX_PULSE_CYCLES = Math.round(4000 * 1.794);
+    static INDEX_PULSE_CYCLES = 0;
 
-    /** Update timing constants for actual CPU clock frequency */
-    static setCPUClock(hz) {
-        const cpm = hz / 1000000;  // cycles per microsecond
-        FDC.CPU_CLOCK_HZ = hz;
-        FDC.CYCLES_PER_US = cpm;
-        FDC.ROTATE_DELAY = Math.round(FDC.ROTATE_DELAY_US * cpm);
-        FDC.BYTE_DELAY = Math.round(FDC.BYTE_DELAY_US * cpm);
-        FDC.MULTI_SECTOR_GAP = Math.round(FDC.MULTI_SECTOR_GAP_US * cpm);
-        FDC.RNF_TIMEOUT = Math.round(FDC.RNF_TIMEOUT_US * cpm);
-        FDC.REVOLUTION_CYCLES = Math.round(FDC.REVOLUTION_US * cpm);
-        FDC.SPINUP_CYCLES = Math.round(FDC.SPINUP_US * cpm);
-        FDC.E_SETTLE_CYCLES = Math.round(FDC.E_SETTLE_US * cpm);
-        FDC.WAIT60_CYCLES = Math.round(FDC.WAIT60_US * cpm);
-        FDC.INDEX_PULSE_CYCLES = Math.round(FDC.INDEX_PULSE_US * cpm);
-        FDC.E_SETTLE_FAST_CYCLES = Math.round(FDC.E_SETTLE_FAST_US * cpm);
-        FDC.SEEK_END_MOVED_CYCLES = Math.round(FDC.SEEK_END_MOVED_US * cpm);
-        FDC.SEEK_END_STAY_CYCLES = Math.round(FDC.SEEK_END_STAY_US * cpm);
-        FDC.STEP_RATES_REAL = STEP_RATES_REAL_US.map(us => Math.round(us * cpm));
+    /** Set the rate of the time units passed to step() and derive the waits. */
+    static setTickRate(hz) {
+        const perUs = hz / 1000000;
+        const t = (us) => Math.round(us * perUs);
+        FDC.TICK_RATE_HZ = hz;
+        FDC.CYCLES_PER_US = perUs;
+        FDC.BYTE_DELAY = t(FDC.BYTE_DELAY_US);
+        FDC.MULTI_SECTOR_GAP = t(FDC.MULTI_SECTOR_GAP_US);
+        FDC.RNF_TIMEOUT = t(FDC.RNF_TIMEOUT_US);
+        FDC.REVOLUTION_CYCLES = t(FDC.REVOLUTION_US);
+        FDC.SPINUP_CYCLES = t(FDC.SPINUP_US);
+        FDC.E_SETTLE_CYCLES = t(FDC.E_SETTLE_US);
+        FDC.E_SETTLE_FAST_CYCLES = t(FDC.E_SETTLE_FAST_US);
+        FDC.HEAD_SETTLE_CYCLES = t(FDC.HEAD_SETTLE_US);
+        FDC.SEEK_END_FAST_MOVED_CYCLES = t(FDC.SEEK_END_FAST_MOVED_US);
+        FDC.SEEK_END_FAST_STAY_CYCLES = t(FDC.SEEK_END_FAST_STAY_US);
+        FDC.WAIT60_CYCLES = t(FDC.WAIT60_US);
+        FDC.INDEX_PULSE_CYCLES = t(FDC.INDEX_PULSE_US);
+        FDC.STEP_RATES_REAL = STEP_RATES_REAL_US.map(t);
+        FDC.STEP_RATES_FAST = STEP_RATES_FAST_US.map(t);
     }
 
+    static { FDC.setTickRate(FDC.TICK_RATE_HZ); }
+
     /**
-     * Effective Type-I step delay in CPU cycles for the current step-rate flag.
+     * Effective Type-I step delay in ticks for the current step-rate flag.
      * Fast-read mode ON → accelerated STEP_RATES; OFF → realistic MB8877 rates.
      */
     _stepDelayCycles() {
         return this.fastReadMode
-            ? STEP_RATES[this.cmdFlags.r]
+            ? FDC.STEP_RATES_FAST[this.cmdFlags.r]
             : FDC.STEP_RATES_REAL[this.cmdFlags.r];
     }
 
@@ -853,9 +804,12 @@ export class FDC {
      * Automatically detects HFE, D77 (single or multi-disk) and raw 2D/2DD images.
      * @param {number} driveNum - Drive number (0-3)
      * @param {ArrayBuffer} arrayBuffer - Disk image data
+     * @param {number} [slotIndex=0] - Disk to put in the drive when the image
+     *        holds several disks (0-based). Out of range falls back to 0.
+     *        Used to keep the user's choice when the same file is read again.
      * @returns {boolean} true if loaded successfully
      */
-    loadDisk(driveNum, arrayBuffer) {
+    loadDisk(driveNum, arrayBuffer, slotIndex = 0) {
         if (driveNum < 0 || driveNum > 3) {
             console.error(`FDC: Invalid drive number ${driveNum}`);
             return false;
@@ -874,7 +828,7 @@ export class FDC {
                         if (typeof this.onHwWarn === 'function') this.onHwWarn('hfe-track-length', w.message);
                         else console.warn(`[FDC/HFE] ${w.message}`);
                     }
-                    const d = new D77Disk();
+                    const d = new FloppyImage();
                     if (d.loadFromDecodedHFE(decoded)) slots.push(d);
                 }
             }
@@ -890,7 +844,7 @@ export class FDC {
                 if (declaredSize < D77_HEADER_SIZE) break;
                 if (pos + declaredSize > arrayBuffer.byteLength) break;
                 const slice = arrayBuffer.slice(pos, pos + declaredSize);
-                const d = new D77Disk();
+                const d = new FloppyImage();
                 if (!d.parseD77(slice)) break;
                 slots.push(d);
                 pos += declaredSize;
@@ -904,7 +858,7 @@ export class FDC {
 
         // Fallback: raw 2D/2DD
         if (slots.length === 0) {
-            const d = new D77Disk();
+            const d = new FloppyImage();
             if (d.parseRaw2D(arrayBuffer)) slots.push(d);
         }
 
@@ -913,15 +867,17 @@ export class FDC {
             return false;
         }
 
+        const index = (Number.isInteger(slotIndex) && slotIndex >= 0 && slotIndex < slots.length)
+            ? slotIndex : 0;
         this.diskSlots[driveNum] = slots;
-        this.diskSlotIndex[driveNum] = 0;
-        this.disks[driveNum] = slots[0];
+        this.diskSlotIndex[driveNum] = index;
+        this.disks[driveNum] = slots[index];
 
         if (slots.length > 1) {
             console.log(`FDC: Drive ${driveNum}: Multi-disk D77 container, ${slots.length} disks: [${slots.map(s => `"${s.name}"`).join(', ')}]`);
         } else {
             const d = slots[0];
-            console.log(`FDC: Drive ${driveNum}: Disk loaded - "${d.name}", ${d.numTracks} tracks, ${d.numSides} side(s)`);
+            console.log(`FDC: Drive ${driveNum}: Disk loaded - "${d.name}", ${d.trackTotal} tracks, ${d.numSides} side(s)`);
         }
         if (this.onDiskInsert) this.onDiskInsert(driveNum);
         return true;
@@ -930,15 +886,15 @@ export class FDC {
     /**
      * Select an alternate disk from a multi-disk D77 container.
      * @param {number} driveNum
-     * @param {number} diskIdx - 0-based index into diskSlots
+     * @param {number} slotIndex - 0-based index into diskSlots
      * @returns {boolean} true if switched
      */
-    selectDisk(driveNum, diskIdx) {
+    selectDisk(driveNum, slotIndex) {
         if (driveNum < 0 || driveNum > 3) return false;
         const slots = this.diskSlots[driveNum];
-        if (!slots || diskIdx < 0 || diskIdx >= slots.length) return false;
-        this.diskSlotIndex[driveNum] = diskIdx;
-        this.disks[driveNum] = slots[diskIdx];
+        if (!slots || slotIndex < 0 || slotIndex >= slots.length) return false;
+        this.diskSlotIndex[driveNum] = slotIndex;
+        this.disks[driveNum] = slots[slotIndex];
         if (this.onDiskInsert) this.onDiskInsert(driveNum);
         return true;
     }
@@ -960,18 +916,18 @@ export class FDC {
      * Read-only geometry summary of the disk in a drive (for UI display).
      * Does not affect emulation; purely inspects the parsed disk structure.
      * @param {number} driveNum
-     * @returns {{type:string,cylinders:number,sides:number,sectorsPerTrack:number,sectorSize:number}|null}
+     * @returns {{type:string,cylinders:number,sides:number,sectorsInTrack:number,sectorBytes:number}|null}
      *          null when no disk is loaded.
      */
     getGeometry(driveNum) {
         const d = this.disks[driveNum];
         if (!d || !d.loaded) return null;
-        const cylinders = d.numTracks || 0;
+        const cylinders = d.trackTotal || 0;
         const sides = d.numSides || 1;
         // Inspect the first populated track to derive sectors-per-track and
         // sector size. Falls back to 0 when the structure is empty.
-        let sectorsPerTrack = 0;
-        let sectorSize = 0;
+        let sectorsInTrack = 0;
+        let sectorBytes = 0;
         const trackKeys = Object.keys(d.sectors || {});
         for (const tk of trackKeys) {
             const sidesObj = d.sectors[tk];
@@ -982,16 +938,16 @@ export class FDC {
                 if (!secObj) continue;
                 const secKeys = Object.keys(secObj);
                 if (secKeys.length === 0) continue;
-                sectorsPerTrack = secKeys.length;
+                sectorsInTrack = secKeys.length;
                 const first = secObj[secKeys[0]];
-                sectorSize = (first && first.size) ? first.size : 0;
+                sectorBytes = (first && first.size) ? first.size : 0;
                 break;
             }
-            if (sectorsPerTrack > 0) break;
+            if (sectorsInTrack > 0) break;
         }
         // 2D vs 2DD by track count (2DD doubles the track density to ~80).
         const type = cylinders > 45 ? '2DD' : '2D';
-        return { type, cylinders, sides, sectorsPerTrack, sectorSize };
+        return { type, cylinders, sides, sectorsInTrack, sectorBytes };
     }
 
     /**
@@ -1004,13 +960,13 @@ export class FDC {
             this.disks[driveNum] = null;
             this.diskSlots[driveNum] = [];
             this.diskSlotIndex[driveNum] = 0;
-            if (hadDisk && this.onDiskEject) this.onDiskEject(driveNum);
+            if (hadDisk && this.onMediaRemoved) this.onMediaRemoved(driveNum);
         }
     }
 
     /**
      * Get the currently selected disk object.
-     * @returns {D77Disk|null}
+     * @returns {FloppyImage|null}
      */
     get currentDisk() {
         return this.disks[this.currentDrive];
@@ -1085,10 +1041,10 @@ export class FDC {
                     const elapsedSinceDrq = this._drqAge || 0;
                     this.drqFlag = false;
                     this.statusReg &= ~STATUS.DRQ;
-                    if (this.logEnabled) {
-                        this._logByteCount++;
-                        this._logTotalBytes++;
-                        extra = { idx: this._logByteCount };
+                    if (this.traceOn) {
+                        this._sectorBytes++;
+                        this._commandBytes++;
+                        extra = { byte: this._sectorBytes };
                     }
                     this._advanceRead(elapsedSinceDrq);
                 } else {
@@ -1096,13 +1052,15 @@ export class FDC {
                 }
                 break;
 
-            case 0xFD1C: // Side register readback (bits 7-1 read as 1)
-                value = this.currentSide | 0xFE;
+            case 0xFD1C: // Head register read: bit 7 DRQ, bit 6 IRQ, bit 0 side
+                // Bits 5-1 read as 1.
+                value = (this.drqFlag ? 0x80 : 0x00) | (this.irqFlag ? 0x40 : 0x00)
+                      | 0x3E | (this.currentSide & 0x01);
                 break;
 
             case 0xFD1D: // Drive select readback
                 value = (this.currentDrive & 0x03) | (this.driveDisabled ? 0x40 : 0x00)
-                      | (this.motorOn ? 0x80 : 0x00);
+                      | (this.motorRunning ? 0x80 : 0x00);
                 break;
 
             case 0xFD1F: // DRQ/IRQ status
@@ -1115,14 +1073,9 @@ export class FDC {
                 break;
         }
 
-        if (this.logEnabled) {
-            const name = { 0xFD18: 'STA', 0xFD19: 'TRK', 0xFD1A: 'SEC',
-                           0xFD1B: 'DAT', 0xFD1C: 'SID', 0xFD1D: 'DRV',
-                           0xFD1F: 'IRQDRQ' }[addr] || ('$' + addr.toString(16));
-            const e = { cyc: this._logCycle, t: 'R', reg: name, val: '$' + (value & 0xFF).toString(16).padStart(2, '0') };
-            if (extra) Object.assign(e, extra);
-            this.log.push(e);
-            this._logEdges();
+        if (this.traceOn) {
+            this._note('in', { port: hexWord(addr), value: hexByte(value), ...extra });
+            this._noteLines();
         }
         return value;
     }
@@ -1135,14 +1088,7 @@ export class FDC {
     writeIO(addr, value) {
         value &= 0xFF;
 
-        if (this.logEnabled) {
-            const name = { 0xFD18: 'CMD', 0xFD19: 'TRK', 0xFD1A: 'SEC',
-                           0xFD1B: 'DAT', 0xFD1C: 'SID', 0xFD1D: 'DRV' }[addr]
-                         || ('$' + addr.toString(16));
-            const e = { cyc: this._logCycle, t: 'W', reg: name, val: '$' + value.toString(16).padStart(2, '0') };
-            if (addr === 0xFD18) e.cmd = this._logCmdNameOf(value);
-            this.log.push(e);
-        }
+        this._note('out', { port: hexWord(addr), value: hexByte(value) });
 
         switch (addr) {
             case 0xFD18: // Command Register
@@ -1167,9 +1113,9 @@ export class FDC {
                 if (this.drqFlag && (this.state === FDC_STATE.WRITE_TRANSFER)) {
                     this.drqFlag = false;
                     this.statusReg &= ~STATUS.DRQ;
-                    if (this.logEnabled) {
-                        this._logByteCount++;
-                        this._logTotalBytes++;
+                    if (this.traceOn) {
+                        this._sectorBytes++;
+                        this._commandBytes++;
                     }
                     this._advanceWrite();
                 } else if (this.drqFlag && (this.state === FDC_STATE.WRITE_TRACK)) {
@@ -1195,12 +1141,12 @@ export class FDC {
                 {
                     const newMotor = (value & 0x80) !== 0;
                     // Stopped -> running: start the cold spin-up window.
-                    if (newMotor && !this.motorOn && this.strictSpinup) {
+                    if (newMotor && !this.motorRunning && this.strictSpinup) {
                         this._spinupRemaining = FDC.SPINUP_CYCLES;
                     } else if (!newMotor) {
                         this._spinupRemaining = 0;
                     }
-                    this.motorOn = newMotor;
+                    this.motorRunning = newMotor;
                 }
                 break;
 
@@ -1216,7 +1162,7 @@ export class FDC {
                 break;
         }
 
-        if (this.logEnabled) this._logEdges();
+        this._noteLines();
     }
 
     // =========================================================================
@@ -1224,12 +1170,33 @@ export class FDC {
     // =========================================================================
 
     /**
-     * Advance the FDC state machine by the given number of CPU cycles.
+     * True while step() has nothing to do but turn the disk: no command in
+     * progress, no DRQ, spin-up or head settle time left, no force
+     * interrupt condition and no trace.
+     */
+    _isWaiting() {
+        return (this.state === FDC_STATE.IDLE || this.state === FDC_STATE.COMPLETE) &&
+            !this._pendingDrq && !this._forceIntCond && !this.traceOn &&
+            !(this._spinupRemaining > 0) && !(this._settleRemaining > 0);
+    }
+
+    /**
+     * Advance the FDC state machine by the given number of ticks.
      * Call this from the main emulation loop.
-     * @param {number} cycles - Number of main CPU cycles elapsed (at the current clock; see FDC.setCPUClock)
+     * @param {number} cycles - Number of ticks elapsed (see FDC.setTickRate)
      */
     step(cycles) {
-        if (this.logEnabled) this._logCycle += cycles;
+        if (this._isWaiting()) {
+            // Waiting with nothing to count down: only the disk turns, and
+            // the DRQ age stays 0 (the full path below does the same).
+            const rev = FDC.REVOLUTION_CYCLES;
+            let phase = this._rotationPhase + cycles;
+            if (phase >= rev) phase = phase < 2 * rev ? phase - rev : phase % rev;
+            this._rotationPhase = phase;
+            this._drqAge = 0;
+            return;
+        }
+        if (this.traceOn) this._traceTicks += cycles;
 
         // Advance disk rotation phase (continuous, wraps at one revolution)
         const indexPassed = this._rotationPhase + cycles >= FDC.REVOLUTION_CYCLES;
@@ -1238,7 +1205,7 @@ export class FDC {
         if (this._forceIntCond) this._checkForceIntConditions(indexPassed);
 
         // Burn down the cold spin-up window while the motor is running.
-        if (this._spinupRemaining > 0 && this.motorOn) {
+        if (this._spinupRemaining > 0 && this.motorRunning) {
             this._spinupRemaining -= cycles;
             if (this._spinupRemaining < 0) this._spinupRemaining = 0;
         }
@@ -1288,7 +1255,7 @@ export class FDC {
         }
 
         if (this.state === FDC_STATE.IDLE || this.state === FDC_STATE.COMPLETE) {
-            if (this.logEnabled) this._logEdges();
+            this._noteLines();
             return;
         }
 
@@ -1359,7 +1326,7 @@ export class FDC {
                 this._completeCommand(STATUS.RNF);
                 break;
         }
-        if (this.logEnabled) this._logEdges();
+        this._noteLines();
     }
 
     // =========================================================================
@@ -1375,19 +1342,17 @@ export class FDC {
         // Clear IRQ on new command
         this.irqFlag = false;
 
-        if (this.logEnabled) {
-            this._logCmdByte = cmd;
-            this._logCmdName = this._logCmdNameOf(cmd);
-            this._logCmdStart = this._logCycle;
-            this._logByteCount = 0;
-            this._logTotalBytes = 0;
-            this.log.push({
-                cyc: this._logCycle, t: 'CMD',
-                cmd: this._logCmdName,
-                byte: '$' + cmd.toString(16).padStart(2, '0'),
-                trk: this.trackReg, sec: this.sectorReg,
-                drv: this.currentDrive, side: this.currentSide,
-                pos: this.headPosition[this.currentDrive],
+        if (this.traceOn) {
+            this._commandByte = cmd;
+            this._commandWord = FDC.commandWord(cmd);
+            this._commandSince = this._traceTicks;
+            this._sectorBytes = 0;
+            this._commandBytes = 0;
+            this._note('command', {
+                op: this._commandWord, code: hexByte(cmd),
+                drive: this.currentDrive, side: this.currentSide,
+                track: this.trackReg, sector: this.sectorReg,
+                head: this.headPosition[this.currentDrive],
             });
         }
 
@@ -1415,7 +1380,7 @@ export class FDC {
         this.statusReg = STATUS.BUSY;
         this.drqFlag = false;
 
-        // Strict: 回転待ちの間は NOT_READY を返す。
+        // Strict mode: while the motor is still spinning up, report NOT READY.
         if (this.strictSpinup && this._spinupRemaining > 0) {
             if (typeof this.onHwWarn === 'function') {
                 this.onHwWarn('fdc-spinup',
@@ -1486,13 +1451,14 @@ export class FDC {
             this.cmdFlags.m = (cmd & 0x10) !== 0;
             this.cmdFlags.s = (cmd & 0x08) !== 0;
             this.cmdFlags.e = (cmd & 0x04) !== 0;
+            this.cmdFlags.c = (cmd & 0x02) !== 0; // C flag: compare the side
             this.cmdFlags.a0 = (cmd & 0x01) !== 0; // DAM flag for write
 
             // FDD sound: head-load click for any Type II command.
             if (this.onHeadLoadSound) this.onHeadLoadSound();
 
-            // No disk inserted: return NOT_READY.
-            if (this._noMedia()) {
+            // Drive not ready (no disk, motor stopped): return NOT_READY.
+            if (this._driveNotReady()) {
                 this._completeCommand(STATUS.NOT_READY);
                 return;
             }
@@ -1528,7 +1494,7 @@ export class FDC {
             // FDD sound: head-load click for Type III.
             if (this.onHeadLoadSound) this.onHeadLoadSound();
 
-            if (this._noMedia()) {
+            if (this._driveNotReady()) {
                 this._completeCommand(STATUS.NOT_READY);
                 return;
             }
@@ -1542,7 +1508,7 @@ export class FDC {
             // Read Track
             this.commandType = CMD_TYPE.TYPE_III;
             if (this.onHeadLoadSound) this.onHeadLoadSound();
-            if (this._noMedia()) {
+            if (this._driveNotReady()) {
                 this._completeCommand(STATUS.NOT_READY);
                 return;
             }
@@ -1555,7 +1521,7 @@ export class FDC {
             // Write Track (Format)
             this.commandType = CMD_TYPE.TYPE_III;
             if (this.onHeadLoadSound) this.onHeadLoadSound();
-            if (this._noMedia()) {
+            if (this._driveNotReady()) {
                 this._completeCommand(STATUS.NOT_READY);
                 return;
             }
@@ -1570,6 +1536,12 @@ export class FDC {
         }
     }
 
+    /** Index of the ID field next under the head, from the rotation phase. */
+    _idUnderHead(count) {
+        const rev = FDC.REVOLUTION_CYCLES || 1;
+        return Math.floor((this._rotationPhase % rev) / rev * count) % count;
+    }
+
     /**
      * Compute rotational latency to reach the target sector from the
      * current disk rotation phase.  The disk spins
@@ -1577,18 +1549,18 @@ export class FDC {
      * on where the head is in the rotation when the command is issued.
      *
      * Returns the wait from the current rotation position to the target
-     * sector, in CPU cycles.
+     * sector, in ticks.
      */
     _rotationalLatency(phaseOffsetCycles = 0) {
         const rev = FDC.REVOLUTION_CYCLES;
         // Use the physical sector order from the image for rotational latency.
         let slot = (this.sectorReg - 1) & 0x0F;   // fallback: logical numbering
-        let spt = FDC.SECTORS_PER_TRACK;
+        let spt = FDC.SECTORS_IN_TRACK;
         const disk = this.currentDisk;
-        if (disk && disk.getSector) {
-            const track = this._mediaTrackIndex();
+        if (disk && disk.lookupSector) {
+            const track = this._cylinderUnderHead();
             const sec = track < 0 ? null
-                : disk.getSector(track, this.currentSide, this.sectorReg);
+                : disk.lookupSector(track, this.currentSide, this.sectorReg);
             if (sec && sec.physIdx !== undefined) {
                 slot = sec.physIdx;
                 const n = disk.getSectorList(track, this.currentSide).length;
@@ -1596,12 +1568,12 @@ export class FDC {
             }
         }
         const sectorSlot = rev / spt;   // cycles per sector slot
-        const sectorOffset = slot * sectorSlot;
+        const sectorStartCycle = slot * sectorSlot;
         // Time from current phase until the sector header passes under head.
         // phaseOffsetCycles: cycles that will elapse before the search
         // actually begins (e.g. E-flag head settle) — measure from there.
         const phase = (this._rotationPhase + phaseOffsetCycles) % rev;
-        let latency = Math.round(sectorOffset - phase);
+        let latency = Math.round(sectorStartCycle - phase);
         if (latency < 0) latency += rev;
         // Minimum latency for controller overhead: a quarter of a sector slot
         const minCycles = Math.round(rev / (spt * 4));  // a quarter of a sector slot
@@ -1610,7 +1582,7 @@ export class FDC {
     }
 
     // =========================================================================
-    // Command start wait, Type I: Seek / Step
+    // Command start wait (Type II / III) and Type I end wait
     // =========================================================================
 
     /**
@@ -1634,12 +1606,41 @@ export class FDC {
     }
 
     /**
-     * Wait in cycles after a seek has finished.  fastReadMode ON keeps the
-     * short fixed waits; OFF uses SEEK_END_MOVED_CYCLES / SEEK_END_STAY_CYCLES.
+     * Time from the last step (or from the start, when the head stays put)
+     * until a Type I command ends.
+     *   V = 0: the command ends once the last step time has run out.
+     *   V = 1: head settling after a step, then HLT from the HLTIME timer
+     *          (60 ms after a STEP pulse or a head load), then the first ID
+     *          field to pass under the head; with no matching ID the search
+     *          gives up after five revolutions.
+     * fastReadMode keeps short fixed waits instead.
      */
-    _seekEndDelay(moved) {
-        if (this.fastReadMode) return moved ? 2000 : (this.cmdFlags.v ? 2000 : 200);
-        return moved ? FDC.SEEK_END_MOVED_CYCLES : FDC.SEEK_END_STAY_CYCLES;
+    _typeIEndWait(moved) {
+        if (this.fastReadMode) {
+            return (moved || this.cmdFlags.v)
+                ? FDC.SEEK_END_FAST_MOVED_CYCLES : FDC.SEEK_END_FAST_STAY_CYCLES;
+        }
+        if (!this.cmdFlags.v) return 1;
+        let hlt = this._settleRemaining;
+        if (moved || !this._headLoaded) hlt = Math.max(hlt, FDC.WAIT60_CYCLES);
+        const settle = moved ? FDC.HEAD_SETTLE_CYCLES : 0;
+        const ready = Math.max(settle, hlt);
+        if (!this._verifyTrack()) return ready + 5 * FDC.REVOLUTION_CYCLES;
+        return ready + this._nextIdFieldWait(ready);
+    }
+
+    /** Wait until the next ID field passes under the head, `after` units from now. */
+    _nextIdFieldWait(after) {
+        let spt = FDC.SECTORS_IN_TRACK;
+        const disk = this.currentDisk;
+        if (disk && disk.getSectorList) {
+            const track = this._cylinderUnderHead();
+            const n = track < 0 ? 0 : disk.getSectorList(track, this.currentSide).length;
+            if (n > 0) spt = n;
+        }
+        const slot = FDC.REVOLUTION_CYCLES / spt;
+        const into = (this._rotationPhase + after) % slot;
+        return Math.round(into === 0 ? 0 : slot - into);
     }
 
     /** Restore: step out until track 0 */
@@ -1647,10 +1648,12 @@ export class FDC {
         this.stepDirection = -1;
         const pos = this.headPosition[this.currentDrive];
         if (pos === 0) {
-            // The controller asserts BUSY briefly even when already at track 0.
+            // Already at track 0: no step pulse. BUSY is set when the command
+            // is loaded and cleared by the Type I end sequence, as for any
+            // other Type I command (FD179X-01 data sheet, "Type I Commands").
             this.trackReg = 0;
             this.headPosition[this.currentDrive] = 0;
-            this.delayCycles = this._seekEndDelay(false);
+            this.delayCycles = this._typeIEndWait(false);
             this.state = FDC_STATE.SEEK_VERIFY;
         } else {
             // Step toward track 0
@@ -1665,9 +1668,9 @@ export class FDC {
         const headPos = this.headPosition[this.currentDrive];
         // Compare with the physical head position; software may change trackReg.
         if (target === headPos) {
-            // Already at target. Completion is deferred by _seekEndDelay(false).
+            // Already at target. Completion is deferred by _typeIEndWait(false).
             this.trackReg = target;
-            this.delayCycles = this._seekEndDelay(false);
+            this.delayCycles = this._typeIEndWait(false);
             this.state = FDC_STATE.SEEK_VERIFY;
             return;
         }
@@ -1699,7 +1702,7 @@ export class FDC {
                 this.headPosition[this.currentDrive] = 0;
                 if (!this.fastReadMode || this.cmdFlags.v) {
                     this.state = FDC_STATE.SEEK_VERIFY;
-                    this.delayCycles = this._seekEndDelay(true);
+                    this.delayCycles = this._typeIEndWait(true);
                 } else {
                     this._completeTypeI();
                 }
@@ -1720,7 +1723,7 @@ export class FDC {
                 this.headPosition[this.currentDrive] = target;
                 if (!this.fastReadMode || this.cmdFlags.v) {
                     this.state = FDC_STATE.SEEK_VERIFY;
-                    this.delayCycles = this._seekEndDelay(true);
+                    this.delayCycles = this._typeIEndWait(true);
                 } else {
                     this._completeTypeI();
                 }
@@ -1740,7 +1743,7 @@ export class FDC {
             }
             if (!this.fastReadMode || this.cmdFlags.v) {
                 this.state = FDC_STATE.SEEK_VERIFY;
-                this.delayCycles = this._seekEndDelay(true);
+                this.delayCycles = this._typeIEndWait(true);
             } else {
                 this._completeTypeI();
             }
@@ -1766,10 +1769,13 @@ export class FDC {
             status |= STATUS.SEEK_ERROR;
         }
 
-        if (!this.fastReadMode && (this._stepped || this.cmdFlags.h)) {
-            this._settleRemaining = FDC.WAIT60_CYCLES;
+        // HLTIME restarts with the last STEP pulse or the head load; a
+        // verifying command has already waited it out.
+        if (!this.fastReadMode) {
+            if (this.cmdFlags.v) this._settleRemaining = 0;
+            else if (this._stepped || this.cmdFlags.h) this._settleRemaining = FDC.WAIT60_CYCLES;
         }
-        if (this.cmdFlags.h) this._headLoaded = true;
+        if (this.cmdFlags.h || this.cmdFlags.v) this._headLoaded = true;
         this._stepped = false;
 
         this._completeCommand(status);
@@ -1782,11 +1788,11 @@ export class FDC {
     _verifyTrack() {
         if (this._driveNotReady()) return false;
         const disk = this.currentDisk;
-        const track = this._mediaTrackIndex();
+        const track = this._cylinderUnderHead();
         if (track < 0) return false;
         const side = this.currentSide;
         for (const n of disk.getSectorList(track, side)) {
-            const sec = disk.getSector(track, side, n);
+            const sec = disk.lookupSector(track, side, n);
             if (sec && sec.c === (this.trackReg & 0xFF)) return true;
         }
         return false;
@@ -1799,9 +1805,14 @@ export class FDC {
         return !disk || !disk.loaded;
     }
 
-    /** True when the selected drive is not ready (no media, or still spinning up). */
+    /**
+     * True when the selected drive is not ready: no media, motor stopped, or
+     * (strict mode only) still spinning up. A drive is ready when a disk is
+     * inserted and turning.
+     */
     _driveNotReady() {
         if (this._noMedia()) return true;
+        if (!this.motorRunning) return true;
         return this.strictSpinup && this._spinupRemaining > 0;
     }
 
@@ -1817,7 +1828,7 @@ export class FDC {
             bits |= STATUS.WRITE_PROTECT;
         }
         if (this.headPosition[this.currentDrive] === 0) bits |= STATUS.TRACK0;
-        if (!notReady && this.motorOn && this._rotationPhase < FDC.INDEX_PULSE_CYCLES) {
+        if (!notReady && this.motorRunning && this._rotationPhase < FDC.INDEX_PULSE_CYCLES) {
             bits |= STATUS.INDEX;
         }
         return bits;
@@ -1828,27 +1839,29 @@ export class FDC {
     // =========================================================================
 
     /**
-     * Map the physical head position (step counter) to the media track
-     * index according to the drive mode and the media type:
-     *   - 2DD drive-mode + 2D media : the drive half-steps relative to the
-     *     media pitch; odd head positions sit between tracks (returns -1).
-     *   - 2D drive-mode + 2DD media : the drive double-steps, so the media
-     *     cylinder is twice the head position (low 8 bits).
-     * Matching mode/media returns the head position unchanged.
+     * Media track under the head, or -1 between two tracks.
+     * Positions are counted in 96 tpi pitches: one step moves the head two
+     * of them in 2D drive mode and one in 2DD drive mode; a 2D track is two
+     * of them apart, a 2DD track one.
      */
-    _mediaTrackIndex() {
+    _cylinderUnderHead() {
+        const steps = this.headPosition[this.currentDrive];
         const disk = this.currentDisk;
-        const pos = this.headPosition[this.currentDrive];
-        if (!disk) return pos;
-        const mediaIs2DD = (disk.mediaType === 0x10);
-        if (this.driveModeIs2dd && !mediaIs2DD) {
-            if (pos & 1) return -1;          // between 2D tracks
-            return pos >> 1;
-        }
-        if (!this.driveModeIs2dd && mediaIs2DD) {
-            return (pos << 1) & 0xFF;        // double-step
-        }
-        return pos;
+        if (!disk) return steps;
+        const headPitch = this.driveModeIs2dd ? 1 : 2;
+        const trackPitch = disk.densityByte === D77_MEDIA_2DD ? 1 : 2;
+        const pos = steps * headPitch;
+        if (pos % trackPitch !== 0) return -1;
+        return (pos / trackPitch) & 0xFF;
+    }
+
+    /**
+     * Type II C flag: when it is 1, the LSB of the side number in the ID
+     * field must equal the S flag, or the sector is not found (FM77AV
+     * Hardware Manual 5.9.5, S flag and C flag). With C = 0 any side passes.
+     */
+    _sideMatches(sector) {
+        return !this.cmdFlags.c || ((sector.h & 1) === (this.cmdFlags.s ? 1 : 0));
     }
 
     /** Begin reading sector data after finding sector */
@@ -1861,26 +1874,22 @@ export class FDC {
 
         // Look up the target sector on the current track; if it is not found,
         // report an error after the search time below.
-        // Drive vs media type compensation.
-        // The step counter is mapped to the media track (2D-mode drive on
+        // Which media track the head is on depends on the drive mode
+        // (2D / 2DD) and the track pitch of the media. The step counter is mapped to the media track (2D-mode drive on
         // 2DD media double-steps; 2DD-mode drive on 2D media half-steps and
         // odd positions sit between tracks). The ID C-field of the sector on
         // that media track must still match the Track Register.
-        const physTrack = this._mediaTrackIndex();
+        const physTrack = this._cylinderUnderHead();
         const side = this.currentSide;
         const sectorNum = this.sectorReg;
         const mismatchRNF = (physTrack < 0);
 
-        const sector = mismatchRNF ? null : disk.getSector(physTrack, side, sectorNum);
-        if (mismatchRNF || !sector || sector.c !== this.trackReg) {
-            if (this.logEnabled) {
-                this.log.push({
-                    cyc: this._logCycle, t: 'FIND_RNF',
-                    physTrk: physTrack, tr: this.trackReg,
-                    side, sec: sectorNum,
-                    has: !sector ? 'none' : `C${sector.c}`,
-                });
-            }
+        const sector = mismatchRNF ? null : disk.lookupSector(physTrack, side, sectorNum);
+        if (mismatchRNF || !sector || sector.c !== this.trackReg || !this._sideMatches(sector)) {
+            this._note('search', {
+                result: 'missing', medium: physTrack, side, sector: sectorNum,
+                track: this.trackReg, idTrack: sector ? sector.c : '-',
+            });
             // Missing sector: stay BUSY for the search time, then assert
             // RNF + INTRQ.
             this.statusReg = STATUS.BUSY;
@@ -1889,15 +1898,13 @@ export class FDC {
             this.delayCycles = FDC.RNF_TIMEOUT;
             return;
         }
-        if (this.logEnabled) {
-            this.log.push({
-                cyc: this._logCycle, t: 'FIND_OK',
-                physTrk: physTrack, side, sec: sectorNum,
-                size: sector.size,
-                d77status: '$' + (sector.status || 0).toString(16).padStart(2, '0'),
-                deleted: sector.deleted ? 1 : 0,
+        if (this.traceOn) {
+            this._note('search', {
+                result: 'found', medium: physTrack, side, sector: sectorNum,
+                bytes: sector.size, imageStatus: hexByte(sector.status || 0),
+                markDeleted: sector.deleted ? 1 : 0,
             });
-            this._logByteCount = 0;
+            this._sectorBytes = 0;
         }
         // Set up data transfer
         this.dataBuffer = sector.data;
@@ -1910,9 +1917,9 @@ export class FDC {
         if (sector.deleted) {
             statusExtra |= STATUS.RECORD_TYPE;
         }
-        // D77 status field: reflect errors to FDC status.
-        // D77 dumps record abnormal sectors as various non-zero status
-        // values ($B0, $E0, $10, etc.). Any non-zero value sets CRC_ERROR.
+        // D77 status field: a non-zero value marks a sector the dump could
+        // not read normally (for example $B0 or $E0); any non-zero value is
+        // reported as CRC ERROR.
         if (sector.status !== 0) {
             statusExtra |= STATUS.CRC_ERROR;
         }
@@ -1955,15 +1962,9 @@ export class FDC {
             // Transfer complete
             if (this.cmdFlags.m) {
                 // Multi-sector: advance to next sector with rotational delay
-                if (this.logEnabled) {
-                    const secEnd = {
-                        cyc: this._logCycle, t: 'SEC_END',
-                        readBytes: this._logByteCount,
-                        nextSec: this.sectorReg + 1,
-                    };
-                    if (this._lostDataCount > 0) secEnd.lostBytes = this._lostDataCount;
-                    this.log.push(secEnd);
-                }
+                this._note('next', {
+                    moved: this._sectorBytes, lost: this._lostDataCount || 0, sector: this.sectorReg + 1,
+                });
                 this._lostDataCount = 0;
                 this.sectorReg++;
                 this.drqFlag = false;
@@ -1992,12 +1993,12 @@ export class FDC {
             return;
         }
 
-        const track = this._mediaTrackIndex();
+        const track = this._cylinderUnderHead();
         const side = this.currentSide;
         const sectorNum = this.sectorReg;
 
-        const sector = track < 0 ? null : disk.getSector(track, side, sectorNum);
-        if (!sector || sector.c !== this.trackReg) {
+        const sector = track < 0 ? null : disk.lookupSector(track, side, sectorNum);
+        if (!sector || sector.c !== this.trackReg || !this._sideMatches(sector)) {
             // C field must match the track register (same as read path).
             this.statusReg = STATUS.BUSY;
             this.drqFlag = false;
@@ -2005,6 +2006,11 @@ export class FDC {
             this.delayCycles = FDC.RNF_TIMEOUT;
             return;
         }
+
+        // a0 = 1 writes a deleted data mark ($F8), 0 a data mark ($FB)
+        // (FM77AV Hardware Manual 5.9.5, Type II (5); FD179X-01 data sheet,
+        // Write Sector).
+        sector.deleted = this.cmdFlags.a0;
 
         // Set up write buffer
         this.dataBuffer = sector.data;
@@ -2057,13 +2063,10 @@ export class FDC {
      * into the matching (pre-existing) sector of the in-memory image.
      */
     _beginWriteTrack() {
-        const track = this._mediaTrackIndex();
+        const track = this._cylinderUnderHead();
         const side = this.currentSide;
         this._wtTrack = track;
         this._wtSide = side;
-        // Sectors physically present on this track (image is pre-formatted).
-        this._wtExpectSectors = track < 0 ? 0
-            : this.currentDisk.getSectorList(track, side).length;
         this._wtSectorsWritten = 0;
         this._wtBytes = 0;
         this._wtPhase = 'gap';        // 'gap' | 'id' | 'data'
@@ -2140,7 +2143,7 @@ export class FDC {
         } else if ((b === 0xFB || b === 0xF8) && this._wtIdReady) {
             const r = this._wtId[2];
             const n = this._wtId[3] & 0x03;
-            this._wtSector = this.currentDisk.getSector(this._wtTrack, this._wtSide, r);
+            this._wtSector = this.currentDisk.lookupSector(this._wtTrack, this._wtSide, r);
             this._wtDataRemaining = 128 << n;
             this._wtDataIndex = 0;
             this._wtPhase = 'data';
@@ -2168,16 +2171,14 @@ export class FDC {
             return;
         }
 
-        const track = this._mediaTrackIndex();
+        const track = this._cylinderUnderHead();
         const side = this.currentSide;
-        // ID フィールドは常にヘッドの下を通る順 (物理順) で返す。
-        // fastReadMode の ON/OFF には依存しない。
+        // ID fields come back in the order they pass under the head
+        // (physical order), whether fastReadMode is on or off.
         const sectorList = track < 0 ? [] : disk.getPhysicalOrder(track, side);
 
         if (sectorList.length === 0) {
-            if (this.logEnabled) {
-                this.log.push({ cyc: this._logCycle, t: 'RADDR_RNF', physTrk: track, side });
-            }
+            this._note('id', { result: 'missing', medium: track, side });
             // Unformatted track: stay BUSY for the search time, then report RNF.
             this.statusReg = STATUS.BUSY;
             this.drqFlag = false;
@@ -2185,20 +2186,20 @@ export class FDC {
             this.delayCycles = FDC.RNF_TIMEOUT;
             return;
         }
-        if (this.logEnabled) {
-            const idx = this.readAddrSectorIndex % sectorList.length;
-            this.log.push({
-                cyc: this._logCycle, t: 'READ_ADDR',
-                physTrk: track, side, retSec: sectorList[idx],
-                listLen: sectorList.length,
+        if (this.traceOn) {
+            this._note('id', {
+                result: 'found', medium: track, side,
+                sector: sectorList[this._idUnderHead(sectorList.length)], ofSectors: sectorList.length,
             });
         }
 
-        // Rotate through sectors on each Read Address call
-        const sectorIdx = this.readAddrSectorIndex % sectorList.length;
-        this.readAddrSectorIndex++;
-        const sectorNum = sectorList[sectorIdx];
-        const sector = disk.getSector(track, side, sectorNum);
+        // The ID field that passes under the head next, from the rotation
+        // phase of the disk; the disk then turns to the end of that ID, so a
+        // following Read Address sees the next one.
+        const slot = this._idUnderHead(sectorList.length);
+        const sectorNum = sectorList[slot];
+        this._rotationPhase = Math.floor((slot + 1) / sectorList.length * (FDC.REVOLUTION_CYCLES || 1)) % (FDC.REVOLUTION_CYCLES || 1);
+        const sector = disk.lookupSector(track, side, sectorNum);
 
         // Build 6-byte ID field: C, H, R, N, CRC1, CRC2
         this.idBuffer = new Uint8Array(6);
@@ -2206,8 +2207,13 @@ export class FDC {
         this.idBuffer[1] = sector.h;
         this.idBuffer[2] = sector.r;
         this.idBuffer[3] = sector.n;
-        this.idBuffer[4] = 0x00; // CRC (dummy)
-        this.idBuffer[5] = 0x00;
+        // CRC1, CRC2: the CRC bytes of the ID field (FM77AV Hardware Manual
+        // 5.9.5, Type III (1) Read Address). CRC-CCITT preset to all ones,
+        // over the address mark ($A1 x3, $FE) and C, H, R, N (FD179X-01 data
+        // sheet, Organization, CRC Logic).
+        const idCrc = crc16([0xA1, 0xA1, 0xA1, 0xFE, sector.c, sector.h, sector.r, sector.n]);
+        this.idBuffer[4] = idCrc >> 8;
+        this.idBuffer[5] = idCrc & 0xFF;
 
         // Transfer via data register + DRQ, same as Read Sector
         this.dataBuffer = this.idBuffer;
@@ -2247,15 +2253,10 @@ export class FDC {
     _forceInterrupt(cmd) {
         const conditions = cmd & 0x0F;
 
-        if (this.logEnabled) {
-            this.log.push({
-                cyc: this._logCycle, t: 'FORCE_INT',
-                byte: '$' + cmd.toString(16).padStart(2, '0'),
-                cond: '$' + conditions.toString(16),
-                wasBusy: (this._logBusyPrev ? 1 : 0),
-                bytesSoFar: this._logTotalBytes,
-            });
-        }
+        this._note('stop', {
+            code: hexByte(cmd), when: conditions, busy: this._seenLines.busy ? 1 : 0,
+            moved: this._commandBytes,
+        });
 
         const wasBusy = (this.statusReg & STATUS.BUSY) !== 0;
 
@@ -2286,14 +2287,14 @@ export class FDC {
         this._forceIntReady = !this._driveNotReady();
         if (conditions & 0x08) this._raiseForceInt();
 
-        if (this.logEnabled) this._logEdges();
+        this._noteLines();
     }
 
     /** Raise the IRQ for a Force Interrupt condition. */
     _raiseForceInt() {
         this.irqFlag = true;
-        if (this.onIRQ) {
-            this.onIRQ();
+        if (this.onIntrqRise) {
+            this.onIntrqRise();
         }
     }
 
@@ -2311,10 +2312,10 @@ export class FDC {
             if (!ready && (this._forceIntCond & 0x02)) fire = true;
             this._forceIntReady = ready;
         }
-        if (indexPassed && (this._forceIntCond & 0x04) && ready && this.motorOn) fire = true;
+        if (indexPassed && (this._forceIntCond & 0x04) && ready && this.motorRunning) fire = true;
         if (fire) {
             this._raiseForceInt();
-            if (this.logEnabled) this._logEdges();
+            this._noteLines();
         }
     }
 
@@ -2332,64 +2333,23 @@ export class FDC {
         this.drqFlag = false;
         this.state = FDC_STATE.IDLE;
 
-        if (this.logEnabled) {
-            const dur = this._logCycle - this._logCmdStart;
-            const flags = this._logStatusFlags(errorBits);
-            const entry = {
-                cyc: this._logCycle, t: 'DONE',
-                cmd: this._logCmdName,
-                status: '$' + (errorBits & 0xFF).toString(16).padStart(2, '0'),
-                flags: flags.length ? flags.join('|') : 'OK',
-                durCyc: dur, durUs: +(dur / FDC.CYCLES_PER_US).toFixed(1),
-                bytes: this._logTotalBytes,
-            };
-            if (this._lostDataCount > 0) entry.lostBytes = this._lostDataCount;
-            this.log.push(entry);
-            this._logEdges();
+        if (this.traceOn) {
+            const words = this._statusWords(errorBits);
+            this._note('end', {
+                op: this._commandWord, status: hexByte(errorBits),
+                bits: words.length ? words.join(',') : '-',
+                tookUs: this._ticksToUs(this._traceTicks - this._commandSince),
+                moved: this._commandBytes, lost: this._lostDataCount || 0,
+            });
+            this._noteLines();
         }
 
         // Assert IRQ
         this.irqFlag = true;
-        if (this.onIRQ) {
-            this.onIRQ();
+        if (this.onIntrqRise) {
+            this.onIntrqRise();
         }
-        if (this.logEnabled) this._logEdges();
-    }
-
-    // =========================================================================
-    // Drive status helper (not wired to an I/O address)
-    // =========================================================================
-
-    /**
-     * Build a drive status byte. $FD1C reads do not use this helper.
-     * @returns {number} Status byte
-     * @private
-     */
-    _readDriveStatus() {
-        let status = 0;
-
-        // Bit 7: 1 = drive not ready / motor off
-        // Drive is always physically present; motor-off — or, in strict mode,
-        // a motor that has not finished spinning up — means not ready.
-        if (!this.motorOn || (this.strictSpinup && this._spinupRemaining > 0)) {
-            status |= 0x80;
-        }
-
-        // Bit 6: write protect
-        if (this.currentDisk && this.currentDisk.writeProtect) {
-            status |= 0x40;
-        }
-
-        // Bit 2: track 0
-        if (this.headPosition[this.currentDrive] === 0) {
-            status |= 0x04;
-        }
-
-        // Bit 1: index pulse (always 0)
-        // Bit 0: side selected
-        status |= (this.currentSide & 0x01);
-
-        return status;
+        this._noteLines();
     }
 
     // =========================================================================
@@ -2411,7 +2371,7 @@ export class FDC {
         this._forceIntReady = false;
         this._pendingDrq = false;
         this._drqTimer = 0;
-        this.motorOn = false;
+        this.motorRunning = false;
         this.driveDisabled = false;
         this._spinupRemaining = 0;
         this._settleRemaining = 0;
@@ -2426,7 +2386,6 @@ export class FDC {
         this.dataIndex = 0;
         this.dataLength = 0;
         this.headPosition = [0, 0, 0, 0];
-        this.readAddrSectorIndex = 0;
         this.accessLatch = false;
     }
 }

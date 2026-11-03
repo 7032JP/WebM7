@@ -6,7 +6,7 @@
 | 作者 | Naomitsu Tsugiiwa |
 | バージョン | v1.0.9 |
 | ライセンス | MIT License（原文は [`assets/altroms/LICENSE`](assets/altroms/LICENSE)。適用範囲は [`assets/altroms/LICENSE-MIT.md`](assets/altroms/LICENSE-MIT.md)） |
-| 本プロジェクトでの範囲 | `assets/altroms/` 配下の ROM イメージと、互換 ROM セットの権利表示文書・ハッシュ一覧（`README.md` は本プロジェクトの文書） |
+| 本プロジェクトでの範囲 | `assets/altroms/` 配下の ROM イメージ（漢字系 ROM に含まれる第三者素材由来の字形を除く。下記「適用範囲」）と、互換 ROM セットの権利表示文書（`LICENSE`・`LICENSE-MIT.md`・`LICENSE-FONT.md`・`docs/LEGAL.md`。`LICENSE-FONT.md` 内の原ライセンス文の写しを除く）。`SHA256SUMS` と `README.md` は本プロジェクトが作った文書で、本プロジェクトの [`LICENSE`](LICENSE) に従う |
 | 改変の有無 | なし |
 
 ## 適用範囲
@@ -25,7 +25,8 @@ MIT License の対象外です。詳細は [`LICENSE-Shinonome.md`](LICENSE-Shin
 ## 同梱ファイル
 
 ROM 本体と併せて、次の文書を `assets/altroms/` に同梱しています。`LICENSE`・
-`LICENSE-MIT.md`・`LICENSE-FONT.md`・`SHA256SUMS` は互換 ROM セットのものをそのまま、
+`LICENSE-MIT.md`・`LICENSE-FONT.md` は互換 ROM セットのものをそのまま、`SHA256SUMS` は
+配布元のファイルのハッシュ値を本フォルダの配置に合わせて本プロジェクトが作り直した一覧、
 `README.md` は本プロジェクトが添えた説明です。互換 ROM セットの `docs/LEGAL.md` も、
 `assets/altroms/docs/LEGAL.md` にそのまま同梱しています。
 
@@ -34,8 +35,8 @@ ROM 本体と併せて、次の文書を `assets/altroms/` に同梱していま
 - `LICENSE-FONT.md` — 漢字フォント素材の由来（素材名・バージョン・作者・取得元・改変内容）、
   MIT License との区分、および原ライセンス文の写し
 - `docs/LEGAL.md` — 利用条件・免責・来歴と、漢字系 ROM の字形の区分の詳細
-- `SHA256SUMS` — ROM 本体と権利表示文書の検証用ハッシュ
-- `README.md` — 互換 ROM セットの説明
+- `SHA256SUMS` — ROM 本体と権利表示文書の検証用ハッシュ（本プロジェクトが作り直した一覧）
+- `README.md` — 本プロジェクトが添えた、このフォルダの説明
 
 ## 改変について
 

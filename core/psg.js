@@ -19,7 +19,6 @@
 
 const PSG_CLOCK     = 1228800;       // 1.2288 MHz
 const CLOCK_DIV     = 8;             // Internal divider for tone/noise
-const ENV_DIV       = CLOCK_DIV * 2; // Envelope runs at half the tone rate
 const SAMPLE_RATE   = 44100;
 
 // AY-3-8910 volume table (logarithmic approximation)
@@ -44,54 +43,49 @@ export class PSGCore {
         this._dataBus = 0;
 
         // --- Tone generators (channels A, B, C) ---
-        this._tonePeriod  = new Float64Array(3);
-        this._toneCount   = new Float64Array(3);
+        this._toneElapsed   = new Float64Array(3);
         this._toneOut     = new Uint8Array(3);
 
         // --- Noise generator ---
-        this._noisePeriod = 0;
-        this._noiseCount  = 0;
+        this._noiseElapsed  = 0;
         this._noiseOut    = 0;
         this._lfsr        = 1;           // 17-bit LFSR, must never be 0
 
         // --- Envelope generator ---
-        this._envPeriod   = 0;
-        this._envCount    = 0;
+        this._envElapsed    = 0;
         this._envStep     = 0;           // Current level 0-15
         this._envDir      = -1;          // +1 = attack, -1 = decay
         this._envHolding  = false;
 
         // --- Clock ratios (synthesis-clock == 1.2288 MHz) ---
         this._ticksPerSample    = (PSG_CLOCK / CLOCK_DIV) / SAMPLE_RATE;
-        this._envTicksPerSample = (PSG_CLOCK / ENV_DIV)   / SAMPLE_RATE;
-        this._cpuToPsgRatio     = PSG_CLOCK / 1794000;  // default FM-7
+        this._cpuToPsgRatio     = 0;   // set by setTickRate()
     }
 
     // =====================================================================
     // Clock setup and reset
     // =====================================================================
 
-    setCPUClock(hz) {
+    /** Rate of the time units passed to step() (master clock periods). */
+    setTickRate(hz) {
         this._cpuToPsgRatio = PSG_CLOCK / hz;
     }
 
     reset() {
+        // Reset clears every register (AY-3-8910 data sheet, RESET); the
+        // amplitude registers at 0 keep the output silent.
         this.regs.fill(0);
-        this.regs[7] = 0xFF;           // Mixer: all disabled
         this._latchedReg = 0;
         this._dataBus = 0;
 
-        this._tonePeriod.fill(0);
-        this._toneCount.fill(0);
+        this._toneElapsed.fill(0);
         this._toneOut.fill(0);
 
-        this._noisePeriod = 0;
-        this._noiseCount  = 0;
+        this._noiseElapsed  = 0;
         this._noiseOut    = 0;
         this._lfsr        = 1;
 
-        this._envPeriod  = 0;
-        this._envCount   = 0;
+        this._envElapsed   = 0;
         this._envStep    = 0;
         this._envDir     = -1;
         this._envHolding = false;
@@ -132,39 +126,34 @@ export class PSGCore {
     // Register write
     // =====================================================================
 
+    /**
+     * The registers are the only state a write changes; the generators
+     * read their periods from them.  R13 also starts the envelope over.
+     */
     _writeReg(reg, val) {
         reg &= 0x0F;
         this.regs[reg] = val;
+        if (reg === 13) this._restartEnvelope(val);
+    }
 
-        switch (reg) {
-            case 0: case 1:
-                this._tonePeriod[0] = ((this.regs[1] & 0x0F) << 8) | this.regs[0];
-                break;
-            case 2: case 3:
-                this._tonePeriod[1] = ((this.regs[3] & 0x0F) << 8) | this.regs[2];
-                break;
-            case 4: case 5:
-                this._tonePeriod[2] = ((this.regs[5] & 0x0F) << 8) | this.regs[4];
-                break;
-            case 6:
-                this._noisePeriod = val & 0x1F;
-                break;
-            case 11: case 12:
-                this._envPeriod = this.regs[11] | (this.regs[12] << 8);
-                break;
-            case 13:
-                // Writing R13 restarts the envelope
-                this._envCount = 0;
-                this._envHolding = false;
-                if (val & 0x04) {
-                    this._envStep = 0;   // Attack: start low, go up
-                    this._envDir  = 1;
-                } else {
-                    this._envStep = 15;  // Decay: start high, go down
-                    this._envDir  = -1;
-                }
-                break;
-        }
+    /** Tone period of channel `ch` (R0/R1, R2/R3, R4/R5: 12 bits). */
+    _tonePeriod(ch) {
+        return ((this.regs[2 * ch + 1] & 0x0F) << 8) | this.regs[2 * ch];
+    }
+
+    /** Noise period (R6: 5 bits). */
+    _noisePeriod() { return this.regs[6] & 0x1F; }
+
+    /** Envelope period (R11 low, R12 high: 16 bits). */
+    _envPeriod() { return this.regs[11] | (this.regs[12] << 8); }
+
+    /** A write to R13 starts the envelope shape over (ATTACK bit = bit 2). */
+    _restartEnvelope(shape) {
+        const rising = (shape & 0x04) !== 0;
+        this._envStep = rising ? 0 : 15;
+        this._envDir = rising ? 1 : -1;
+        this._envHolding = false;
+        this._envElapsed = 0;
     }
 
     // =====================================================================
@@ -174,20 +163,20 @@ export class PSGCore {
     _advance(ticks) {
         // --- Tone counters ---
         for (let ch = 0; ch < 3; ch++) {
-            const p = this._tonePeriod[ch];
+            const p = this._tonePeriod(ch);
             if (p < 1) { this._toneOut[ch] = 1; continue; }
-            this._toneCount[ch] += ticks;
-            while (this._toneCount[ch] >= p) {
-                this._toneCount[ch] -= p;
+            this._toneElapsed[ch] += ticks;
+            while (this._toneElapsed[ch] >= p) {
+                this._toneElapsed[ch] -= p;
                 this._toneOut[ch] ^= 1;
             }
         }
 
         // --- Noise counter (runs at half the tone rate) ---
-        const np = (this._noisePeriod || 1) * 2;
-        this._noiseCount += ticks;
-        while (this._noiseCount >= np) {
-            this._noiseCount -= np;
+        const np = (this._noisePeriod() || 1) * 2;
+        this._noiseElapsed += ticks;
+        while (this._noiseElapsed >= np) {
+            this._noiseElapsed -= np;
             // Advance the noise generator.
             const bit = ((this._lfsr ^ (this._lfsr >> 3)) & 1);
             this._lfsr = ((this._lfsr >> 1) | (bit << 16)) & 0x1FFFF;
@@ -196,13 +185,13 @@ export class PSGCore {
         }
 
         // --- Envelope counter ---
-        if (!this._envHolding && this._envPeriod > 0) {
+        const ep = this._envPeriod();
+        if (!this._envHolding && ep > 0) {
             // Envelope ticks at half the tone counter rate
             const envTicks = ticks * 0.5;
-            const ep = this._envPeriod;
-            this._envCount += envTicks;
-            while (this._envCount >= ep && !this._envHolding) {
-                this._envCount -= ep;
+            this._envElapsed += envTicks;
+            while (this._envElapsed >= ep && !this._envHolding) {
+                this._envElapsed -= ep;
                 this._envStep += this._envDir;
                 if (this._envStep < 0 || this._envStep > 15) {
                     this._envCycle();
@@ -387,7 +376,7 @@ export class PSG extends PSGCore {
      * Set output volume.
      * @param {number} v - 0.0 (silent) to 1.0 (full)
      */
-    setVolume(v) {
+    setGain(v) {
         this._volume = Math.max(0, Math.min(1, v));
         if (this._gainNode) {
             this._gainNode.gain.value = this._volume;

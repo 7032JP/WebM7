@@ -5,7 +5,8 @@
 // 6809 instruction set simulation with per-instruction cycle counts
 // =============================================================================
 
-// Condition Code Register bit masks
+// Condition Code Register bit masks. Source: MC6809 data sheet, the
+// condition code register section (bit assignment of CC).
 const CC_C = 0x01; // Carry
 const CC_V = 0x02; // Overflow
 const CC_Z = 0x04; // Zero
@@ -15,19 +16,41 @@ const CC_H = 0x20; // Half-carry
 const CC_F = 0x40; // FIRQ mask
 const CC_E = 0x80; // Entire flag
 
-// Interrupt request flags
-const INTR_NMI     = 0x01;  // NMI request
-const INTR_FIRQ    = 0x02;  // FIRQ request
-const INTR_IRQ     = 0x04;  // IRQ request
-const INTR_NMI_ARMED = 0x08;  // NMI armed (set when S is loaded)
-const INTR_SYNC      = 0x10;  // SYNC wait state
-const INTR_CWAI      = 0x20;  // CWAI has pushed the registers
-const INTR_HALT    = 0x40;  // CPU halted
+// EXG / TFR postbyte register codes. Source: MC6809 data sheet, the
+// transfer/exchange post byte table. Codes with bit 3 set are 8-bit
+// registers; null = code not assigned.
+const TRANSFER_REGISTERS = [
+    'd', 'x', 'y', 'u', 's', 'pc', null, null,
+    'a', 'b', 'cc', 'dp', null, null, null, null,
+];
 
-// TFR/EXG postbyte register code for S (see getRegValue / setRegValue)
-const REG_S = 0x04;
+// PSH / PUL postbyte. Source: MC6809 datasheet, the push/pull post byte
+// figure and the stacking order. Bit, register, size in bytes, in the order a pull
+// takes them from the stack (a push stores them in the reverse order).
+// Bit 6 names the other stack pointer (U for the S stack, S for the U stack).
+const STACK_SLOTS = [
+    [0x01, 'cc', 1], [0x02, 'a', 1], [0x04, 'b', 1], [0x08, 'dp', 1],
+    [0x10, 'x', 2], [0x20, 'y', 2], [0x40, null, 2], [0x80, 'pc', 2],
+];
+const STACK_SLOT_SIZES = Uint8Array.from(STACK_SLOTS, (slot) => slot[2]);
 
-// Interrupt vectors
+// For every postbyte, the indices of STACK_SLOTS it selects (in the order a
+// pull takes them) and the number of bytes it moves. Built once from
+// STACK_SLOTS so that an instruction does not walk the whole table.
+const STACK_SLOT_LISTS = [];
+const STACK_SLOT_BYTES = new Uint8Array(256);
+for (let mask = 0; mask < 256; mask++) {
+    const list = [];
+    for (let k = 0; k < STACK_SLOTS.length; k++) {
+        if (!(mask & STACK_SLOTS[k][0])) continue;
+        list.push(k);
+        STACK_SLOT_BYTES[mask] += STACK_SLOTS[k][2];
+    }
+    STACK_SLOT_LISTS.push(Uint8Array.from(list));
+}
+
+// Interrupt vectors. Source: MC6809 data sheet, the memory map for
+// interrupt vectors table.
 const VEC_NMI  = 0xFFFC;
 const VEC_FIRQ = 0xFFF6;
 const VEC_IRQ  = 0xFFF8;
@@ -36,80 +59,92 @@ const VEC_SWI2 = 0xFFF4;
 const VEC_SWI3 = 0xFFF2;
 const VEC_RST  = 0xFFFE;
 
-// Cycle tables
-// Page 1 opcodes ($00-$FF)
-const CYCLES_PAGE1 = [
-//  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
-    6,  0,  0,  6,  6,  0,  6,  6,  6,  6,  6,  0,  6,  6,  3,  6, // 0x
-    0,  0,  2,  4,  0,  0,  5,  9,  0,  2,  3,  0,  3,  2,  8,  6, // 1x
-    3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3, // 2x
-    4,  4,  4,  4,  5,  5,  5,  5,  0,  5,  3,  6, 20, 11,  0, 19, // 3x
-    2,  0,  0,  2,  2,  0,  2,  2,  2,  2,  2,  0,  2,  2,  0,  2, // 4x
-    2,  0,  0,  2,  2,  0,  2,  2,  2,  2,  2,  0,  2,  2,  0,  2, // 5x
-    6,  0,  0,  6,  6,  0,  6,  6,  6,  6,  6,  0,  6,  6,  3,  6, // 6x
-    7,  0,  0,  7,  7,  0,  7,  7,  7,  7,  7,  0,  7,  7,  4,  7, // 7x
-    2,  2,  2,  4,  2,  2,  2,  0,  2,  2,  2,  2,  4,  7,  3,  0, // 8x
-    4,  4,  4,  6,  4,  4,  4,  4,  4,  4,  4,  4,  6,  7,  5,  5, // 9x
-    4,  4,  4,  6,  4,  4,  4,  4,  4,  4,  4,  4,  6,  7,  5,  5, // Ax
-    5,  5,  5,  7,  5,  5,  5,  5,  5,  5,  5,  5,  7,  8,  6,  6, // Bx
-    2,  2,  2,  4,  2,  2,  2,  0,  2,  2,  2,  2,  3,  0,  3,  0, // Cx
-    4,  4,  4,  6,  4,  4,  4,  4,  4,  4,  4,  4,  5,  5,  5,  5, // Dx
-    4,  4,  4,  6,  4,  4,  4,  4,  4,  4,  4,  4,  5,  5,  5,  5, // Ex
-    5,  5,  5,  7,  5,  5,  5,  5,  5,  5,  5,  5,  6,  6,  6,  6  // Fx
-];
+// Where the processor is in the data sheet flowchart (Figure 15) between
+// instructions: running, in the SYNC loop, or in the CWAI loop.
+export const RUNNING   = 0;
+export const IN_SYNC   = 1;   // SYNC: waiting for any interrupt line
+export const IN_CWAI   = 2;   // CWAI: registers stacked, waiting for an interrupt
 
-// Page 2 opcodes ($10xx) - only valid ones have non-zero cycles
-const CYCLES_PAGE2 = [
-//  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 0x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 1x
-    0,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5, // 2x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 20, // 3x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 4x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 5x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 6x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 7x
-    0,  0,  0,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5,  0,  4,  0, // 8x
-    0,  0,  0,  7,  0,  0,  0,  0,  0,  0,  0,  0,  7,  0,  6,  6, // 9x
-    0,  0,  0,  7,  0,  0,  0,  0,  0,  0,  0,  0,  7,  0,  6,  6, // Ax
-    0,  0,  0,  8,  0,  0,  0,  0,  0,  0,  0,  0,  8,  0,  7,  7, // Bx
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  0, // Cx
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6, // Dx
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6, // Ex
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  7  // Fx
-];
+// Base cycle counts. Source: MC6809 datasheet, the instruction set tables
+// (the "~" cycle columns for each addressing mode, and the long branch and
+// prefixed-opcode entries). They exclude the cycles that depend on the operand: the
+// indexed postbyte, a taken long branch and the registers that PSH / PUL /
+// RTI move; the executing code adds those. 0 = no such instruction.
+export const BASE_CYCLES = (() => {
+    const page1 = new Array(256).fill(0);
+    const page2 = new Array(256).fill(0);
+    const page3 = new Array(256).fill(0);
 
-// Page 3 opcodes ($11xx)
-const CYCLES_PAGE3 = [
-//  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 0x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 1x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 2x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 20, // 3x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 4x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 5x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 6x
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // 7x
-    0,  0,  0,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5,  0,  0,  0, // 8x
-    0,  0,  0,  7,  0,  0,  0,  0,  0,  0,  0,  0,  7,  0,  0,  0, // 9x
-    0,  0,  0,  7,  0,  0,  0,  0,  0,  0,  0,  0,  7,  0,  0,  0, // Ax
-    0,  0,  0,  8,  0,  0,  0,  0,  0,  0,  0,  0,  8,  0,  0,  0, // Bx
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // Cx
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // Dx
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, // Ex
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0  // Fx
-];
+    // $80-$FF: bits 5-4 of the opcode give the addressing mode
+    // (immediate, direct, indexed, extended); bit 6 picks the A side
+    // ($80-$BF) or the B side ($C0-$FF); the low four bits the operation.
+    const BYTE_OP    = [2, 4, 4, 5];
+    const BYTE_STORE = [0, 4, 4, 5];
+    const WORD_OP    = [4, 6, 6, 7];   // SUBD ADDD CMPX
+    const WORD_LOAD  = [3, 5, 5, 6];
+    const WORD_STORE = [0, 5, 5, 6];
+    const CALL       = [7, 7, 7, 8];   // BSR (immediate column), JSR
+    const sideA = new Array(16).fill(BYTE_OP);
+    sideA[0x3] = WORD_OP;   sideA[0x7] = BYTE_STORE; sideA[0xC] = WORD_OP;
+    sideA[0xD] = CALL;      sideA[0xE] = WORD_LOAD;  sideA[0xF] = WORD_STORE;
+    const sideB = new Array(16).fill(BYTE_OP);
+    sideB[0x3] = WORD_OP;   sideB[0x7] = BYTE_STORE; sideB[0xC] = WORD_LOAD;
+    sideB[0xD] = WORD_STORE; sideB[0xE] = WORD_LOAD; sideB[0xF] = WORD_STORE;
+    for (let op = 0x80; op <= 0xFF; op++) {
+        const forms = (op & 0x40) ? sideB : sideA;
+        page1[op] = forms[op & 0x0F][(op >> 4) & 0x03];
+    }
 
-// Unused. addrIndexed() computes the indexed addressing cycles inline.
-const INDEXED_CYCLES = [
-    2, 3, 2, 3, 0, 1, 1, 0, 1, 4, 0, 4, 1, 5, 0, 0, // 0x00-0x0F
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5  // 0x10-0x1F
-];
+    // $00-$7F single-operand group: direct ($0x), A ($4x), B ($5x),
+    // indexed ($6x), extended ($7x). JMP has no register form.
+    const SINGLE_OPERAND = [0x0, 0x3, 0x4, 0x6, 0x7, 0x8, 0x9, 0xA, 0xC, 0xD, 0xF];
+    const singleByRow = { 0x0: 6, 0x4: 2, 0x5: 2, 0x6: 6, 0x7: 7 };
+    const jumpByRow   = { 0x0: 3, 0x6: 3, 0x7: 4 };
+    for (const [row, n] of Object.entries(singleByRow)) {
+        for (const low of SINGLE_OPERAND) page1[(row << 4) | low] = n;
+    }
+    for (const [row, n] of Object.entries(jumpByRow)) page1[(row << 4) | 0xE] = n;
 
-const INDEXED_CYCLES_INDIRECT = [
-    0, 3, 0, 3, 0, 1, 1, 0, 1, 4, 0, 4, 1, 5, 0, 0,
-    0, 6, 0, 6, 3, 4, 4, 0, 4, 7, 0, 7, 4, 8, 0, 5
-];
+    // Short branches $20-$2F.
+    for (let op = 0x20; op <= 0x2F; op++) page1[op] = 3;
+
+    // Instructions listed one by one.
+    const single = {
+        0x12: 2,  /* NOP */   0x13: 4,  /* SYNC */  0x16: 5,  /* LBRA */
+        0x17: 9,  /* LBSR */  0x19: 2,  /* DAA */   0x1A: 3,  /* ORCC */
+        0x1C: 3,  /* ANDCC */ 0x1D: 2,  /* SEX */   0x1E: 8,  /* EXG */
+        0x1F: 6,  /* TFR */   0x30: 4,  /* LEAX */  0x31: 4,  /* LEAY */
+        0x32: 4,  /* LEAS */  0x33: 4,  /* LEAU */  0x34: 5,  /* PSHS */
+        0x35: 5,  /* PULS */  0x36: 5,  /* PSHU */  0x37: 5,  /* PULU */
+        0x39: 5,  /* RTS */   0x3A: 3,  /* ABX */   0x3B: 6,  /* RTI */
+        0x3C: 20, /* CWAI */  0x3D: 11, /* MUL */   0x3F: 19, /* SWI */
+    };
+    for (const [op, n] of Object.entries(single)) page1[op] = n;
+
+    // Prefixed pages: the long conditional branches and SWI2 / SWI3, and
+    // register forms that take one cycle more than the unprefixed
+    // instruction in the same position (CMPD CMPY LDY STY LDS STS on $10,
+    // CMPU CMPS on $11).
+    for (let op = 0x21; op <= 0x2F; op++) page2[op] = 5;
+    page2[0x3F] = 20;
+    page3[0x3F] = 20;
+    const longer = (page, sideALows, sideBLows) => {
+        for (let op = 0x80; op <= 0xFF; op++) {
+            const lows = (op & 0x40) ? sideBLows : sideALows;
+            if (lows.includes(op & 0x0F) && page1[op] !== 0) page[op] = page1[op] + 1;
+        }
+    };
+    longer(page2, [0x3, 0xC, 0xE, 0xF], [0xE, 0xF]);
+    longer(page3, [0x3, 0xC], []);
+
+    return { page1, page2, page3 };
+})();
+
+// Which second bytes have an instruction on the prefixed pages: exactly
+// those with a cycle count there.  The prefix is dropped for the others
+// and the second byte runs as its page 1 instruction.
+const PAGE2_DEFINED = Uint8Array.from(BASE_CYCLES.page2, (n) => (n > 0 ? 1 : 0));
+const PAGE3_DEFINED = Uint8Array.from(BASE_CYCLES.page3, (n) => (n > 0 ? 1 : 0));
 
 export class CPU6809 {
     constructor() {
@@ -124,22 +159,42 @@ export class CPU6809 {
         this.dp = 0;     // Direct page register (8-bit)
         this.cc = 0;     // Condition code register (8-bit)
 
-        // Internal state
-        this.intr = 0;   // Interrupt flags (16-bit)
-        this.cycle = 0;  // Cycles for current instruction
-        this.total = 0;  // Total cycles executed
+        // Interrupt inputs and the waiting loops
+        this.nmiRequest = false;   // NMI edge seen, not yet taken
+        this.firqRequest = false;  // FIRQ requested, not yet taken
+        this.irqRequest = false;   // IRQ requested, not yet taken
+        this.nmiArmed = false;     // set when LDS, LEAS or TFR / EXG writes S after reset
+        this.waitState = RUNNING;  // RUNNING, IN_SYNC or IN_CWAI
 
-        // Memory callbacks
-        this._readMem = null;
-        this._writeMem = null;
+        this.instrCycles = 0;      // cycles of the instruction just executed
+        this.elapsedCycles = 0;    // cycles since reset
+
+        // Memory access (the system's bus)
+        this._readCycleHandler = null;
+        this._writeCycleHandler = null;
+
+        // Bus cycle accounting. When a map is set, each
+        // byte the instruction moves on the bus is counted, and so is each
+        // access whose address the map marks as a long bus cycle. Cycles of
+        // the instruction that move no byte are internal (VMA) cycles.
+        this.longCycleMap = null;   // Uint8Array(65536) of 0/1, or null
+        this.busBytes = 0;          // bus accesses in the current instruction
+        this.longBusBytes = 0;      // of those, accesses to long-cycle addresses
+
+        // Direct page tables. Entry n is a 256-byte view of the memory that
+        // answers $nn00-$nnFF with no side effect, or null when the access
+        // goes to the read / write handler. The system that owns the memory
+        // keeps them up to date; all null means every access uses the handler.
+        this.readPages = new Array(256).fill(null);
+        this.writePages = new Array(256).fill(null);
     }
 
     // =========================================================================
     // Public API
     // =========================================================================
 
-    setReadMem(fn) { this._readMem = fn; }
-    setWriteMem(fn) { this._writeMem = fn; }
+    setReadMem(fn) { this._readCycleHandler = fn; }
+    setWriteMem(fn) { this._writeCycleHandler = fn; }
 
     reset() {
         this.a = 0;
@@ -150,59 +205,64 @@ export class CPU6809 {
         this.s = 0;
         this.dp = 0;
         this.cc = CC_I | CC_F;  // Interrupts masked on reset
-        this.intr = 0;
-        this.total = 0;
-        this.cycle = 0;
+        this.nmiRequest = this.firqRequest = this.irqRequest = false;
+        this.nmiArmed = false;
+        this.waitState = RUNNING;
+        this.elapsedCycles = 0;
+        this.instrCycles = 0;
 
         // Load PC from reset vector
         this.pc = this.read16(VEC_RST);
     }
 
-    nmi() { this.intr |= INTR_NMI; }
-    firq() { this.intr |= INTR_FIRQ; }
-    irq() { this.intr |= INTR_IRQ; }
-    halt(on) {
-        if (on) this.intr |= INTR_HALT;
-        else this.intr &= ~INTR_HALT;
-    }
+    nmi() { this.nmiRequest = true; }
+    firq() { this.firqRequest = true; }
+    irq() { this.irqRequest = true; }
 
-    // Execute one instruction, return cycles consumed
+    /**
+     * One pass of the MC6809 flowchart (data sheet Figure 15): an interrupt
+     * entry, one bus cycle of the SYNC or CWAI loop, or one instruction.
+     * Returns the cycles it took.
+     */
     exec() {
-        // Check HALT
-        if (this.intr & INTR_HALT) {
-            this.cycle = 2;
-            this.total += 2;
-            return 2;
+        this.busBytes = 0;
+        this.longBusBytes = 0;
+        // With no request and no waiting loop there is nothing to look at
+        // before the instruction (the checks below would all fall through).
+        if (this.nmiRequest || this.firqRequest || this.irqRequest || this.waitState !== RUNNING) {
+            // SYNC loop: any asserted interrupt line, masked or not, leaves the
+            // loop (Figure 15, SYNC; "SYNC Acknowledge").
+            if (this.waitState === IN_SYNC && (this.nmiRequest || this.firqRequest || this.irqRequest)) {
+                this.waitState = RUNNING;
+            }
+            const entryCycles = this._serviceInterrupt();
+            if (entryCycles > 0) return this._spend(entryCycles);
+            // Still in the SYNC or CWAI loop: one bus cycle, then look again.
+            if (this.waitState !== RUNNING) return this._spend(1);
         }
 
-        // Check interrupts
-        if (this._checkInterrupts()) {
-            const c = this.cycle;
-            this.total += c;
-            return c;
-        }
-
-        // Check SYNC state
-        if (this.intr & INTR_SYNC) {
-            this.cycle = 1;
-            this.total += 1;
-            return 1;
-        }
-
-        // Fetch and execute opcode
-        this.cycle = 0;
+        this.instrCycles = 0;
         const opcode = this.fetchByte();
-
-        if (opcode === 0x10) {
-            this._execPage2();
-        } else if (opcode === 0x11) {
-            this._execPage3();
+        if (opcode === 0x10 || opcode === 0x11) {
+            // $10 / $11 prefix: the next byte picks from page 2 / 3.  A
+            // byte with no entry there keeps the prefix consumed but is
+            // run as the page 1 instruction with its page 1 cycles.
+            const second = this.fetchByte();
+            const defined = (opcode === 0x10) ? PAGE2_DEFINED : PAGE3_DEFINED;
+            if (!defined[second]) this._execPage1(second);
+            else if (opcode === 0x10) this._execPage2(second);
+            else this._execPage3(second);
         } else {
             this._execPage1(opcode);
         }
+        this.elapsedCycles += this.instrCycles;
+        return this.instrCycles;
+    }
 
-        this.total += this.cycle;
-        return this.cycle;
+    _spend(cycles) {
+        this.instrCycles = cycles;
+        this.elapsedCycles += cycles;
+        return cycles;
     }
 
     // =========================================================================
@@ -210,11 +270,34 @@ export class CPU6809 {
     // =========================================================================
 
     read(addr) {
-        return this._readMem(addr & 0xFFFF) & 0xFF;
+        addr &= 0xFFFF;
+        const map = this.longCycleMap;
+        if (map !== null) { this.busBytes++; this.longBusBytes += map[addr]; }
+        const page = this.readPages[addr >> 8];
+        if (page !== null) return page[addr & 0xFF];
+        return this._readCycleHandler(addr) & 0xFF;
     }
 
     write(addr, val) {
-        this._writeMem(addr & 0xFFFF, val & 0xFF);
+        addr &= 0xFFFF;
+        const map = this.longCycleMap;
+        if (map !== null) { this.busBytes++; this.longBusBytes += map[addr]; }
+        const page = this.writePages[addr >> 8];
+        if (page !== null) { page[addr & 0xFF] = val; return; }
+        this._writeCycleHandler(addr, val & 0xFF);
+    }
+
+    /**
+     * Length of the instruction just executed, in master clock periods.
+     * Short bus cycles take `shortLen`, long ones and internal cycles take
+     * `longLen` (an internal cycle puts $FFFF on the bus, which lies in the
+     * long range).
+     */
+    instructionTicks(shortLen, longLen) {
+        const bytes = this.busBytes;
+        const internal = this.instrCycles > bytes ? this.instrCycles - bytes : 0;
+        const longCount = this.longBusBytes + internal;
+        return (bytes - this.longBusBytes) * shortLen + longCount * longLen;
     }
 
     read16(addr) {
@@ -262,167 +345,134 @@ export class CPU6809 {
     // Stack operations
     // =========================================================================
 
-    pushByteS(val) {
-        this.s = (this.s - 1) & 0xFFFF;
-        this.write(this.s, val);
+    /**
+     * The register in slot `k` of STACK_SLOTS. Slot 6 is the other stack
+     * pointer: U when `useS` (the S stack), S otherwise.
+     */
+    _slotValue(k, useS) {
+        switch (k) {
+            case 0: return this.cc;
+            case 1: return this.a;
+            case 2: return this.b;
+            case 3: return this.dp;
+            case 4: return this.x;
+            case 5: return this.y;
+            case 6: return useS ? this.u : this.s;
+            default: return this.pc;
+        }
     }
 
-    pushWordS(val) {
-        this.s = (this.s - 1) & 0xFFFF;
-        this.write(this.s, val & 0xFF);
-        this.s = (this.s - 1) & 0xFFFF;
-        this.write(this.s, (val >> 8) & 0xFF);
+    /** Set the register in slot `k` of STACK_SLOTS (see _slotValue). */
+    _setSlotValue(k, useS, value) {
+        switch (k) {
+            case 0: this.cc = value; break;
+            case 1: this.a = value; break;
+            case 2: this.b = value; break;
+            case 3: this.dp = value; break;
+            case 4: this.x = value; break;
+            case 5: this.y = value; break;
+            case 6: if (useS) this.u = value; else this.s = value; break;
+            default: this.pc = value; break;
+        }
     }
 
-    pullByteS() {
-        const val = this.read(this.s);
-        this.s = (this.s + 1) & 0xFFFF;
-        return val;
+    /**
+     * Put `bytes` (1 or 2) bytes of `value` on the S stack (`useS`) or the
+     * U stack. The stack grows down and a 16-bit value ends with its high
+     * byte at the lower address.
+     */
+    _stackPut(useS, value, bytes) {
+        let p = useS ? this.s : this.u;
+        for (let shift = 0; shift < bytes * 8; shift += 8) {
+            p = (p - 1) & 0xFFFF;
+            this.write(p, (value >> shift) & 0xFF);
+        }
+        if (useS) this.s = p; else this.u = p;
     }
 
-    pullWordS() {
-        const hi = this.read(this.s);
-        this.s = (this.s + 1) & 0xFFFF;
-        const lo = this.read(this.s);
-        this.s = (this.s + 1) & 0xFFFF;
-        return (hi << 8) | lo;
+    /** Take `bytes` (1 or 2) bytes off the S stack (`useS`) or the U stack. */
+    _stackTake(useS, bytes) {
+        let p = useS ? this.s : this.u;
+        let value = 0;
+        for (let k = 0; k < bytes; k++) {
+            value = (value << 8) | this.read(p);
+            p = (p + 1) & 0xFFFF;
+        }
+        if (useS) this.s = p; else this.u = p;
+        return value;
     }
 
-    pushByteU(val) {
-        this.u = (this.u - 1) & 0xFFFF;
-        this.write(this.u, val);
+    /**
+     * Save the registers chosen by a PSH-style postbyte `mask` on stack `sp`
+     * (PC first, CC last). Returns the number of bytes stored.
+     */
+    _saveRegisters(sp, mask) {
+        const useS = sp === 's';
+        const list = STACK_SLOT_LISTS[mask];
+        for (let n = list.length - 1; n >= 0; n--) {
+            const k = list[n];
+            this._stackPut(useS, this._slotValue(k, useS), STACK_SLOT_SIZES[k]);
+        }
+        return STACK_SLOT_BYTES[mask];
     }
 
-    pushWordU(val) {
-        this.u = (this.u - 1) & 0xFFFF;
-        this.write(this.u, val & 0xFF);
-        this.u = (this.u - 1) & 0xFFFF;
-        this.write(this.u, (val >> 8) & 0xFF);
-    }
-
-    pullByteU() {
-        const val = this.read(this.u);
-        this.u = (this.u + 1) & 0xFFFF;
-        return val;
-    }
-
-    pullWordU() {
-        const hi = this.read(this.u);
-        this.u = (this.u + 1) & 0xFFFF;
-        const lo = this.read(this.u);
-        this.u = (this.u + 1) & 0xFFFF;
-        return (hi << 8) | lo;
-    }
-
-    // Push all registers to S stack (for interrupts/CWAI)
-    pushAllS() {
-        this.pushWordS(this.pc);
-        this.pushWordS(this.u);
-        this.pushWordS(this.y);
-        this.pushWordS(this.x);
-        this.pushByteS(this.dp);
-        this.pushByteS(this.b);
-        this.pushByteS(this.a);
-        this.pushByteS(this.cc);
-    }
-
-    // Pull all registers from S stack
-    pullAllS() {
-        this.cc = this.pullByteS();
-        this.a = this.pullByteS();
-        this.b = this.pullByteS();
-        this.dp = this.pullByteS();
-        this.x = this.pullWordS();
-        this.y = this.pullWordS();
-        this.u = this.pullWordS();
-        this.pc = this.pullWordS();
+    /**
+     * Load the registers chosen by a PUL-style postbyte `mask` from stack
+     * `sp` (CC first, PC last). Returns the number of bytes loaded.
+     */
+    _restoreRegisters(sp, mask) {
+        const useS = sp === 's';
+        const list = STACK_SLOT_LISTS[mask];
+        for (let n = 0; n < list.length; n++) {
+            const k = list[n];
+            this._setSlotValue(k, useS, this._stackTake(useS, STACK_SLOT_SIZES[k]));
+        }
+        return STACK_SLOT_BYTES[mask];
     }
 
     // =========================================================================
     // Interrupt handling
     // =========================================================================
 
-    _checkInterrupts() {
-        // NMI - highest priority, only once NMI is armed (S has been loaded)
-        if ((this.intr & INTR_NMI) && (this.intr & INTR_NMI_ARMED)) {
-            this.intr &= ~INTR_NMI;
-
-            if (this.intr & INTR_CWAI) {
-                // CWAI already pushed regs
-                this.intr &= ~INTR_CWAI;
-                this.cc |= CC_E;
-                this.cycle = 7;
-            } else if (this.intr & INTR_SYNC) {
-                this.intr &= ~INTR_SYNC;
-                this.cc |= CC_E;
-                this.pushAllS();
-                this.cycle = 19;
-            } else {
-                this.cc |= CC_E;
-                this.pushAllS();
-                this.cycle = 19;
-            }
-            this.cc |= CC_I | CC_F;
-            this.pc = this.read16(VEC_NMI);
-            return true;
+    /**
+     * Interrupt check of Figure 15: NMI (only once armed by a load of S),
+     * then FIRQ with F clear, then IRQ with I clear. The accepted request is
+     * cleared, the state is stacked (FIRQ: PC and CC with E = 0; NMI and IRQ:
+     * every register with E = 1; nothing more after CWAI) and the vector is
+     * fetched. Returns the cycles of the entry (data sheet Figures 9 and 10,
+     * and the CWAI case), or 0 when nothing is accepted.
+     */
+    _serviceInterrupt() {
+        let vector, fastEntry, setMask;
+        if (this.nmiArmed && this.nmiRequest) {
+            this.nmiRequest = false;
+            vector = VEC_NMI; fastEntry = false; setMask = CC_I | CC_F;
+        } else if (this.firqRequest && (this.cc & CC_F) === 0) {
+            this.firqRequest = false;
+            vector = VEC_FIRQ; fastEntry = true; setMask = CC_I | CC_F;
+        } else if (this.irqRequest && (this.cc & CC_I) === 0) {
+            this.irqRequest = false;
+            vector = VEC_IRQ; fastEntry = false; setMask = CC_I;
+        } else {
+            return 0;
         }
-
-        // FIRQ
-        if ((this.intr & INTR_FIRQ) && !(this.cc & CC_F)) {
-            this.intr &= ~INTR_FIRQ;
-
-            if (this.intr & INTR_CWAI) {
-                this.intr &= ~INTR_CWAI;
-                this.cc |= CC_E;  // CWAI already set E and pushed all
-                this.cycle = 7;
-            } else if (this.intr & INTR_SYNC) {
-                this.intr &= ~INTR_SYNC;
-                this.cc &= ~CC_E;
-                this.pushWordS(this.pc);
-                this.pushByteS(this.cc);
-                this.cycle = 10;
-            } else {
-                this.cc &= ~CC_E;
-                this.pushWordS(this.pc);
-                this.pushByteS(this.cc);
-                this.cycle = 10;
-            }
-            this.cc |= CC_I | CC_F;
-            this.pc = this.read16(VEC_FIRQ);
-            return true;
+        let cycles;
+        if (this.waitState === IN_CWAI) {
+            this.cc |= CC_E;                  // already stacked by CWAI
+            cycles = 7;
+        } else if (fastEntry) {
+            this.cc &= ~CC_E;
+            this._saveRegisters('s', 0x81);   // PC, then CC
+            cycles = 10;
+        } else {
+            this.cc |= CC_E;
+            this._saveRegisters('s', 0xFF);
+            cycles = 19;
         }
-
-        // IRQ
-        if ((this.intr & INTR_IRQ) && !(this.cc & CC_I)) {
-            this.intr &= ~INTR_IRQ;
-
-            if (this.intr & INTR_CWAI) {
-                this.intr &= ~INTR_CWAI;
-                this.cc |= CC_E;
-                this.cycle = 7;
-            } else if (this.intr & INTR_SYNC) {
-                this.intr &= ~INTR_SYNC;
-                this.cc |= CC_E;
-                this.pushAllS();
-                this.cycle = 19;
-            } else {
-                this.cc |= CC_E;
-                this.pushAllS();
-                this.cycle = 19;
-            }
-            this.cc |= CC_I;
-            this.pc = this.read16(VEC_IRQ);
-            return true;
-        }
-
-        // SYNC wait handling
-        if (this.intr & INTR_SYNC) {
-            if (this.intr & (INTR_NMI | INTR_FIRQ | INTR_IRQ)) {
-                this.intr &= ~INTR_SYNC;
-            }
-        }
-
-        return false;
+        this.waitState = RUNNING;
+        this.cc |= setMask;
+        this.pc = this.read16(vector);
+        return cycles;
     }
 
     // =========================================================================
@@ -439,7 +489,8 @@ export class CPU6809 {
         return this.fetchWord();
     }
 
-    // Indexed addressing with postbyte
+    // Indexed addressing with postbyte. The extra cycles of each mode are
+    // the "+~" column of the indexed addressing table (MC6809 data sheet).
     addrIndexed() {
         const postbyte = this.fetchByte();
         let addr = 0;
@@ -458,7 +509,7 @@ export class CPU6809 {
             // 5-bit signed offset
             const offset = this.sign5(postbyte & 0x1F);
             addr = (reg + offset) & 0xFFFF;
-            this.cycle += 1;
+            this.instrCycles += 1;
             return addr;
         }
 
@@ -469,68 +520,68 @@ export class CPU6809 {
             case 0x00: // ,R+
                 addr = reg;
                 reg = (reg + 1) & 0xFFFF;
-                this.cycle += 2;
+                this.instrCycles += 2;
                 break;
             case 0x01: // ,R++
                 addr = reg;
                 reg = (reg + 2) & 0xFFFF;
-                this.cycle += indirect ? 6 : 3;
+                this.instrCycles += indirect ? 6 : 3;
                 break;
             case 0x02: // ,-R
                 reg = (reg - 1) & 0xFFFF;
                 addr = reg;
-                this.cycle += 2;
+                this.instrCycles += 2;
                 break;
             case 0x03: // ,--R
                 reg = (reg - 2) & 0xFFFF;
                 addr = reg;
-                this.cycle += indirect ? 6 : 3;
+                this.instrCycles += indirect ? 6 : 3;
                 break;
             case 0x04: // ,R (no offset)
                 addr = reg;
-                this.cycle += indirect ? 3 : 0;
+                this.instrCycles += indirect ? 3 : 0;
                 break;
             case 0x05: // B,R
                 addr = (reg + this.sign8(this.b)) & 0xFFFF;
-                this.cycle += indirect ? 4 : 1;
+                this.instrCycles += indirect ? 4 : 1;
                 break;
             case 0x06: // A,R
                 addr = (reg + this.sign8(this.a)) & 0xFFFF;
-                this.cycle += indirect ? 4 : 1;
+                this.instrCycles += indirect ? 4 : 1;
                 break;
             case 0x08: // 8-bit offset,R
                 addr = (reg + this.sign8(this.fetchByte())) & 0xFFFF;
-                this.cycle += indirect ? 4 : 1;
+                this.instrCycles += indirect ? 4 : 1;
                 break;
             case 0x09: // 16-bit offset,R
                 addr = (reg + this.sign16(this.fetchWord())) & 0xFFFF;
-                this.cycle += indirect ? 7 : 4;
+                this.instrCycles += indirect ? 7 : 4;
                 break;
             case 0x0B: // D,R
                 addr = (reg + this.sign16(this.d)) & 0xFFFF;
-                this.cycle += indirect ? 7 : 4;
+                this.instrCycles += indirect ? 7 : 4;
                 break;
             case 0x0C: // 8-bit offset,PC
                 {
                     const off = this.sign8(this.fetchByte());
                     addr = (this.pc + off) & 0xFFFF;
-                    this.cycle += indirect ? 4 : 1;
+                    this.instrCycles += indirect ? 4 : 1;
                 }
                 break;
             case 0x0D: // 16-bit offset,PC
                 {
                     const off = this.sign16(this.fetchWord());
                     addr = (this.pc + off) & 0xFFFF;
-                    this.cycle += indirect ? 8 : 5;
+                    this.instrCycles += indirect ? 8 : 5;
                 }
                 break;
             case 0x0F: // Extended indirect [addr16]; the non-indirect form is undefined
                 if (indirect) {
                     addr = this.fetchWord();
-                    this.cycle += 5;
+                    this.instrCycles += 5;
                 } else {
                     addr = reg;
-                    this.cycle += 1;
+                    this.instrCycles += 1;
                 }
                 break;
             default:
@@ -801,20 +852,19 @@ export class CPU6809 {
         return 0;
     }
 
-    // DAA - Decimal Adjust Accumulator
-    opDAA() {
-        let msn = this.a & 0xF0;
-        let lsn = this.a & 0x0F;
-        let cf = 0;
-
-        if (lsn > 0x09 || (this.cc & CC_H)) cf |= 0x06;
-        if (msn > 0x80 && lsn > 0x09) cf |= 0x60;
-        if (msn > 0x90 || (this.cc & CC_C)) cf |= 0x60;
-
-        const result = this.a + cf;
+    // DAA (MC6809 datasheet): after a BCD addition, add $06 when H is set
+    // or the low digit is above 9, and $60 when C is set or A is above $99.
+    // C becomes 1 on a carry out and otherwise keeps its value; N and Z
+    // follow the result; H is unchanged; V (undefined in the datasheet) is cleared.
+    decimalAdjustA() {
+        const before = this.a;
+        let adjust = 0;
+        if ((this.cc & CC_H) || (before & 0x0F) > 0x09) adjust |= 0x06;
+        if ((this.cc & CC_C) || before > 0x99) adjust |= 0x60;
+        const sum = before + adjust;
+        this.a = sum & 0xFF;
         this.cc &= ~(CC_N | CC_Z | CC_V);
-        if (result & 0x100) this.cc |= CC_C;
-        this.a = result & 0xFF;
+        if (sum > 0xFF) this.cc |= CC_C;
         if (this.a & 0x80) this.cc |= CC_N;
         if (this.a === 0) this.cc |= CC_Z;
     }
@@ -890,100 +940,41 @@ export class CPU6809 {
         const offset = this.sign16(this.fetchWord());
         if (cond) {
             this.pc = (this.pc + offset) & 0xFFFF;
-            this.cycle += 1;
+            this.instrCycles += 1;
         }
     }
 
     // =========================================================================
-    // TFR/EXG register mapping
+    // EXG / TFR register access
     // =========================================================================
 
-    getRegValue(code) {
-        switch (code & 0x0F) {
-            case 0x00: return this.d;
-            case 0x01: return this.x;
-            case 0x02: return this.y;
-            case 0x03: return this.u;
-            case 0x04: return this.s;
-            case 0x05: return this.pc;
-            case 0x08: return this.a;
-            case 0x09: return this.b;
-            case 0x0A: return this.cc;
-            case 0x0B: return this.dp;
-            default: return 0;
-        }
+    /** Read the register an EXG / TFR code names (unassigned codes read 0). */
+    _transferRead(code) {
+        const name = TRANSFER_REGISTERS[code & 0x0F];
+        return name ? this[name] : 0;
     }
 
-    setRegValue(code, val) {
-        switch (code & 0x0F) {
-            case 0x00: this.d = val & 0xFFFF; break;
-            case 0x01: this.x = val & 0xFFFF; break;
-            case 0x02: this.y = val & 0xFFFF; break;
-            case 0x03: this.u = val & 0xFFFF; break;
-            case 0x04: this.s = val & 0xFFFF; break;
-            case 0x05: this.pc = val & 0xFFFF; break;
-            case 0x08: this.a = val & 0xFF; break;
-            case 0x09: this.b = val & 0xFF; break;
-            case 0x0A: this.cc = val & 0xFF; break;
-            case 0x0B: this.dp = val & 0xFF; break;
-        }
-    }
-
-    // Check if TFR/EXG register code is 8-bit
-    isReg8(code) {
-        return (code & 0x08) !== 0;
+    /**
+     * Write the register an EXG / TFR code names (unassigned codes ignore it).
+     * The datasheet leaves moves between an 8-bit and a 16-bit register
+     * undefined. Here the number itself moves: an 8-bit value lands in a
+     * 16-bit register with a zero high byte, and an 8-bit register keeps
+     * the low byte of a 16-bit value.
+     */
+    _transferWrite(code, value) {
+        const name = TRANSFER_REGISTERS[code & 0x0F];
+        if (name) this[name] = value & ((code & 0x08) ? 0xFF : 0xFFFF);
     }
 
     // =========================================================================
-    // PSHS/PULS/PSHU/PULU
+    // PSHS / PULS / PSHU / PULU
     // =========================================================================
 
-    opPSHS() {
-        const postbyte = this.fetchByte();
-        if (postbyte & 0x80) { this.pushWordS(this.pc); this.cycle += 2; }
-        if (postbyte & 0x40) { this.pushWordS(this.u);  this.cycle += 2; }
-        if (postbyte & 0x20) { this.pushWordS(this.y);  this.cycle += 2; }
-        if (postbyte & 0x10) { this.pushWordS(this.x);  this.cycle += 2; }
-        if (postbyte & 0x08) { this.pushByteS(this.dp); this.cycle += 1; }
-        if (postbyte & 0x04) { this.pushByteS(this.b);  this.cycle += 1; }
-        if (postbyte & 0x02) { this.pushByteS(this.a);  this.cycle += 1; }
-        if (postbyte & 0x01) { this.pushByteS(this.cc); this.cycle += 1; }
-    }
-
-    opPULS() {
-        const postbyte = this.fetchByte();
-        if (postbyte & 0x01) { this.cc = this.pullByteS(); this.cycle += 1; }
-        if (postbyte & 0x02) { this.a  = this.pullByteS(); this.cycle += 1; }
-        if (postbyte & 0x04) { this.b  = this.pullByteS(); this.cycle += 1; }
-        if (postbyte & 0x08) { this.dp = this.pullByteS(); this.cycle += 1; }
-        if (postbyte & 0x10) { this.x  = this.pullWordS(); this.cycle += 2; }
-        if (postbyte & 0x20) { this.y  = this.pullWordS(); this.cycle += 2; }
-        if (postbyte & 0x40) { this.u  = this.pullWordS(); this.cycle += 2; }
-        if (postbyte & 0x80) { this.pc = this.pullWordS(); this.cycle += 2; }
-    }
-
-    opPSHU() {
-        const postbyte = this.fetchByte();
-        if (postbyte & 0x80) { this.pushWordU(this.pc); this.cycle += 2; }
-        if (postbyte & 0x40) { this.pushWordU(this.s);  this.cycle += 2; }
-        if (postbyte & 0x20) { this.pushWordU(this.y);  this.cycle += 2; }
-        if (postbyte & 0x10) { this.pushWordU(this.x);  this.cycle += 2; }
-        if (postbyte & 0x08) { this.pushByteU(this.dp); this.cycle += 1; }
-        if (postbyte & 0x04) { this.pushByteU(this.b);  this.cycle += 1; }
-        if (postbyte & 0x02) { this.pushByteU(this.a);  this.cycle += 1; }
-        if (postbyte & 0x01) { this.pushByteU(this.cc); this.cycle += 1; }
-    }
-
-    opPULU() {
-        const postbyte = this.fetchByte();
-        if (postbyte & 0x01) { this.cc = this.pullByteU(); this.cycle += 1; }
-        if (postbyte & 0x02) { this.a  = this.pullByteU(); this.cycle += 1; }
-        if (postbyte & 0x04) { this.b  = this.pullByteU(); this.cycle += 1; }
-        if (postbyte & 0x08) { this.dp = this.pullByteU(); this.cycle += 1; }
-        if (postbyte & 0x10) { this.x  = this.pullWordU(); this.cycle += 2; }
-        if (postbyte & 0x20) { this.y  = this.pullWordU(); this.cycle += 2; }
-        if (postbyte & 0x40) { this.s  = this.pullWordU(); this.cycle += 2; }
-        if (postbyte & 0x80) { this.pc = this.pullWordU(); this.cycle += 2; }
+    /** PSH (pull = false) or PUL (pull = true) on stack `sp`; one cycle per byte. */
+    _pushPullInstr(sp, pull) {
+        const mask = this.fetchByte();
+        this.instrCycles += pull ? this._restoreRegisters(sp, mask)
+                                 : this._saveRegisters(sp, mask);
     }
 
     // =========================================================================
@@ -991,775 +982,837 @@ export class CPU6809 {
     // =========================================================================
 
     _execPage1(opcode) {
-        this.cycle = CYCLES_PAGE1[opcode];
-
-        switch (opcode) {
-            // -----------------------------------------------------------------
-            // $00-$0F: Direct addressing ALU (memory)
-            // -----------------------------------------------------------------
-            case 0x00: { // NEG direct
-                const addr = this.addrDirect();
-                this.write(addr, this.opNEG8(this.read(addr)));
-                break;
-            }
-            case 0x03: { // COM direct
-                const addr = this.addrDirect();
-                this.write(addr, this.opCOM8(this.read(addr)));
-                break;
-            }
-            case 0x04: { // LSR direct
-                const addr = this.addrDirect();
-                this.write(addr, this.opLSR8(this.read(addr)));
-                break;
-            }
-            case 0x06: { // ROR direct
-                const addr = this.addrDirect();
-                this.write(addr, this.opROR8(this.read(addr)));
-                break;
-            }
-            case 0x07: { // ASR direct
-                const addr = this.addrDirect();
-                this.write(addr, this.opASR8(this.read(addr)));
-                break;
-            }
-            case 0x08: { // ASL/LSL direct
-                const addr = this.addrDirect();
-                this.write(addr, this.opASL8(this.read(addr)));
-                break;
-            }
-            case 0x09: { // ROL direct
-                const addr = this.addrDirect();
-                this.write(addr, this.opROL8(this.read(addr)));
-                break;
-            }
-            case 0x0A: { // DEC direct
-                const addr = this.addrDirect();
-                this.write(addr, this.opDEC8(this.read(addr)));
-                break;
-            }
-            case 0x0C: { // INC direct
-                const addr = this.addrDirect();
-                this.write(addr, this.opINC8(this.read(addr)));
-                break;
-            }
-            case 0x0D: { // TST direct
-                const addr = this.addrDirect();
-                this.opTST8(this.read(addr));
-                break;
-            }
-            case 0x0E: { // JMP direct
-                this.pc = this.addrDirect();
-                break;
-            }
-            case 0x0F: { // CLR direct
-                const addr = this.addrDirect();
-                this.write(addr, this.opCLR8());
-                break;
-            }
-
-            // -----------------------------------------------------------------
-            // $10, $11 handled externally (page prefix)
-            // -----------------------------------------------------------------
-
-            // -----------------------------------------------------------------
-            // $12-$1F: Inherent / Misc
-            // -----------------------------------------------------------------
-            case 0x12: { // NOP
-                break;
-            }
-            case 0x13: { // SYNC
-                this.intr |= INTR_SYNC;
-                break;
-            }
-            case 0x16: { // LBRA (long branch always)
-                const offset = this.sign16(this.fetchWord());
-                this.pc = (this.pc + offset) & 0xFFFF;
-                break;
-            }
-            case 0x17: { // LBSR (long branch to subroutine)
-                const offset = this.sign16(this.fetchWord());
-                this.pushWordS(this.pc);
-                this.pc = (this.pc + offset) & 0xFFFF;
-                break;
-            }
-            case 0x19: { // DAA
-                this.opDAA();
-                break;
-            }
-            case 0x1A: { // ORCC immediate
-                this.cc |= this.fetchByte();
-                break;
-            }
-            case 0x1C: { // ANDCC immediate
-                this.cc &= this.fetchByte();
-                break;
-            }
-            case 0x1D: { // SEX (sign extend B -> A:B)
-                if (this.b & 0x80) {
-                    this.a = 0xFF;
-                } else {
-                    this.a = 0x00;
-                }
-                this.cc &= ~(CC_N | CC_Z);
-                if (this.a & 0x80) this.cc |= CC_N;
-                if (this.d === 0) this.cc |= CC_Z;
-                break;
-            }
-            case 0x1E: { // EXG
-                const postbyte = this.fetchByte();
-                const r1 = (postbyte >> 4) & 0x0F;
-                const r2 = postbyte & 0x0F;
-                const v1 = this.getRegValue(r1);
-                const v2 = this.getRegValue(r2);
-                if (this.isReg8(r1) && !this.isReg8(r2)) {
-                    this.setRegValue(r1, v2 & 0xFF);
-                    this.setRegValue(r2, (0xFF00 | v1));
-                } else if (!this.isReg8(r1) && this.isReg8(r2)) {
-                    this.setRegValue(r1, (0xFF00 | v2));
-                    this.setRegValue(r2, v1 & 0xFF);
-                } else {
-                    this.setRegValue(r1, v2);
-                    this.setRegValue(r2, v1);
-                }
-                // Writing S arms NMI
-                if (r1 === REG_S || r2 === REG_S) this.intr |= INTR_NMI_ARMED;
-                break;
-            }
-            case 0x1F: { // TFR
-                const postbyte = this.fetchByte();
-                const r1 = (postbyte >> 4) & 0x0F;
-                const r2 = postbyte & 0x0F;
-                let val = this.getRegValue(r1);
-                if (this.isReg8(r1) && !this.isReg8(r2)) {
-                    val = 0xFF00 | val;
-                } else if (!this.isReg8(r1) && this.isReg8(r2)) {
-                    val = val & 0xFF;
-                }
-                this.setRegValue(r2, val);
-                // Writing S arms NMI
-                if (r2 === REG_S) this.intr |= INTR_NMI_ARMED;
-                break;
-            }
-
-            // -----------------------------------------------------------------
-            // $20-$2F: Short branches (relative 8-bit)
-            // -----------------------------------------------------------------
-            case 0x20: // BRA
-                this.branchShort(true);
-                break;
-            case 0x21: // BRN
-                this.branchShort(false);
-                break;
-            case 0x22: // BHI (C=0 and Z=0)
-                this.branchShort(!(this.cc & (CC_C | CC_Z)));
-                break;
-            case 0x23: // BLS (C=1 or Z=1)
-                this.branchShort(!!(this.cc & (CC_C | CC_Z)));
-                break;
-            case 0x24: // BCC/BHS (C=0)
-                this.branchShort(!(this.cc & CC_C));
-                break;
-            case 0x25: // BCS/BLO (C=1)
-                this.branchShort(!!(this.cc & CC_C));
-                break;
-            case 0x26: // BNE (Z=0)
-                this.branchShort(!(this.cc & CC_Z));
-                break;
-            case 0x27: // BEQ (Z=1)
-                this.branchShort(!!(this.cc & CC_Z));
-                break;
-            case 0x28: // BVC (V=0)
-                this.branchShort(!(this.cc & CC_V));
-                break;
-            case 0x29: // BVS (V=1)
-                this.branchShort(!!(this.cc & CC_V));
-                break;
-            case 0x2A: // BPL (N=0)
-                this.branchShort(!(this.cc & CC_N));
-                break;
-            case 0x2B: // BMI (N=1)
-                this.branchShort(!!(this.cc & CC_N));
-                break;
-            case 0x2C: // BGE (N^V=0)
-                this.branchShort(!((this.cc & CC_N) ? 1 : 0) === !((this.cc & CC_V) ? 1 : 0));
-                break;
-            case 0x2D: // BLT (N^V=1)
-                this.branchShort(((this.cc & CC_N) ? 1 : 0) !== ((this.cc & CC_V) ? 1 : 0));
-                break;
-            case 0x2E: // BGT (Z=0 and N^V=0)
-                this.branchShort(!(this.cc & CC_Z) &&
-                    (((this.cc & CC_N) ? 1 : 0) === ((this.cc & CC_V) ? 1 : 0)));
-                break;
-            case 0x2F: // BLE (Z=1 or N^V=1)
-                this.branchShort(!!(this.cc & CC_Z) ||
-                    (((this.cc & CC_N) ? 1 : 0) !== ((this.cc & CC_V) ? 1 : 0)));
-                break;
-
-            // -----------------------------------------------------------------
-            // $30-$3F: Misc
-            // -----------------------------------------------------------------
-            case 0x30: { // LEAX indexed
-                this.x = this.addrIndexed();
-                this.cc &= ~CC_Z;
-                if (this.x === 0) this.cc |= CC_Z;
-                break;
-            }
-            case 0x31: { // LEAY indexed
-                this.y = this.addrIndexed();
-                this.cc &= ~CC_Z;
-                if (this.y === 0) this.cc |= CC_Z;
-                break;
-            }
-            case 0x32: { // LEAS indexed
-                this.s = this.addrIndexed();
-                this.intr |= INTR_NMI_ARMED;
-                break;
-            }
-            case 0x33: { // LEAU indexed
-                this.u = this.addrIndexed();
-                break;
-            }
-            case 0x34: { // PSHS
-                this.opPSHS();
-                break;
-            }
-            case 0x35: { // PULS
-                this.opPULS();
-                break;
-            }
-            case 0x36: { // PSHU
-                this.opPSHU();
-                break;
-            }
-            case 0x37: { // PULU
-                this.opPULU();
-                break;
-            }
-            case 0x39: { // RTS
-                this.pc = this.pullWordS();
-                break;
-            }
-            case 0x3A: { // ABX (X = X + unsigned B)
-                this.x = (this.x + this.b) & 0xFFFF;
-                break;
-            }
-            case 0x3B: { // RTI
-                this.cc = this.pullByteS();
-                if (this.cc & CC_E) {
-                    // Entire state was saved
-                    this.a = this.pullByteS();
-                    this.b = this.pullByteS();
-                    this.dp = this.pullByteS();
-                    this.x = this.pullWordS();
-                    this.y = this.pullWordS();
-                    this.u = this.pullWordS();
-                    this.cycle = 15;
-                }
-                this.pc = this.pullWordS();
-                break;
-            }
-            case 0x3C: { // CWAI
-                const imm = this.fetchByte();
-                this.cc &= imm;
-                this.cc |= CC_E;
-                this.pushAllS();
-                this.intr |= INTR_CWAI;
-                break;
-            }
-            case 0x3D: { // MUL
-                this.opMUL();
-                break;
-            }
-            case 0x3F: { // SWI
-                this.cc |= CC_E;
-                this.pushAllS();
-                this.cc |= CC_I | CC_F;
-                this.pc = this.read16(VEC_SWI);
-                break;
-            }
-
-            // -----------------------------------------------------------------
-            // $40-$4F: Inherent A register
-            // -----------------------------------------------------------------
-            case 0x40: this.a = this.opNEG8(this.a); break;     // NEGA
-            case 0x43: this.a = this.opCOM8(this.a); break;     // COMA
-            case 0x44: this.a = this.opLSR8(this.a); break;     // LSRA
-            case 0x46: this.a = this.opROR8(this.a); break;     // RORA
-            case 0x47: this.a = this.opASR8(this.a); break;     // ASRA
-            case 0x48: this.a = this.opASL8(this.a); break;     // ASLA/LSLA
-            case 0x49: this.a = this.opROL8(this.a); break;     // ROLA
-            case 0x4A: this.a = this.opDEC8(this.a); break;     // DECA
-            case 0x4C: this.a = this.opINC8(this.a); break;     // INCA
-            case 0x4D: this.opTST8(this.a); break;              // TSTA
-            case 0x4F: this.a = this.opCLR8(); break;            // CLRA
-
-            // -----------------------------------------------------------------
-            // $50-$5F: Inherent B register
-            // -----------------------------------------------------------------
-            case 0x50: this.b = this.opNEG8(this.b); break;     // NEGB
-            case 0x53: this.b = this.opCOM8(this.b); break;     // COMB
-            case 0x54: this.b = this.opLSR8(this.b); break;     // LSRB
-            case 0x56: this.b = this.opROR8(this.b); break;     // RORB
-            case 0x57: this.b = this.opASR8(this.b); break;     // ASRB
-            case 0x58: this.b = this.opASL8(this.b); break;     // ASLB/LSLB
-            case 0x59: this.b = this.opROL8(this.b); break;     // ROLB
-            case 0x5A: this.b = this.opDEC8(this.b); break;     // DECB
-            case 0x5C: this.b = this.opINC8(this.b); break;     // INCB
-            case 0x5D: this.opTST8(this.b); break;              // TSTB
-            case 0x5F: this.b = this.opCLR8(); break;            // CLRB
-
-            // -----------------------------------------------------------------
-            // $60-$6F: Indexed addressing ALU (memory)
-            // -----------------------------------------------------------------
-            case 0x60: { // NEG indexed
-                const addr = this.addrIndexed();
-                this.write(addr, this.opNEG8(this.read(addr)));
-                break;
-            }
-            case 0x63: { // COM indexed
-                const addr = this.addrIndexed();
-                this.write(addr, this.opCOM8(this.read(addr)));
-                break;
-            }
-            case 0x64: { // LSR indexed
-                const addr = this.addrIndexed();
-                this.write(addr, this.opLSR8(this.read(addr)));
-                break;
-            }
-            case 0x66: { // ROR indexed
-                const addr = this.addrIndexed();
-                this.write(addr, this.opROR8(this.read(addr)));
-                break;
-            }
-            case 0x67: { // ASR indexed
-                const addr = this.addrIndexed();
-                this.write(addr, this.opASR8(this.read(addr)));
-                break;
-            }
-            case 0x68: { // ASL/LSL indexed
-                const addr = this.addrIndexed();
-                this.write(addr, this.opASL8(this.read(addr)));
-                break;
-            }
-            case 0x69: { // ROL indexed
-                const addr = this.addrIndexed();
-                this.write(addr, this.opROL8(this.read(addr)));
-                break;
-            }
-            case 0x6A: { // DEC indexed
-                const addr = this.addrIndexed();
-                this.write(addr, this.opDEC8(this.read(addr)));
-                break;
-            }
-            case 0x6C: { // INC indexed
-                const addr = this.addrIndexed();
-                this.write(addr, this.opINC8(this.read(addr)));
-                break;
-            }
-            case 0x6D: { // TST indexed
-                const addr = this.addrIndexed();
-                this.opTST8(this.read(addr));
-                break;
-            }
-            case 0x6E: { // JMP indexed
-                this.pc = this.addrIndexed();
-                break;
-            }
-            case 0x6F: { // CLR indexed
-                const addr = this.addrIndexed();
-                this.write(addr, this.opCLR8());
-                break;
-            }
-
-            // -----------------------------------------------------------------
-            // $70-$7F: Extended addressing ALU (memory)
-            // -----------------------------------------------------------------
-            case 0x70: { // NEG extended
-                const addr = this.addrExtended();
-                this.write(addr, this.opNEG8(this.read(addr)));
-                break;
-            }
-            case 0x73: { // COM extended
-                const addr = this.addrExtended();
-                this.write(addr, this.opCOM8(this.read(addr)));
-                break;
-            }
-            case 0x74: { // LSR extended
-                const addr = this.addrExtended();
-                this.write(addr, this.opLSR8(this.read(addr)));
-                break;
-            }
-            case 0x76: { // ROR extended
-                const addr = this.addrExtended();
-                this.write(addr, this.opROR8(this.read(addr)));
-                break;
-            }
-            case 0x77: { // ASR extended
-                const addr = this.addrExtended();
-                this.write(addr, this.opASR8(this.read(addr)));
-                break;
-            }
-            case 0x78: { // ASL/LSL extended
-                const addr = this.addrExtended();
-                this.write(addr, this.opASL8(this.read(addr)));
-                break;
-            }
-            case 0x79: { // ROL extended
-                const addr = this.addrExtended();
-                this.write(addr, this.opROL8(this.read(addr)));
-                break;
-            }
-            case 0x7A: { // DEC extended
-                const addr = this.addrExtended();
-                this.write(addr, this.opDEC8(this.read(addr)));
-                break;
-            }
-            case 0x7C: { // INC extended
-                const addr = this.addrExtended();
-                this.write(addr, this.opINC8(this.read(addr)));
-                break;
-            }
-            case 0x7D: { // TST extended
-                const addr = this.addrExtended();
-                this.opTST8(this.read(addr));
-                break;
-            }
-            case 0x7E: { // JMP extended
-                this.pc = this.addrExtended();
-                break;
-            }
-            case 0x7F: { // CLR extended
-                const addr = this.addrExtended();
-                this.write(addr, this.opCLR8());
-                break;
-            }
-
-            // -----------------------------------------------------------------
-            // $80-$8F: Immediate operand, and BSR
-            // -----------------------------------------------------------------
-            case 0x80: this.a = this.opSUB8(this.a, this.fetchByte()); break;  // SUBA imm
-            case 0x81: this.opCMP8(this.a, this.fetchByte()); break;           // CMPA imm
-            case 0x82: this.a = this.opSBC8(this.a, this.fetchByte()); break;  // SBCA imm
-            case 0x83: this.d = this.opSUB16(this.d, this.fetchWord()); break; // SUBD imm
-            case 0x84: this.a = this.opAND8(this.a, this.fetchByte()); break;  // ANDA imm
-            case 0x85: this.opBIT8(this.a, this.fetchByte()); break;           // BITA imm
-            case 0x86: this.a = this.opLD8(this.fetchByte()); break;           // LDA imm
-            // 0x87: STA imm - illegal
-            case 0x88: this.a = this.opEOR8(this.a, this.fetchByte()); break;  // EORA imm
-            case 0x89: this.a = this.opADC8(this.a, this.fetchByte()); break;  // ADCA imm
-            case 0x8A: this.a = this.opOR8(this.a, this.fetchByte()); break;   // ORA imm
-            case 0x8B: this.a = this.opADD8(this.a, this.fetchByte()); break;  // ADDA imm
-            case 0x8C: this.opCMP16(this.x, this.fetchWord()); break;          // CMPX imm
-            case 0x8D: { // BSR (branch to subroutine)
-                const offset = this.sign8(this.fetchByte());
-                this.pushWordS(this.pc);
-                this.pc = (this.pc + offset) & 0xFFFF;
-                break;
-            }
-            case 0x8E: this.x = this.opLD16(this.fetchWord()); break;         // LDX imm
-            // 0x8F: STX imm - illegal
-
-            // -----------------------------------------------------------------
-            // $90-$9F: Direct addressing
-            // -----------------------------------------------------------------
-            case 0x90: { const a = this.addrDirect(); this.a = this.opSUB8(this.a, this.read(a)); break; } // SUBA dir
-            case 0x91: { const a = this.addrDirect(); this.opCMP8(this.a, this.read(a)); break; }          // CMPA dir
-            case 0x92: { const a = this.addrDirect(); this.a = this.opSBC8(this.a, this.read(a)); break; } // SBCA dir
-            case 0x93: { const a = this.addrDirect(); this.d = this.opSUB16(this.d, this.read16(a)); break; } // SUBD dir
-            case 0x94: { const a = this.addrDirect(); this.a = this.opAND8(this.a, this.read(a)); break; } // ANDA dir
-            case 0x95: { const a = this.addrDirect(); this.opBIT8(this.a, this.read(a)); break; }          // BITA dir
-            case 0x96: { const a = this.addrDirect(); this.a = this.opLD8(this.read(a)); break; }          // LDA dir
-            case 0x97: { const a = this.addrDirect(); this.write(a, this.opST8(this.a)); break; }          // STA dir
-            case 0x98: { const a = this.addrDirect(); this.a = this.opEOR8(this.a, this.read(a)); break; } // EORA dir
-            case 0x99: { const a = this.addrDirect(); this.a = this.opADC8(this.a, this.read(a)); break; } // ADCA dir
-            case 0x9A: { const a = this.addrDirect(); this.a = this.opOR8(this.a, this.read(a)); break; }  // ORA dir
-            case 0x9B: { const a = this.addrDirect(); this.a = this.opADD8(this.a, this.read(a)); break; } // ADDA dir
-            case 0x9C: { const a = this.addrDirect(); this.opCMP16(this.x, this.read16(a)); break; }       // CMPX dir
-            case 0x9D: { // JSR direct
-                const a = this.addrDirect();
-                this.pushWordS(this.pc);
-                this.pc = a;
-                break;
-            }
-            case 0x9E: { const a = this.addrDirect(); this.x = this.opLD16(this.read16(a)); break; }       // LDX dir
-            case 0x9F: { const a = this.addrDirect(); const v = this.opST16(this.x); this.write16(a, v); break; } // STX dir
-
-            // -----------------------------------------------------------------
-            // $A0-$AF: Indexed addressing
-            // -----------------------------------------------------------------
-            case 0xA0: { const a = this.addrIndexed(); this.a = this.opSUB8(this.a, this.read(a)); break; } // SUBA idx
-            case 0xA1: { const a = this.addrIndexed(); this.opCMP8(this.a, this.read(a)); break; }          // CMPA idx
-            case 0xA2: { const a = this.addrIndexed(); this.a = this.opSBC8(this.a, this.read(a)); break; } // SBCA idx
-            case 0xA3: { const a = this.addrIndexed(); this.d = this.opSUB16(this.d, this.read16(a)); break; } // SUBD idx
-            case 0xA4: { const a = this.addrIndexed(); this.a = this.opAND8(this.a, this.read(a)); break; } // ANDA idx
-            case 0xA5: { const a = this.addrIndexed(); this.opBIT8(this.a, this.read(a)); break; }          // BITA idx
-            case 0xA6: { const a = this.addrIndexed(); this.a = this.opLD8(this.read(a)); break; }          // LDA idx
-            case 0xA7: { const a = this.addrIndexed(); this.write(a, this.opST8(this.a)); break; }          // STA idx
-            case 0xA8: { const a = this.addrIndexed(); this.a = this.opEOR8(this.a, this.read(a)); break; } // EORA idx
-            case 0xA9: { const a = this.addrIndexed(); this.a = this.opADC8(this.a, this.read(a)); break; } // ADCA idx
-            case 0xAA: { const a = this.addrIndexed(); this.a = this.opOR8(this.a, this.read(a)); break; }  // ORA idx
-            case 0xAB: { const a = this.addrIndexed(); this.a = this.opADD8(this.a, this.read(a)); break; } // ADDA idx
-            case 0xAC: { const a = this.addrIndexed(); this.opCMP16(this.x, this.read16(a)); break; }       // CMPX idx
-            case 0xAD: { // JSR indexed
-                const a = this.addrIndexed();
-                this.pushWordS(this.pc);
-                this.pc = a;
-                break;
-            }
-            case 0xAE: { const a = this.addrIndexed(); this.x = this.opLD16(this.read16(a)); break; }       // LDX idx
-            case 0xAF: { const a = this.addrIndexed(); const v = this.opST16(this.x); this.write16(a, v); break; } // STX idx
-
-            // -----------------------------------------------------------------
-            // $B0-$BF: Extended addressing
-            // -----------------------------------------------------------------
-            case 0xB0: { const a = this.addrExtended(); this.a = this.opSUB8(this.a, this.read(a)); break; } // SUBA ext
-            case 0xB1: { const a = this.addrExtended(); this.opCMP8(this.a, this.read(a)); break; }          // CMPA ext
-            case 0xB2: { const a = this.addrExtended(); this.a = this.opSBC8(this.a, this.read(a)); break; } // SBCA ext
-            case 0xB3: { const a = this.addrExtended(); this.d = this.opSUB16(this.d, this.read16(a)); break; } // SUBD ext
-            case 0xB4: { const a = this.addrExtended(); this.a = this.opAND8(this.a, this.read(a)); break; } // ANDA ext
-            case 0xB5: { const a = this.addrExtended(); this.opBIT8(this.a, this.read(a)); break; }          // BITA ext
-            case 0xB6: { const a = this.addrExtended(); this.a = this.opLD8(this.read(a)); break; }          // LDA ext
-            case 0xB7: { const a = this.addrExtended(); this.write(a, this.opST8(this.a)); break; }          // STA ext
-            case 0xB8: { const a = this.addrExtended(); this.a = this.opEOR8(this.a, this.read(a)); break; } // EORA ext
-            case 0xB9: { const a = this.addrExtended(); this.a = this.opADC8(this.a, this.read(a)); break; } // ADCA ext
-            case 0xBA: { const a = this.addrExtended(); this.a = this.opOR8(this.a, this.read(a)); break; }  // ORA ext
-            case 0xBB: { const a = this.addrExtended(); this.a = this.opADD8(this.a, this.read(a)); break; } // ADDA ext
-            case 0xBC: { const a = this.addrExtended(); this.opCMP16(this.x, this.read16(a)); break; }       // CMPX ext
-            case 0xBD: { // JSR extended
-                const a = this.addrExtended();
-                this.pushWordS(this.pc);
-                this.pc = a;
-                break;
-            }
-            case 0xBE: { const a = this.addrExtended(); this.x = this.opLD16(this.read16(a)); break; }       // LDX ext
-            case 0xBF: { const a = this.addrExtended(); const v = this.opST16(this.x); this.write16(a, v); break; } // STX ext
-
-            // -----------------------------------------------------------------
-            // $C0-$CF: Immediate operand
-            // -----------------------------------------------------------------
-            case 0xC0: this.b = this.opSUB8(this.b, this.fetchByte()); break;  // SUBB imm
-            case 0xC1: this.opCMP8(this.b, this.fetchByte()); break;           // CMPB imm
-            case 0xC2: this.b = this.opSBC8(this.b, this.fetchByte()); break;  // SBCB imm
-            case 0xC3: this.d = this.opADD16(this.d, this.fetchWord()); break; // ADDD imm
-            case 0xC4: this.b = this.opAND8(this.b, this.fetchByte()); break;  // ANDB imm
-            case 0xC5: this.opBIT8(this.b, this.fetchByte()); break;           // BITB imm
-            case 0xC6: this.b = this.opLD8(this.fetchByte()); break;           // LDB imm
-            // 0xC7: STB imm - illegal
-            case 0xC8: this.b = this.opEOR8(this.b, this.fetchByte()); break;  // EORB imm
-            case 0xC9: this.b = this.opADC8(this.b, this.fetchByte()); break;  // ADCB imm
-            case 0xCA: this.b = this.opOR8(this.b, this.fetchByte()); break;   // ORB imm
-            case 0xCB: this.b = this.opADD8(this.b, this.fetchByte()); break;  // ADDB imm
-            case 0xCC: this.d = this.opLD16(this.fetchWord()); break;          // LDD imm
-            // 0xCD: illegal
-            case 0xCE: this.u = this.opLD16(this.fetchWord()); break;          // LDU imm
-            // 0xCF: STU imm - illegal
-
-            // -----------------------------------------------------------------
-            // $D0-$DF: Direct addressing
-            // -----------------------------------------------------------------
-            case 0xD0: { const a = this.addrDirect(); this.b = this.opSUB8(this.b, this.read(a)); break; } // SUBB dir
-            case 0xD1: { const a = this.addrDirect(); this.opCMP8(this.b, this.read(a)); break; }          // CMPB dir
-            case 0xD2: { const a = this.addrDirect(); this.b = this.opSBC8(this.b, this.read(a)); break; } // SBCB dir
-            case 0xD3: { const a = this.addrDirect(); this.d = this.opADD16(this.d, this.read16(a)); break; } // ADDD dir
-            case 0xD4: { const a = this.addrDirect(); this.b = this.opAND8(this.b, this.read(a)); break; } // ANDB dir
-            case 0xD5: { const a = this.addrDirect(); this.opBIT8(this.b, this.read(a)); break; }          // BITB dir
-            case 0xD6: { const a = this.addrDirect(); this.b = this.opLD8(this.read(a)); break; }          // LDB dir
-            case 0xD7: { const a = this.addrDirect(); this.write(a, this.opST8(this.b)); break; }          // STB dir
-            case 0xD8: { const a = this.addrDirect(); this.b = this.opEOR8(this.b, this.read(a)); break; } // EORB dir
-            case 0xD9: { const a = this.addrDirect(); this.b = this.opADC8(this.b, this.read(a)); break; } // ADCB dir
-            case 0xDA: { const a = this.addrDirect(); this.b = this.opOR8(this.b, this.read(a)); break; }  // ORB dir
-            case 0xDB: { const a = this.addrDirect(); this.b = this.opADD8(this.b, this.read(a)); break; } // ADDB dir
-            case 0xDC: { const a = this.addrDirect(); this.d = this.opLD16(this.read16(a)); break; }       // LDD dir
-            case 0xDD: { const a = this.addrDirect(); const v = this.opST16(this.d); this.write16(a, v); break; } // STD dir
-            case 0xDE: { const a = this.addrDirect(); this.u = this.opLD16(this.read16(a)); break; }       // LDU dir
-            case 0xDF: { const a = this.addrDirect(); const v = this.opST16(this.u); this.write16(a, v); break; } // STU dir
-
-            // -----------------------------------------------------------------
-            // $E0-$EF: Indexed addressing
-            // -----------------------------------------------------------------
-            case 0xE0: { const a = this.addrIndexed(); this.b = this.opSUB8(this.b, this.read(a)); break; } // SUBB idx
-            case 0xE1: { const a = this.addrIndexed(); this.opCMP8(this.b, this.read(a)); break; }          // CMPB idx
-            case 0xE2: { const a = this.addrIndexed(); this.b = this.opSBC8(this.b, this.read(a)); break; } // SBCB idx
-            case 0xE3: { const a = this.addrIndexed(); this.d = this.opADD16(this.d, this.read16(a)); break; } // ADDD idx
-            case 0xE4: { const a = this.addrIndexed(); this.b = this.opAND8(this.b, this.read(a)); break; } // ANDB idx
-            case 0xE5: { const a = this.addrIndexed(); this.opBIT8(this.b, this.read(a)); break; }          // BITB idx
-            case 0xE6: { const a = this.addrIndexed(); this.b = this.opLD8(this.read(a)); break; }          // LDB idx
-            case 0xE7: { const a = this.addrIndexed(); this.write(a, this.opST8(this.b)); break; }          // STB idx
-            case 0xE8: { const a = this.addrIndexed(); this.b = this.opEOR8(this.b, this.read(a)); break; } // EORB idx
-            case 0xE9: { const a = this.addrIndexed(); this.b = this.opADC8(this.b, this.read(a)); break; } // ADCB idx
-            case 0xEA: { const a = this.addrIndexed(); this.b = this.opOR8(this.b, this.read(a)); break; }  // ORB idx
-            case 0xEB: { const a = this.addrIndexed(); this.b = this.opADD8(this.b, this.read(a)); break; } // ADDB idx
-            case 0xEC: { const a = this.addrIndexed(); this.d = this.opLD16(this.read16(a)); break; }       // LDD idx
-            case 0xED: { const a = this.addrIndexed(); const v = this.opST16(this.d); this.write16(a, v); break; } // STD idx
-            case 0xEE: { const a = this.addrIndexed(); this.u = this.opLD16(this.read16(a)); break; }       // LDU idx
-            case 0xEF: { const a = this.addrIndexed(); const v = this.opST16(this.u); this.write16(a, v); break; } // STU idx
-
-            // -----------------------------------------------------------------
-            // $F0-$FF: Extended addressing
-            // -----------------------------------------------------------------
-            case 0xF0: { const a = this.addrExtended(); this.b = this.opSUB8(this.b, this.read(a)); break; } // SUBB ext
-            case 0xF1: { const a = this.addrExtended(); this.opCMP8(this.b, this.read(a)); break; }          // CMPB ext
-            case 0xF2: { const a = this.addrExtended(); this.b = this.opSBC8(this.b, this.read(a)); break; } // SBCB ext
-            case 0xF3: { const a = this.addrExtended(); this.d = this.opADD16(this.d, this.read16(a)); break; } // ADDD ext
-            case 0xF4: { const a = this.addrExtended(); this.b = this.opAND8(this.b, this.read(a)); break; } // ANDB ext
-            case 0xF5: { const a = this.addrExtended(); this.opBIT8(this.b, this.read(a)); break; }          // BITB ext
-            case 0xF6: { const a = this.addrExtended(); this.b = this.opLD8(this.read(a)); break; }          // LDB ext
-            case 0xF7: { const a = this.addrExtended(); this.write(a, this.opST8(this.b)); break; }          // STB ext
-            case 0xF8: { const a = this.addrExtended(); this.b = this.opEOR8(this.b, this.read(a)); break; } // EORB ext
-            case 0xF9: { const a = this.addrExtended(); this.b = this.opADC8(this.b, this.read(a)); break; } // ADCB ext
-            case 0xFA: { const a = this.addrExtended(); this.b = this.opOR8(this.b, this.read(a)); break; }  // ORB ext
-            case 0xFB: { const a = this.addrExtended(); this.b = this.opADD8(this.b, this.read(a)); break; } // ADDB ext
-            case 0xFC: { const a = this.addrExtended(); this.d = this.opLD16(this.read16(a)); break; }       // LDD ext
-            case 0xFD: { const a = this.addrExtended(); const v = this.opST16(this.d); this.write16(a, v); break; } // STD ext
-            case 0xFE: { const a = this.addrExtended(); this.u = this.opLD16(this.read16(a)); break; }       // LDU ext
-            case 0xFF: { const a = this.addrExtended(); const v = this.opST16(this.u); this.write16(a, v); break; } // STU ext
-
-            default:
-                // Illegal/undefined opcode fallback
-                this.cycle = 2;
-                break;
-        }
+        this.instrCycles = BASE_CYCLES.page1[opcode];
+        PAGE1_OPS[opcode](this);
     }
 
     // =========================================================================
-    // Page 2 instruction dispatch ($10xx)
+    // Page 2 instruction dispatch ($10xx); `opcode` is in PAGE2_DEFINED
     // =========================================================================
 
-    _execPage2() {
-        const opcode = this.fetchByte();
-        this.cycle = CYCLES_PAGE2[opcode];
-
-        switch (opcode) {
-            // Long branches (16-bit relative offset)
-            case 0x21: // LBRN
-                this.branchLong(false);
-                break;
-            case 0x22: // LBHI
-                this.branchLong(!(this.cc & (CC_C | CC_Z)));
-                break;
-            case 0x23: // LBLS
-                this.branchLong(!!(this.cc & (CC_C | CC_Z)));
-                break;
-            case 0x24: // LBCC/LBHS
-                this.branchLong(!(this.cc & CC_C));
-                break;
-            case 0x25: // LBCS/LBLO
-                this.branchLong(!!(this.cc & CC_C));
-                break;
-            case 0x26: // LBNE
-                this.branchLong(!(this.cc & CC_Z));
-                break;
-            case 0x27: // LBEQ
-                this.branchLong(!!(this.cc & CC_Z));
-                break;
-            case 0x28: // LBVC
-                this.branchLong(!(this.cc & CC_V));
-                break;
-            case 0x29: // LBVS
-                this.branchLong(!!(this.cc & CC_V));
-                break;
-            case 0x2A: // LBPL
-                this.branchLong(!(this.cc & CC_N));
-                break;
-            case 0x2B: // LBMI
-                this.branchLong(!!(this.cc & CC_N));
-                break;
-            case 0x2C: // LBGE
-                this.branchLong(((this.cc & CC_N) ? 1 : 0) === ((this.cc & CC_V) ? 1 : 0));
-                break;
-            case 0x2D: // LBLT
-                this.branchLong(((this.cc & CC_N) ? 1 : 0) !== ((this.cc & CC_V) ? 1 : 0));
-                break;
-            case 0x2E: // LBGT
-                this.branchLong(!(this.cc & CC_Z) &&
-                    (((this.cc & CC_N) ? 1 : 0) === ((this.cc & CC_V) ? 1 : 0)));
-                break;
-            case 0x2F: // LBLE
-                this.branchLong(!!(this.cc & CC_Z) ||
-                    (((this.cc & CC_N) ? 1 : 0) !== ((this.cc & CC_V) ? 1 : 0)));
-                break;
-
-            case 0x3F: { // SWI2
-                this.cc |= CC_E;
-                this.pushAllS();
-                this.pc = this.read16(VEC_SWI2);
-                break;
-            }
-
-            // CMPD (compare D register)
-            case 0x83: this.opCMP16(this.d, this.fetchWord()); break;                                        // CMPD imm
-            case 0x93: { const a = this.addrDirect(); this.opCMP16(this.d, this.read16(a)); break; }         // CMPD dir
-            case 0xA3: { const a = this.addrIndexed(); this.opCMP16(this.d, this.read16(a)); break; }        // CMPD idx
-            case 0xB3: { const a = this.addrExtended(); this.opCMP16(this.d, this.read16(a)); break; }       // CMPD ext
-
-            // LDY
-            case 0x8E: this.y = this.opLD16(this.fetchWord()); break;                                        // LDY imm
-            case 0x9E: { const a = this.addrDirect(); this.y = this.opLD16(this.read16(a)); break; }         // LDY dir
-            case 0xAE: { const a = this.addrIndexed(); this.y = this.opLD16(this.read16(a)); break; }        // LDY idx
-            case 0xBE: { const a = this.addrExtended(); this.y = this.opLD16(this.read16(a)); break; }       // LDY ext
-
-            // STY
-            case 0x9F: { const a = this.addrDirect(); const v = this.opST16(this.y); this.write16(a, v); break; }   // STY dir
-            case 0xAF: { const a = this.addrIndexed(); const v = this.opST16(this.y); this.write16(a, v); break; }  // STY idx
-            case 0xBF: { const a = this.addrExtended(); const v = this.opST16(this.y); this.write16(a, v); break; } // STY ext
-
-            // CMPY
-            case 0x8C: this.opCMP16(this.y, this.fetchWord()); break;                                        // CMPY imm
-            case 0x9C: { const a = this.addrDirect(); this.opCMP16(this.y, this.read16(a)); break; }         // CMPY dir
-            case 0xAC: { const a = this.addrIndexed(); this.opCMP16(this.y, this.read16(a)); break; }        // CMPY idx
-            case 0xBC: { const a = this.addrExtended(); this.opCMP16(this.y, this.read16(a)); break; }       // CMPY ext
-
-            // LDS (also sets INTR_NMI_ARMED)
-            case 0xCE: this.s = this.opLD16(this.fetchWord()); this.intr |= INTR_NMI_ARMED; break;               // LDS imm
-            case 0xDE: { const a = this.addrDirect(); this.s = this.opLD16(this.read16(a)); this.intr |= INTR_NMI_ARMED; break; }   // LDS dir
-            case 0xEE: { const a = this.addrIndexed(); this.s = this.opLD16(this.read16(a)); this.intr |= INTR_NMI_ARMED; break; }  // LDS idx
-            case 0xFE: { const a = this.addrExtended(); this.s = this.opLD16(this.read16(a)); this.intr |= INTR_NMI_ARMED; break; } // LDS ext
-
-            // STS
-            case 0xDF: { const a = this.addrDirect(); const v = this.opST16(this.s); this.write16(a, v); break; }   // STS dir
-            case 0xEF: { const a = this.addrIndexed(); const v = this.opST16(this.s); this.write16(a, v); break; }  // STS idx
-            case 0xFF: { const a = this.addrExtended(); const v = this.opST16(this.s); this.write16(a, v); break; } // STS ext
-
-            default:
-                // Undefined page 2 opcode: handled as the base page 1
-                // instruction (the $10 prefix is consumed).
-                this._execPage1(opcode);
-                break;
-        }
+    _execPage2(opcode) {
+        this.instrCycles = BASE_CYCLES.page2[opcode];
+        PAGE2_OPS[opcode](this);
     }
 
     // =========================================================================
-    // Page 3 instruction dispatch ($11xx)
+    // Page 3 instruction dispatch ($11xx); `opcode` is in PAGE3_DEFINED
     // =========================================================================
 
-    _execPage3() {
-        const opcode = this.fetchByte();
-        this.cycle = CYCLES_PAGE3[opcode];
-
-        switch (opcode) {
-            case 0x3F: { // SWI3
-                this.cc |= CC_E;
-                this.pushAllS();
-                this.pc = this.read16(VEC_SWI3);
-                break;
-            }
-
-            // CMPU
-            case 0x83: this.opCMP16(this.u, this.fetchWord()); break;                                        // CMPU imm
-            case 0x93: { const a = this.addrDirect(); this.opCMP16(this.u, this.read16(a)); break; }         // CMPU dir
-            case 0xA3: { const a = this.addrIndexed(); this.opCMP16(this.u, this.read16(a)); break; }        // CMPU idx
-            case 0xB3: { const a = this.addrExtended(); this.opCMP16(this.u, this.read16(a)); break; }       // CMPU ext
-
-            // CMPS
-            case 0x8C: this.opCMP16(this.s, this.fetchWord()); break;                                        // CMPS imm
-            case 0x9C: { const a = this.addrDirect(); this.opCMP16(this.s, this.read16(a)); break; }         // CMPS dir
-            case 0xAC: { const a = this.addrIndexed(); this.opCMP16(this.s, this.read16(a)); break; }        // CMPS idx
-            case 0xBC: { const a = this.addrExtended(); this.opCMP16(this.s, this.read16(a)); break; }       // CMPS ext
-
-            default:
-                // Undefined page 3 opcode: same as page 2 — execute base instruction
-                this._execPage1(opcode);
-                break;
-        }
+    _execPage3(opcode) {
+        this.instrCycles = BASE_CYCLES.page3[opcode];
+        PAGE3_OPS[opcode](this);
     }
 }
+
+// =============================================================================
+// Page 1 instructions ($00-$FF): one function per opcode, called as
+// PAGE1_OPS[opcode](cpu) after _execPage1 has set the base cycle count.
+// An opcode without an instruction runs PAGE1_UNDEFINED.
+// =============================================================================
+
+const PAGE1_OPS = new Array(256);
+// -----------------------------------------------------------------
+// $00-$0F: Direct addressing ALU (memory)
+// -----------------------------------------------------------------
+// NEG direct
+PAGE1_OPS[0x00] = (cpu) => {
+    const addr = cpu.addrDirect();
+    cpu.write(addr, cpu.opNEG8(cpu.read(addr)));
+};
+// COM direct
+PAGE1_OPS[0x03] = (cpu) => {
+    const addr = cpu.addrDirect();
+    cpu.write(addr, cpu.opCOM8(cpu.read(addr)));
+};
+// LSR direct
+PAGE1_OPS[0x04] = (cpu) => {
+    const addr = cpu.addrDirect();
+    cpu.write(addr, cpu.opLSR8(cpu.read(addr)));
+};
+// ROR direct
+PAGE1_OPS[0x06] = (cpu) => {
+    const addr = cpu.addrDirect();
+    cpu.write(addr, cpu.opROR8(cpu.read(addr)));
+};
+// ASR direct
+PAGE1_OPS[0x07] = (cpu) => {
+    const addr = cpu.addrDirect();
+    cpu.write(addr, cpu.opASR8(cpu.read(addr)));
+};
+// ASL/LSL direct
+PAGE1_OPS[0x08] = (cpu) => {
+    const addr = cpu.addrDirect();
+    cpu.write(addr, cpu.opASL8(cpu.read(addr)));
+};
+// ROL direct
+PAGE1_OPS[0x09] = (cpu) => {
+    const addr = cpu.addrDirect();
+    cpu.write(addr, cpu.opROL8(cpu.read(addr)));
+};
+// DEC direct
+PAGE1_OPS[0x0A] = (cpu) => {
+    const addr = cpu.addrDirect();
+    cpu.write(addr, cpu.opDEC8(cpu.read(addr)));
+};
+// INC direct
+PAGE1_OPS[0x0C] = (cpu) => {
+    const addr = cpu.addrDirect();
+    cpu.write(addr, cpu.opINC8(cpu.read(addr)));
+};
+// TST direct
+PAGE1_OPS[0x0D] = (cpu) => {
+    const addr = cpu.addrDirect();
+    cpu.opTST8(cpu.read(addr));
+};
+// JMP direct
+PAGE1_OPS[0x0E] = (cpu) => { cpu.pc = cpu.addrDirect(); };
+// CLR direct
+PAGE1_OPS[0x0F] = (cpu) => {
+    const addr = cpu.addrDirect();
+    cpu.write(addr, cpu.opCLR8());
+};
+
+// -----------------------------------------------------------------
+// $10, $11 handled externally (page prefix)
+// -----------------------------------------------------------------
+
+// -----------------------------------------------------------------
+// $12-$1F: Inherent / Misc
+// -----------------------------------------------------------------
+// NOP
+PAGE1_OPS[0x12] = () => {};
+// SYNC
+PAGE1_OPS[0x13] = (cpu) => { cpu.waitState = IN_SYNC; };
+// LBRA (long branch always)
+PAGE1_OPS[0x16] = (cpu) => {
+    const offset = cpu.sign16(cpu.fetchWord());
+    cpu.pc = (cpu.pc + offset) & 0xFFFF;
+};
+// LBSR (long branch to subroutine)
+PAGE1_OPS[0x17] = (cpu) => {
+    const offset = cpu.sign16(cpu.fetchWord());
+    cpu._saveRegisters('s', 0x80);
+    cpu.pc = (cpu.pc + offset) & 0xFFFF;
+};
+// DAA
+PAGE1_OPS[0x19] = (cpu) => { cpu.decimalAdjustA(); };
+// ORCC immediate
+PAGE1_OPS[0x1A] = (cpu) => { cpu.cc |= cpu.fetchByte(); };
+// ANDCC immediate
+PAGE1_OPS[0x1C] = (cpu) => { cpu.cc &= cpu.fetchByte(); };
+// SEX (sign extend B -> A:B)
+PAGE1_OPS[0x1D] = (cpu) => {
+    if (cpu.b & 0x80) {
+        cpu.a = 0xFF;
+    } else {
+        cpu.a = 0x00;
+    }
+    cpu.cc &= ~(CC_N | CC_Z);
+    if (cpu.a & 0x80) cpu.cc |= CC_N;
+    if (cpu.d === 0) cpu.cc |= CC_Z;
+};
+// EXG
+PAGE1_OPS[0x1E] = (cpu) => {
+    const postbyte = cpu.fetchByte();
+    const first = postbyte >> 4;
+    const second = postbyte & 0x0F;
+    const firstValue = cpu._transferRead(first);
+    const secondValue = cpu._transferRead(second);
+    cpu._transferWrite(first, secondValue);
+    cpu._transferWrite(second, firstValue);
+    // Loading S arms NMI
+    if (TRANSFER_REGISTERS[first] === 's' || TRANSFER_REGISTERS[second] === 's') cpu.nmiArmed = true;
+};
+// TFR
+PAGE1_OPS[0x1F] = (cpu) => {
+    const postbyte = cpu.fetchByte();
+    const source = postbyte >> 4;
+    const dest = postbyte & 0x0F;
+    cpu._transferWrite(dest, cpu._transferRead(source));
+    // Loading S arms NMI
+    if (TRANSFER_REGISTERS[dest] === 's') cpu.nmiArmed = true;
+};
+
+// -----------------------------------------------------------------
+// $20-$2F: Short branches (relative 8-bit)
+// -----------------------------------------------------------------
+// BRA
+PAGE1_OPS[0x20] = (cpu) => { cpu.branchShort(true); };
+// BRN
+PAGE1_OPS[0x21] = (cpu) => { cpu.branchShort(false); };
+// BHI (C=0 and Z=0)
+PAGE1_OPS[0x22] = (cpu) => { cpu.branchShort(!(cpu.cc & (CC_C | CC_Z))); };
+// BLS (C=1 or Z=1)
+PAGE1_OPS[0x23] = (cpu) => { cpu.branchShort(!!(cpu.cc & (CC_C | CC_Z))); };
+// BCC/BHS (C=0)
+PAGE1_OPS[0x24] = (cpu) => { cpu.branchShort(!(cpu.cc & CC_C)); };
+// BCS/BLO (C=1)
+PAGE1_OPS[0x25] = (cpu) => { cpu.branchShort(!!(cpu.cc & CC_C)); };
+// BNE (Z=0)
+PAGE1_OPS[0x26] = (cpu) => { cpu.branchShort(!(cpu.cc & CC_Z)); };
+// BEQ (Z=1)
+PAGE1_OPS[0x27] = (cpu) => { cpu.branchShort(!!(cpu.cc & CC_Z)); };
+// BVC (V=0)
+PAGE1_OPS[0x28] = (cpu) => { cpu.branchShort(!(cpu.cc & CC_V)); };
+// BVS (V=1)
+PAGE1_OPS[0x29] = (cpu) => { cpu.branchShort(!!(cpu.cc & CC_V)); };
+// BPL (N=0)
+PAGE1_OPS[0x2A] = (cpu) => { cpu.branchShort(!(cpu.cc & CC_N)); };
+// BMI (N=1)
+PAGE1_OPS[0x2B] = (cpu) => { cpu.branchShort(!!(cpu.cc & CC_N)); };
+// BGE (N^V=0)
+PAGE1_OPS[0x2C] = (cpu) => { cpu.branchShort(!((cpu.cc & CC_N) ? 1 : 0) === !((cpu.cc & CC_V) ? 1 : 0)); };
+// BLT (N^V=1)
+PAGE1_OPS[0x2D] = (cpu) => { cpu.branchShort(((cpu.cc & CC_N) ? 1 : 0) !== ((cpu.cc & CC_V) ? 1 : 0)); };
+// BGT (Z=0 and N^V=0)
+PAGE1_OPS[0x2E] = (cpu) => {
+    cpu.branchShort(!(cpu.cc & CC_Z) &&
+        (((cpu.cc & CC_N) ? 1 : 0) === ((cpu.cc & CC_V) ? 1 : 0)));
+};
+// BLE (Z=1 or N^V=1)
+PAGE1_OPS[0x2F] = (cpu) => {
+    cpu.branchShort(!!(cpu.cc & CC_Z) ||
+        (((cpu.cc & CC_N) ? 1 : 0) !== ((cpu.cc & CC_V) ? 1 : 0)));
+};
+
+// -----------------------------------------------------------------
+// $30-$3F: Misc
+// -----------------------------------------------------------------
+// LEAX indexed
+PAGE1_OPS[0x30] = (cpu) => {
+    cpu.x = cpu.addrIndexed();
+    cpu.cc &= ~CC_Z;
+    if (cpu.x === 0) cpu.cc |= CC_Z;
+};
+// LEAY indexed
+PAGE1_OPS[0x31] = (cpu) => {
+    cpu.y = cpu.addrIndexed();
+    cpu.cc &= ~CC_Z;
+    if (cpu.y === 0) cpu.cc |= CC_Z;
+};
+// LEAS indexed
+PAGE1_OPS[0x32] = (cpu) => {
+    cpu.s = cpu.addrIndexed();
+    cpu.nmiArmed = true;
+};
+// LEAU indexed
+PAGE1_OPS[0x33] = (cpu) => { cpu.u = cpu.addrIndexed(); };
+// PSHS
+PAGE1_OPS[0x34] = (cpu) => { cpu._pushPullInstr('s', false); };
+// PULS
+PAGE1_OPS[0x35] = (cpu) => { cpu._pushPullInstr('s', true); };
+// PSHU
+PAGE1_OPS[0x36] = (cpu) => { cpu._pushPullInstr('u', false); };
+// PULU
+PAGE1_OPS[0x37] = (cpu) => { cpu._pushPullInstr('u', true); };
+// RTS
+PAGE1_OPS[0x39] = (cpu) => { cpu._restoreRegisters('s', 0x80); };
+// ABX (X = X + unsigned B)
+PAGE1_OPS[0x3A] = (cpu) => { cpu.x = (cpu.x + cpu.b) & 0xFFFF; };
+// RTI
+PAGE1_OPS[0x3B] = (cpu) => {
+    cpu._restoreRegisters('s', 0x01);   // CC
+    if (cpu.cc & CC_E) {
+        // Entire state was saved
+        cpu._restoreRegisters('s', 0x7E);   // A B DP X Y U
+        cpu.instrCycles = 15;
+    }
+    cpu._restoreRegisters('s', 0x80);
+};
+// CWAI
+PAGE1_OPS[0x3C] = (cpu) => {
+    const imm = cpu.fetchByte();
+    cpu.cc &= imm;
+    cpu.cc |= CC_E;
+    cpu._saveRegisters('s', 0xFF);
+    cpu.waitState = IN_CWAI;
+};
+// MUL
+PAGE1_OPS[0x3D] = (cpu) => { cpu.opMUL(); };
+// SWI
+PAGE1_OPS[0x3F] = (cpu) => {
+    cpu.cc |= CC_E;
+    cpu._saveRegisters('s', 0xFF);
+    cpu.cc |= CC_I | CC_F;
+    cpu.pc = cpu.read16(VEC_SWI);
+};
+
+// -----------------------------------------------------------------
+// $40-$4F: Inherent A register
+// -----------------------------------------------------------------
+// NEGA
+PAGE1_OPS[0x40] = (cpu) => { cpu.a = cpu.opNEG8(cpu.a); };
+// COMA
+PAGE1_OPS[0x43] = (cpu) => { cpu.a = cpu.opCOM8(cpu.a); };
+// LSRA
+PAGE1_OPS[0x44] = (cpu) => { cpu.a = cpu.opLSR8(cpu.a); };
+// RORA
+PAGE1_OPS[0x46] = (cpu) => { cpu.a = cpu.opROR8(cpu.a); };
+// ASRA
+PAGE1_OPS[0x47] = (cpu) => { cpu.a = cpu.opASR8(cpu.a); };
+// ASLA/LSLA
+PAGE1_OPS[0x48] = (cpu) => { cpu.a = cpu.opASL8(cpu.a); };
+// ROLA
+PAGE1_OPS[0x49] = (cpu) => { cpu.a = cpu.opROL8(cpu.a); };
+// DECA
+PAGE1_OPS[0x4A] = (cpu) => { cpu.a = cpu.opDEC8(cpu.a); };
+// INCA
+PAGE1_OPS[0x4C] = (cpu) => { cpu.a = cpu.opINC8(cpu.a); };
+// TSTA
+PAGE1_OPS[0x4D] = (cpu) => { cpu.opTST8(cpu.a); };
+// CLRA
+PAGE1_OPS[0x4F] = (cpu) => { cpu.a = cpu.opCLR8(); };
+
+// -----------------------------------------------------------------
+// $50-$5F: Inherent B register
+// -----------------------------------------------------------------
+// NEGB
+PAGE1_OPS[0x50] = (cpu) => { cpu.b = cpu.opNEG8(cpu.b); };
+// COMB
+PAGE1_OPS[0x53] = (cpu) => { cpu.b = cpu.opCOM8(cpu.b); };
+// LSRB
+PAGE1_OPS[0x54] = (cpu) => { cpu.b = cpu.opLSR8(cpu.b); };
+// RORB
+PAGE1_OPS[0x56] = (cpu) => { cpu.b = cpu.opROR8(cpu.b); };
+// ASRB
+PAGE1_OPS[0x57] = (cpu) => { cpu.b = cpu.opASR8(cpu.b); };
+// ASLB/LSLB
+PAGE1_OPS[0x58] = (cpu) => { cpu.b = cpu.opASL8(cpu.b); };
+// ROLB
+PAGE1_OPS[0x59] = (cpu) => { cpu.b = cpu.opROL8(cpu.b); };
+// DECB
+PAGE1_OPS[0x5A] = (cpu) => { cpu.b = cpu.opDEC8(cpu.b); };
+// INCB
+PAGE1_OPS[0x5C] = (cpu) => { cpu.b = cpu.opINC8(cpu.b); };
+// TSTB
+PAGE1_OPS[0x5D] = (cpu) => { cpu.opTST8(cpu.b); };
+// CLRB
+PAGE1_OPS[0x5F] = (cpu) => { cpu.b = cpu.opCLR8(); };
+
+// -----------------------------------------------------------------
+// $60-$6F: Indexed addressing ALU (memory)
+// -----------------------------------------------------------------
+// NEG indexed
+PAGE1_OPS[0x60] = (cpu) => {
+    const addr = cpu.addrIndexed();
+    cpu.write(addr, cpu.opNEG8(cpu.read(addr)));
+};
+// COM indexed
+PAGE1_OPS[0x63] = (cpu) => {
+    const addr = cpu.addrIndexed();
+    cpu.write(addr, cpu.opCOM8(cpu.read(addr)));
+};
+// LSR indexed
+PAGE1_OPS[0x64] = (cpu) => {
+    const addr = cpu.addrIndexed();
+    cpu.write(addr, cpu.opLSR8(cpu.read(addr)));
+};
+// ROR indexed
+PAGE1_OPS[0x66] = (cpu) => {
+    const addr = cpu.addrIndexed();
+    cpu.write(addr, cpu.opROR8(cpu.read(addr)));
+};
+// ASR indexed
+PAGE1_OPS[0x67] = (cpu) => {
+    const addr = cpu.addrIndexed();
+    cpu.write(addr, cpu.opASR8(cpu.read(addr)));
+};
+// ASL/LSL indexed
+PAGE1_OPS[0x68] = (cpu) => {
+    const addr = cpu.addrIndexed();
+    cpu.write(addr, cpu.opASL8(cpu.read(addr)));
+};
+// ROL indexed
+PAGE1_OPS[0x69] = (cpu) => {
+    const addr = cpu.addrIndexed();
+    cpu.write(addr, cpu.opROL8(cpu.read(addr)));
+};
+// DEC indexed
+PAGE1_OPS[0x6A] = (cpu) => {
+    const addr = cpu.addrIndexed();
+    cpu.write(addr, cpu.opDEC8(cpu.read(addr)));
+};
+// INC indexed
+PAGE1_OPS[0x6C] = (cpu) => {
+    const addr = cpu.addrIndexed();
+    cpu.write(addr, cpu.opINC8(cpu.read(addr)));
+};
+// TST indexed
+PAGE1_OPS[0x6D] = (cpu) => {
+    const addr = cpu.addrIndexed();
+    cpu.opTST8(cpu.read(addr));
+};
+// JMP indexed
+PAGE1_OPS[0x6E] = (cpu) => { cpu.pc = cpu.addrIndexed(); };
+// CLR indexed
+PAGE1_OPS[0x6F] = (cpu) => {
+    const addr = cpu.addrIndexed();
+    cpu.write(addr, cpu.opCLR8());
+};
+
+// -----------------------------------------------------------------
+// $70-$7F: Extended addressing ALU (memory)
+// -----------------------------------------------------------------
+// NEG extended
+PAGE1_OPS[0x70] = (cpu) => {
+    const addr = cpu.addrExtended();
+    cpu.write(addr, cpu.opNEG8(cpu.read(addr)));
+};
+// COM extended
+PAGE1_OPS[0x73] = (cpu) => {
+    const addr = cpu.addrExtended();
+    cpu.write(addr, cpu.opCOM8(cpu.read(addr)));
+};
+// LSR extended
+PAGE1_OPS[0x74] = (cpu) => {
+    const addr = cpu.addrExtended();
+    cpu.write(addr, cpu.opLSR8(cpu.read(addr)));
+};
+// ROR extended
+PAGE1_OPS[0x76] = (cpu) => {
+    const addr = cpu.addrExtended();
+    cpu.write(addr, cpu.opROR8(cpu.read(addr)));
+};
+// ASR extended
+PAGE1_OPS[0x77] = (cpu) => {
+    const addr = cpu.addrExtended();
+    cpu.write(addr, cpu.opASR8(cpu.read(addr)));
+};
+// ASL/LSL extended
+PAGE1_OPS[0x78] = (cpu) => {
+    const addr = cpu.addrExtended();
+    cpu.write(addr, cpu.opASL8(cpu.read(addr)));
+};
+// ROL extended
+PAGE1_OPS[0x79] = (cpu) => {
+    const addr = cpu.addrExtended();
+    cpu.write(addr, cpu.opROL8(cpu.read(addr)));
+};
+// DEC extended
+PAGE1_OPS[0x7A] = (cpu) => {
+    const addr = cpu.addrExtended();
+    cpu.write(addr, cpu.opDEC8(cpu.read(addr)));
+};
+// INC extended
+PAGE1_OPS[0x7C] = (cpu) => {
+    const addr = cpu.addrExtended();
+    cpu.write(addr, cpu.opINC8(cpu.read(addr)));
+};
+// TST extended
+PAGE1_OPS[0x7D] = (cpu) => {
+    const addr = cpu.addrExtended();
+    cpu.opTST8(cpu.read(addr));
+};
+// JMP extended
+PAGE1_OPS[0x7E] = (cpu) => { cpu.pc = cpu.addrExtended(); };
+// CLR extended
+PAGE1_OPS[0x7F] = (cpu) => {
+    const addr = cpu.addrExtended();
+    cpu.write(addr, cpu.opCLR8());
+};
+
+// -----------------------------------------------------------------
+// $80-$8F: Immediate operand, and BSR
+// -----------------------------------------------------------------
+// SUBA imm
+PAGE1_OPS[0x80] = (cpu) => { cpu.a = cpu.opSUB8(cpu.a, cpu.fetchByte()); };
+// CMPA imm
+PAGE1_OPS[0x81] = (cpu) => { cpu.opCMP8(cpu.a, cpu.fetchByte()); };
+// SBCA imm
+PAGE1_OPS[0x82] = (cpu) => { cpu.a = cpu.opSBC8(cpu.a, cpu.fetchByte()); };
+// SUBD imm
+PAGE1_OPS[0x83] = (cpu) => { cpu.d = cpu.opSUB16(cpu.d, cpu.fetchWord()); };
+// ANDA imm
+PAGE1_OPS[0x84] = (cpu) => { cpu.a = cpu.opAND8(cpu.a, cpu.fetchByte()); };
+// BITA imm
+PAGE1_OPS[0x85] = (cpu) => { cpu.opBIT8(cpu.a, cpu.fetchByte()); };
+// LDA imm
+PAGE1_OPS[0x86] = (cpu) => { cpu.a = cpu.opLD8(cpu.fetchByte()); };
+// 0x87: STA imm - illegal
+// EORA imm
+PAGE1_OPS[0x88] = (cpu) => { cpu.a = cpu.opEOR8(cpu.a, cpu.fetchByte()); };
+// ADCA imm
+PAGE1_OPS[0x89] = (cpu) => { cpu.a = cpu.opADC8(cpu.a, cpu.fetchByte()); };
+// ORA imm
+PAGE1_OPS[0x8A] = (cpu) => { cpu.a = cpu.opOR8(cpu.a, cpu.fetchByte()); };
+// ADDA imm
+PAGE1_OPS[0x8B] = (cpu) => { cpu.a = cpu.opADD8(cpu.a, cpu.fetchByte()); };
+// CMPX imm
+PAGE1_OPS[0x8C] = (cpu) => { cpu.opCMP16(cpu.x, cpu.fetchWord()); };
+// BSR (branch to subroutine)
+PAGE1_OPS[0x8D] = (cpu) => {
+    const offset = cpu.sign8(cpu.fetchByte());
+    cpu._saveRegisters('s', 0x80);
+    cpu.pc = (cpu.pc + offset) & 0xFFFF;
+};
+// LDX imm
+PAGE1_OPS[0x8E] = (cpu) => { cpu.x = cpu.opLD16(cpu.fetchWord()); };
+// 0x8F: STX imm - illegal
+
+// -----------------------------------------------------------------
+// $90-$9F: Direct addressing
+// -----------------------------------------------------------------
+// SUBA dir
+PAGE1_OPS[0x90] = (cpu) => { const a = cpu.addrDirect(); cpu.a = cpu.opSUB8(cpu.a, cpu.read(a)); };
+// CMPA dir
+PAGE1_OPS[0x91] = (cpu) => { const a = cpu.addrDirect(); cpu.opCMP8(cpu.a, cpu.read(a)); };
+// SBCA dir
+PAGE1_OPS[0x92] = (cpu) => { const a = cpu.addrDirect(); cpu.a = cpu.opSBC8(cpu.a, cpu.read(a)); };
+// SUBD dir
+PAGE1_OPS[0x93] = (cpu) => { const a = cpu.addrDirect(); cpu.d = cpu.opSUB16(cpu.d, cpu.read16(a)); };
+// ANDA dir
+PAGE1_OPS[0x94] = (cpu) => { const a = cpu.addrDirect(); cpu.a = cpu.opAND8(cpu.a, cpu.read(a)); };
+// BITA dir
+PAGE1_OPS[0x95] = (cpu) => { const a = cpu.addrDirect(); cpu.opBIT8(cpu.a, cpu.read(a)); };
+// LDA dir
+PAGE1_OPS[0x96] = (cpu) => { const a = cpu.addrDirect(); cpu.a = cpu.opLD8(cpu.read(a)); };
+// STA dir
+PAGE1_OPS[0x97] = (cpu) => { const a = cpu.addrDirect(); cpu.write(a, cpu.opST8(cpu.a)); };
+// EORA dir
+PAGE1_OPS[0x98] = (cpu) => { const a = cpu.addrDirect(); cpu.a = cpu.opEOR8(cpu.a, cpu.read(a)); };
+// ADCA dir
+PAGE1_OPS[0x99] = (cpu) => { const a = cpu.addrDirect(); cpu.a = cpu.opADC8(cpu.a, cpu.read(a)); };
+// ORA dir
+PAGE1_OPS[0x9A] = (cpu) => { const a = cpu.addrDirect(); cpu.a = cpu.opOR8(cpu.a, cpu.read(a)); };
+// ADDA dir
+PAGE1_OPS[0x9B] = (cpu) => { const a = cpu.addrDirect(); cpu.a = cpu.opADD8(cpu.a, cpu.read(a)); };
+// CMPX dir
+PAGE1_OPS[0x9C] = (cpu) => { const a = cpu.addrDirect(); cpu.opCMP16(cpu.x, cpu.read16(a)); };
+// JSR direct
+PAGE1_OPS[0x9D] = (cpu) => {
+    const a = cpu.addrDirect();
+    cpu._saveRegisters('s', 0x80);
+    cpu.pc = a;
+};
+// LDX dir
+PAGE1_OPS[0x9E] = (cpu) => { const a = cpu.addrDirect(); cpu.x = cpu.opLD16(cpu.read16(a)); };
+// STX dir
+PAGE1_OPS[0x9F] = (cpu) => { const a = cpu.addrDirect(); const v = cpu.opST16(cpu.x); cpu.write16(a, v); };
+
+// -----------------------------------------------------------------
+// $A0-$AF: Indexed addressing
+// -----------------------------------------------------------------
+// SUBA idx
+PAGE1_OPS[0xA0] = (cpu) => { const a = cpu.addrIndexed(); cpu.a = cpu.opSUB8(cpu.a, cpu.read(a)); };
+// CMPA idx
+PAGE1_OPS[0xA1] = (cpu) => { const a = cpu.addrIndexed(); cpu.opCMP8(cpu.a, cpu.read(a)); };
+// SBCA idx
+PAGE1_OPS[0xA2] = (cpu) => { const a = cpu.addrIndexed(); cpu.a = cpu.opSBC8(cpu.a, cpu.read(a)); };
+// SUBD idx
+PAGE1_OPS[0xA3] = (cpu) => { const a = cpu.addrIndexed(); cpu.d = cpu.opSUB16(cpu.d, cpu.read16(a)); };
+// ANDA idx
+PAGE1_OPS[0xA4] = (cpu) => { const a = cpu.addrIndexed(); cpu.a = cpu.opAND8(cpu.a, cpu.read(a)); };
+// BITA idx
+PAGE1_OPS[0xA5] = (cpu) => { const a = cpu.addrIndexed(); cpu.opBIT8(cpu.a, cpu.read(a)); };
+// LDA idx
+PAGE1_OPS[0xA6] = (cpu) => { const a = cpu.addrIndexed(); cpu.a = cpu.opLD8(cpu.read(a)); };
+// STA idx
+PAGE1_OPS[0xA7] = (cpu) => { const a = cpu.addrIndexed(); cpu.write(a, cpu.opST8(cpu.a)); };
+// EORA idx
+PAGE1_OPS[0xA8] = (cpu) => { const a = cpu.addrIndexed(); cpu.a = cpu.opEOR8(cpu.a, cpu.read(a)); };
+// ADCA idx
+PAGE1_OPS[0xA9] = (cpu) => { const a = cpu.addrIndexed(); cpu.a = cpu.opADC8(cpu.a, cpu.read(a)); };
+// ORA idx
+PAGE1_OPS[0xAA] = (cpu) => { const a = cpu.addrIndexed(); cpu.a = cpu.opOR8(cpu.a, cpu.read(a)); };
+// ADDA idx
+PAGE1_OPS[0xAB] = (cpu) => { const a = cpu.addrIndexed(); cpu.a = cpu.opADD8(cpu.a, cpu.read(a)); };
+// CMPX idx
+PAGE1_OPS[0xAC] = (cpu) => { const a = cpu.addrIndexed(); cpu.opCMP16(cpu.x, cpu.read16(a)); };
+// JSR indexed
+PAGE1_OPS[0xAD] = (cpu) => {
+    const a = cpu.addrIndexed();
+    cpu._saveRegisters('s', 0x80);
+    cpu.pc = a;
+};
+// LDX idx
+PAGE1_OPS[0xAE] = (cpu) => { const a = cpu.addrIndexed(); cpu.x = cpu.opLD16(cpu.read16(a)); };
+// STX idx
+PAGE1_OPS[0xAF] = (cpu) => { const a = cpu.addrIndexed(); const v = cpu.opST16(cpu.x); cpu.write16(a, v); };
+
+// -----------------------------------------------------------------
+// $B0-$BF: Extended addressing
+// -----------------------------------------------------------------
+// SUBA ext
+PAGE1_OPS[0xB0] = (cpu) => { const a = cpu.addrExtended(); cpu.a = cpu.opSUB8(cpu.a, cpu.read(a)); };
+// CMPA ext
+PAGE1_OPS[0xB1] = (cpu) => { const a = cpu.addrExtended(); cpu.opCMP8(cpu.a, cpu.read(a)); };
+// SBCA ext
+PAGE1_OPS[0xB2] = (cpu) => { const a = cpu.addrExtended(); cpu.a = cpu.opSBC8(cpu.a, cpu.read(a)); };
+// SUBD ext
+PAGE1_OPS[0xB3] = (cpu) => { const a = cpu.addrExtended(); cpu.d = cpu.opSUB16(cpu.d, cpu.read16(a)); };
+// ANDA ext
+PAGE1_OPS[0xB4] = (cpu) => { const a = cpu.addrExtended(); cpu.a = cpu.opAND8(cpu.a, cpu.read(a)); };
+// BITA ext
+PAGE1_OPS[0xB5] = (cpu) => { const a = cpu.addrExtended(); cpu.opBIT8(cpu.a, cpu.read(a)); };
+// LDA ext
+PAGE1_OPS[0xB6] = (cpu) => { const a = cpu.addrExtended(); cpu.a = cpu.opLD8(cpu.read(a)); };
+// STA ext
+PAGE1_OPS[0xB7] = (cpu) => { const a = cpu.addrExtended(); cpu.write(a, cpu.opST8(cpu.a)); };
+// EORA ext
+PAGE1_OPS[0xB8] = (cpu) => { const a = cpu.addrExtended(); cpu.a = cpu.opEOR8(cpu.a, cpu.read(a)); };
+// ADCA ext
+PAGE1_OPS[0xB9] = (cpu) => { const a = cpu.addrExtended(); cpu.a = cpu.opADC8(cpu.a, cpu.read(a)); };
+// ORA ext
+PAGE1_OPS[0xBA] = (cpu) => { const a = cpu.addrExtended(); cpu.a = cpu.opOR8(cpu.a, cpu.read(a)); };
+// ADDA ext
+PAGE1_OPS[0xBB] = (cpu) => { const a = cpu.addrExtended(); cpu.a = cpu.opADD8(cpu.a, cpu.read(a)); };
+// CMPX ext
+PAGE1_OPS[0xBC] = (cpu) => { const a = cpu.addrExtended(); cpu.opCMP16(cpu.x, cpu.read16(a)); };
+// JSR extended
+PAGE1_OPS[0xBD] = (cpu) => {
+    const a = cpu.addrExtended();
+    cpu._saveRegisters('s', 0x80);
+    cpu.pc = a;
+};
+// LDX ext
+PAGE1_OPS[0xBE] = (cpu) => { const a = cpu.addrExtended(); cpu.x = cpu.opLD16(cpu.read16(a)); };
+// STX ext
+PAGE1_OPS[0xBF] = (cpu) => { const a = cpu.addrExtended(); const v = cpu.opST16(cpu.x); cpu.write16(a, v); };
+
+// -----------------------------------------------------------------
+// $C0-$CF: Immediate operand
+// -----------------------------------------------------------------
+// SUBB imm
+PAGE1_OPS[0xC0] = (cpu) => { cpu.b = cpu.opSUB8(cpu.b, cpu.fetchByte()); };
+// CMPB imm
+PAGE1_OPS[0xC1] = (cpu) => { cpu.opCMP8(cpu.b, cpu.fetchByte()); };
+// SBCB imm
+PAGE1_OPS[0xC2] = (cpu) => { cpu.b = cpu.opSBC8(cpu.b, cpu.fetchByte()); };
+// ADDD imm
+PAGE1_OPS[0xC3] = (cpu) => { cpu.d = cpu.opADD16(cpu.d, cpu.fetchWord()); };
+// ANDB imm
+PAGE1_OPS[0xC4] = (cpu) => { cpu.b = cpu.opAND8(cpu.b, cpu.fetchByte()); };
+// BITB imm
+PAGE1_OPS[0xC5] = (cpu) => { cpu.opBIT8(cpu.b, cpu.fetchByte()); };
+// LDB imm
+PAGE1_OPS[0xC6] = (cpu) => { cpu.b = cpu.opLD8(cpu.fetchByte()); };
+// 0xC7: STB imm - illegal
+// EORB imm
+PAGE1_OPS[0xC8] = (cpu) => { cpu.b = cpu.opEOR8(cpu.b, cpu.fetchByte()); };
+// ADCB imm
+PAGE1_OPS[0xC9] = (cpu) => { cpu.b = cpu.opADC8(cpu.b, cpu.fetchByte()); };
+// ORB imm
+PAGE1_OPS[0xCA] = (cpu) => { cpu.b = cpu.opOR8(cpu.b, cpu.fetchByte()); };
+// ADDB imm
+PAGE1_OPS[0xCB] = (cpu) => { cpu.b = cpu.opADD8(cpu.b, cpu.fetchByte()); };
+// LDD imm
+PAGE1_OPS[0xCC] = (cpu) => { cpu.d = cpu.opLD16(cpu.fetchWord()); };
+// 0xCD: illegal
+// LDU imm
+PAGE1_OPS[0xCE] = (cpu) => { cpu.u = cpu.opLD16(cpu.fetchWord()); };
+// 0xCF: STU imm - illegal
+
+// -----------------------------------------------------------------
+// $D0-$DF: Direct addressing
+// -----------------------------------------------------------------
+// SUBB dir
+PAGE1_OPS[0xD0] = (cpu) => { const a = cpu.addrDirect(); cpu.b = cpu.opSUB8(cpu.b, cpu.read(a)); };
+// CMPB dir
+PAGE1_OPS[0xD1] = (cpu) => { const a = cpu.addrDirect(); cpu.opCMP8(cpu.b, cpu.read(a)); };
+// SBCB dir
+PAGE1_OPS[0xD2] = (cpu) => { const a = cpu.addrDirect(); cpu.b = cpu.opSBC8(cpu.b, cpu.read(a)); };
+// ADDD dir
+PAGE1_OPS[0xD3] = (cpu) => { const a = cpu.addrDirect(); cpu.d = cpu.opADD16(cpu.d, cpu.read16(a)); };
+// ANDB dir
+PAGE1_OPS[0xD4] = (cpu) => { const a = cpu.addrDirect(); cpu.b = cpu.opAND8(cpu.b, cpu.read(a)); };
+// BITB dir
+PAGE1_OPS[0xD5] = (cpu) => { const a = cpu.addrDirect(); cpu.opBIT8(cpu.b, cpu.read(a)); };
+// LDB dir
+PAGE1_OPS[0xD6] = (cpu) => { const a = cpu.addrDirect(); cpu.b = cpu.opLD8(cpu.read(a)); };
+// STB dir
+PAGE1_OPS[0xD7] = (cpu) => { const a = cpu.addrDirect(); cpu.write(a, cpu.opST8(cpu.b)); };
+// EORB dir
+PAGE1_OPS[0xD8] = (cpu) => { const a = cpu.addrDirect(); cpu.b = cpu.opEOR8(cpu.b, cpu.read(a)); };
+// ADCB dir
+PAGE1_OPS[0xD9] = (cpu) => { const a = cpu.addrDirect(); cpu.b = cpu.opADC8(cpu.b, cpu.read(a)); };
+// ORB dir
+PAGE1_OPS[0xDA] = (cpu) => { const a = cpu.addrDirect(); cpu.b = cpu.opOR8(cpu.b, cpu.read(a)); };
+// ADDB dir
+PAGE1_OPS[0xDB] = (cpu) => { const a = cpu.addrDirect(); cpu.b = cpu.opADD8(cpu.b, cpu.read(a)); };
+// LDD dir
+PAGE1_OPS[0xDC] = (cpu) => { const a = cpu.addrDirect(); cpu.d = cpu.opLD16(cpu.read16(a)); };
+// STD dir
+PAGE1_OPS[0xDD] = (cpu) => { const a = cpu.addrDirect(); const v = cpu.opST16(cpu.d); cpu.write16(a, v); };
+// LDU dir
+PAGE1_OPS[0xDE] = (cpu) => { const a = cpu.addrDirect(); cpu.u = cpu.opLD16(cpu.read16(a)); };
+// STU dir
+PAGE1_OPS[0xDF] = (cpu) => { const a = cpu.addrDirect(); const v = cpu.opST16(cpu.u); cpu.write16(a, v); };
+
+// -----------------------------------------------------------------
+// $E0-$EF: Indexed addressing
+// -----------------------------------------------------------------
+// SUBB idx
+PAGE1_OPS[0xE0] = (cpu) => { const a = cpu.addrIndexed(); cpu.b = cpu.opSUB8(cpu.b, cpu.read(a)); };
+// CMPB idx
+PAGE1_OPS[0xE1] = (cpu) => { const a = cpu.addrIndexed(); cpu.opCMP8(cpu.b, cpu.read(a)); };
+// SBCB idx
+PAGE1_OPS[0xE2] = (cpu) => { const a = cpu.addrIndexed(); cpu.b = cpu.opSBC8(cpu.b, cpu.read(a)); };
+// ADDD idx
+PAGE1_OPS[0xE3] = (cpu) => { const a = cpu.addrIndexed(); cpu.d = cpu.opADD16(cpu.d, cpu.read16(a)); };
+// ANDB idx
+PAGE1_OPS[0xE4] = (cpu) => { const a = cpu.addrIndexed(); cpu.b = cpu.opAND8(cpu.b, cpu.read(a)); };
+// BITB idx
+PAGE1_OPS[0xE5] = (cpu) => { const a = cpu.addrIndexed(); cpu.opBIT8(cpu.b, cpu.read(a)); };
+// LDB idx
+PAGE1_OPS[0xE6] = (cpu) => { const a = cpu.addrIndexed(); cpu.b = cpu.opLD8(cpu.read(a)); };
+// STB idx
+PAGE1_OPS[0xE7] = (cpu) => { const a = cpu.addrIndexed(); cpu.write(a, cpu.opST8(cpu.b)); };
+// EORB idx
+PAGE1_OPS[0xE8] = (cpu) => { const a = cpu.addrIndexed(); cpu.b = cpu.opEOR8(cpu.b, cpu.read(a)); };
+// ADCB idx
+PAGE1_OPS[0xE9] = (cpu) => { const a = cpu.addrIndexed(); cpu.b = cpu.opADC8(cpu.b, cpu.read(a)); };
+// ORB idx
+PAGE1_OPS[0xEA] = (cpu) => { const a = cpu.addrIndexed(); cpu.b = cpu.opOR8(cpu.b, cpu.read(a)); };
+// ADDB idx
+PAGE1_OPS[0xEB] = (cpu) => { const a = cpu.addrIndexed(); cpu.b = cpu.opADD8(cpu.b, cpu.read(a)); };
+// LDD idx
+PAGE1_OPS[0xEC] = (cpu) => { const a = cpu.addrIndexed(); cpu.d = cpu.opLD16(cpu.read16(a)); };
+// STD idx
+PAGE1_OPS[0xED] = (cpu) => { const a = cpu.addrIndexed(); const v = cpu.opST16(cpu.d); cpu.write16(a, v); };
+// LDU idx
+PAGE1_OPS[0xEE] = (cpu) => { const a = cpu.addrIndexed(); cpu.u = cpu.opLD16(cpu.read16(a)); };
+// STU idx
+PAGE1_OPS[0xEF] = (cpu) => { const a = cpu.addrIndexed(); const v = cpu.opST16(cpu.u); cpu.write16(a, v); };
+
+// -----------------------------------------------------------------
+// $F0-$FF: Extended addressing
+// -----------------------------------------------------------------
+// SUBB ext
+PAGE1_OPS[0xF0] = (cpu) => { const a = cpu.addrExtended(); cpu.b = cpu.opSUB8(cpu.b, cpu.read(a)); };
+// CMPB ext
+PAGE1_OPS[0xF1] = (cpu) => { const a = cpu.addrExtended(); cpu.opCMP8(cpu.b, cpu.read(a)); };
+// SBCB ext
+PAGE1_OPS[0xF2] = (cpu) => { const a = cpu.addrExtended(); cpu.b = cpu.opSBC8(cpu.b, cpu.read(a)); };
+// ADDD ext
+PAGE1_OPS[0xF3] = (cpu) => { const a = cpu.addrExtended(); cpu.d = cpu.opADD16(cpu.d, cpu.read16(a)); };
+// ANDB ext
+PAGE1_OPS[0xF4] = (cpu) => { const a = cpu.addrExtended(); cpu.b = cpu.opAND8(cpu.b, cpu.read(a)); };
+// BITB ext
+PAGE1_OPS[0xF5] = (cpu) => { const a = cpu.addrExtended(); cpu.opBIT8(cpu.b, cpu.read(a)); };
+// LDB ext
+PAGE1_OPS[0xF6] = (cpu) => { const a = cpu.addrExtended(); cpu.b = cpu.opLD8(cpu.read(a)); };
+// STB ext
+PAGE1_OPS[0xF7] = (cpu) => { const a = cpu.addrExtended(); cpu.write(a, cpu.opST8(cpu.b)); };
+// EORB ext
+PAGE1_OPS[0xF8] = (cpu) => { const a = cpu.addrExtended(); cpu.b = cpu.opEOR8(cpu.b, cpu.read(a)); };
+// ADCB ext
+PAGE1_OPS[0xF9] = (cpu) => { const a = cpu.addrExtended(); cpu.b = cpu.opADC8(cpu.b, cpu.read(a)); };
+// ORB ext
+PAGE1_OPS[0xFA] = (cpu) => { const a = cpu.addrExtended(); cpu.b = cpu.opOR8(cpu.b, cpu.read(a)); };
+// ADDB ext
+PAGE1_OPS[0xFB] = (cpu) => { const a = cpu.addrExtended(); cpu.b = cpu.opADD8(cpu.b, cpu.read(a)); };
+// LDD ext
+PAGE1_OPS[0xFC] = (cpu) => { const a = cpu.addrExtended(); cpu.d = cpu.opLD16(cpu.read16(a)); };
+// STD ext
+PAGE1_OPS[0xFD] = (cpu) => { const a = cpu.addrExtended(); const v = cpu.opST16(cpu.d); cpu.write16(a, v); };
+// LDU ext
+PAGE1_OPS[0xFE] = (cpu) => { const a = cpu.addrExtended(); cpu.u = cpu.opLD16(cpu.read16(a)); };
+// STU ext
+PAGE1_OPS[0xFF] = (cpu) => { const a = cpu.addrExtended(); const v = cpu.opST16(cpu.u); cpu.write16(a, v); };
+
+// Illegal/undefined opcode fallback
+const PAGE1_UNDEFINED = (cpu) => { cpu.instrCycles = 2; };
+
+for (let op = 0; op < 256; op++) {
+    if (PAGE1_OPS[op] === undefined) PAGE1_OPS[op] = PAGE1_UNDEFINED;
+}
+
+// =============================================================================
+// Page 2 ($10xx) and page 3 ($11xx) instructions: one function per opcode,
+// called as PAGE2_OPS[opcode](cpu) / PAGE3_OPS[opcode](cpu) after
+// _execPage2 / _execPage3 has set the base cycle count. Only the opcodes in
+// PAGE2_DEFINED / PAGE3_DEFINED reach them (exec() runs any other byte as
+// the page 1 instruction); the rest of each table does nothing.
+// =============================================================================
+
+const PAGE_NOTHING = () => {};
+const PAGE2_OPS = new Array(256).fill(PAGE_NOTHING);
+const PAGE3_OPS = new Array(256).fill(PAGE_NOTHING);
+
+// Long branches (16-bit relative offset)
+PAGE2_OPS[0x21] = (cpu) => { cpu.branchLong(false); };                          // LBRN
+PAGE2_OPS[0x22] = (cpu) => { cpu.branchLong(!(cpu.cc & (CC_C | CC_Z))); };      // LBHI
+PAGE2_OPS[0x23] = (cpu) => { cpu.branchLong(!!(cpu.cc & (CC_C | CC_Z))); };     // LBLS
+PAGE2_OPS[0x24] = (cpu) => { cpu.branchLong(!(cpu.cc & CC_C)); };               // LBCC/LBHS
+PAGE2_OPS[0x25] = (cpu) => { cpu.branchLong(!!(cpu.cc & CC_C)); };              // LBCS/LBLO
+PAGE2_OPS[0x26] = (cpu) => { cpu.branchLong(!(cpu.cc & CC_Z)); };               // LBNE
+PAGE2_OPS[0x27] = (cpu) => { cpu.branchLong(!!(cpu.cc & CC_Z)); };              // LBEQ
+PAGE2_OPS[0x28] = (cpu) => { cpu.branchLong(!(cpu.cc & CC_V)); };               // LBVC
+PAGE2_OPS[0x29] = (cpu) => { cpu.branchLong(!!(cpu.cc & CC_V)); };              // LBVS
+PAGE2_OPS[0x2A] = (cpu) => { cpu.branchLong(!(cpu.cc & CC_N)); };               // LBPL
+PAGE2_OPS[0x2B] = (cpu) => { cpu.branchLong(!!(cpu.cc & CC_N)); };              // LBMI
+PAGE2_OPS[0x2C] = (cpu) => {                                                    // LBGE
+    cpu.branchLong(((cpu.cc & CC_N) ? 1 : 0) === ((cpu.cc & CC_V) ? 1 : 0));
+};
+PAGE2_OPS[0x2D] = (cpu) => {                                                    // LBLT
+    cpu.branchLong(((cpu.cc & CC_N) ? 1 : 0) !== ((cpu.cc & CC_V) ? 1 : 0));
+};
+PAGE2_OPS[0x2E] = (cpu) => {                                                    // LBGT
+    cpu.branchLong(!(cpu.cc & CC_Z) &&
+        (((cpu.cc & CC_N) ? 1 : 0) === ((cpu.cc & CC_V) ? 1 : 0)));
+};
+PAGE2_OPS[0x2F] = (cpu) => {                                                    // LBLE
+    cpu.branchLong(!!(cpu.cc & CC_Z) ||
+        (((cpu.cc & CC_N) ? 1 : 0) !== ((cpu.cc & CC_V) ? 1 : 0)));
+};
+
+// SWI2
+PAGE2_OPS[0x3F] = (cpu) => {
+    cpu.cc |= CC_E;
+    cpu._saveRegisters('s', 0xFF);
+    cpu.pc = cpu.read16(VEC_SWI2);
+};
+
+// CMPD (compare D register)
+PAGE2_OPS[0x83] = (cpu) => { cpu.opCMP16(cpu.d, cpu.fetchWord()); };                                  // CMPD imm
+PAGE2_OPS[0x93] = (cpu) => { const a = cpu.addrDirect(); cpu.opCMP16(cpu.d, cpu.read16(a)); };       // CMPD dir
+PAGE2_OPS[0xA3] = (cpu) => { const a = cpu.addrIndexed(); cpu.opCMP16(cpu.d, cpu.read16(a)); };      // CMPD idx
+PAGE2_OPS[0xB3] = (cpu) => { const a = cpu.addrExtended(); cpu.opCMP16(cpu.d, cpu.read16(a)); };     // CMPD ext
+
+// LDY
+PAGE2_OPS[0x8E] = (cpu) => { cpu.y = cpu.opLD16(cpu.fetchWord()); };                                  // LDY imm
+PAGE2_OPS[0x9E] = (cpu) => { const a = cpu.addrDirect(); cpu.y = cpu.opLD16(cpu.read16(a)); };       // LDY dir
+PAGE2_OPS[0xAE] = (cpu) => { const a = cpu.addrIndexed(); cpu.y = cpu.opLD16(cpu.read16(a)); };      // LDY idx
+PAGE2_OPS[0xBE] = (cpu) => { const a = cpu.addrExtended(); cpu.y = cpu.opLD16(cpu.read16(a)); };     // LDY ext
+
+// STY
+PAGE2_OPS[0x9F] = (cpu) => { const a = cpu.addrDirect(); const v = cpu.opST16(cpu.y); cpu.write16(a, v); };     // STY dir
+PAGE2_OPS[0xAF] = (cpu) => { const a = cpu.addrIndexed(); const v = cpu.opST16(cpu.y); cpu.write16(a, v); };    // STY idx
+PAGE2_OPS[0xBF] = (cpu) => { const a = cpu.addrExtended(); const v = cpu.opST16(cpu.y); cpu.write16(a, v); };   // STY ext
+
+// CMPY
+PAGE2_OPS[0x8C] = (cpu) => { cpu.opCMP16(cpu.y, cpu.fetchWord()); };                                  // CMPY imm
+PAGE2_OPS[0x9C] = (cpu) => { const a = cpu.addrDirect(); cpu.opCMP16(cpu.y, cpu.read16(a)); };       // CMPY dir
+PAGE2_OPS[0xAC] = (cpu) => { const a = cpu.addrIndexed(); cpu.opCMP16(cpu.y, cpu.read16(a)); };      // CMPY idx
+PAGE2_OPS[0xBC] = (cpu) => { const a = cpu.addrExtended(); cpu.opCMP16(cpu.y, cpu.read16(a)); };     // CMPY ext
+
+// LDS (also arms NMI)
+PAGE2_OPS[0xCE] = (cpu) => { cpu.s = cpu.opLD16(cpu.fetchWord()); cpu.nmiArmed = true; };                                  // LDS imm
+PAGE2_OPS[0xDE] = (cpu) => { const a = cpu.addrDirect(); cpu.s = cpu.opLD16(cpu.read16(a)); cpu.nmiArmed = true; };       // LDS dir
+PAGE2_OPS[0xEE] = (cpu) => { const a = cpu.addrIndexed(); cpu.s = cpu.opLD16(cpu.read16(a)); cpu.nmiArmed = true; };      // LDS idx
+PAGE2_OPS[0xFE] = (cpu) => { const a = cpu.addrExtended(); cpu.s = cpu.opLD16(cpu.read16(a)); cpu.nmiArmed = true; };     // LDS ext
+
+// STS
+PAGE2_OPS[0xDF] = (cpu) => { const a = cpu.addrDirect(); const v = cpu.opST16(cpu.s); cpu.write16(a, v); };     // STS dir
+PAGE2_OPS[0xEF] = (cpu) => { const a = cpu.addrIndexed(); const v = cpu.opST16(cpu.s); cpu.write16(a, v); };    // STS idx
+PAGE2_OPS[0xFF] = (cpu) => { const a = cpu.addrExtended(); const v = cpu.opST16(cpu.s); cpu.write16(a, v); };   // STS ext
+
+// SWI3
+PAGE3_OPS[0x3F] = (cpu) => {
+    cpu.cc |= CC_E;
+    cpu._saveRegisters('s', 0xFF);
+    cpu.pc = cpu.read16(VEC_SWI3);
+};
+
+// CMPU
+PAGE3_OPS[0x83] = (cpu) => { cpu.opCMP16(cpu.u, cpu.fetchWord()); };                                  // CMPU imm
+PAGE3_OPS[0x93] = (cpu) => { const a = cpu.addrDirect(); cpu.opCMP16(cpu.u, cpu.read16(a)); };       // CMPU dir
+PAGE3_OPS[0xA3] = (cpu) => { const a = cpu.addrIndexed(); cpu.opCMP16(cpu.u, cpu.read16(a)); };      // CMPU idx
+PAGE3_OPS[0xB3] = (cpu) => { const a = cpu.addrExtended(); cpu.opCMP16(cpu.u, cpu.read16(a)); };     // CMPU ext
+
+// CMPS
+PAGE3_OPS[0x8C] = (cpu) => { cpu.opCMP16(cpu.s, cpu.fetchWord()); };                                  // CMPS imm
+PAGE3_OPS[0x9C] = (cpu) => { const a = cpu.addrDirect(); cpu.opCMP16(cpu.s, cpu.read16(a)); };       // CMPS dir
+PAGE3_OPS[0xAC] = (cpu) => { const a = cpu.addrIndexed(); cpu.opCMP16(cpu.s, cpu.read16(a)); };      // CMPS idx
+PAGE3_OPS[0xBC] = (cpu) => { const a = cpu.addrExtended(); cpu.opCMP16(cpu.s, cpu.read16(a)); };     // CMPS ext

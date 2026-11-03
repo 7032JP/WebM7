@@ -2718,8 +2718,8 @@ button.hw-lip-reset:active { box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35); }
     border: 1px solid #2e2e34;
 }
 
-/* --- FM77AV 系黒筐体（av = 初代、av2040 = FM77AV20 / FM77AV40）:
-       既定の hw-bar 見た目 = 上記の黒基調 --- */
+/* --- FM77AV 系黒筐体の初代（av）: 部品の配置はここで定める。
+       FM77AV20 / FM77AV40（av2040）の配置は後述の body.ui-skin-av2040 の規則で定める --- */
 body.ui-skin-av .hw-left-power { display: none; }
 /* FM77AV の左ブロック: スピーカーの下に機種名を表示する。 */
 .hw-speaker { display: none; }

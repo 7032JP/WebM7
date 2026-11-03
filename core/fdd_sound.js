@@ -97,7 +97,7 @@ const PROFILE_FM77AV = {
     ejectClickGain:  0.3,
 };
 
-export class FddSound {
+export class DriveNoiseSynth {
     constructor() {
         this._audioCtx         = null;
         this._masterGain       = null;
@@ -158,7 +158,7 @@ export class FddSound {
 
     isEnabled() { return this._enabled; }
 
-    setVolume(v) {
+    setGain(v) {
         this._volume = Math.max(0, Math.min(1, v));
         if (this._masterGain && this._enabled) {
             this._masterGain.gain.value = this._volume;

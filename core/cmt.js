@@ -12,13 +12,22 @@
 const T77_HEADER = "XM7 TAPE IMAGE 0";
 const T77_HEADER_SIZE = 16;
 
-// Main CPU effective clock — used to convert between T77 pulse widths
-// (in CPU cycles via _scale) and WAV sample counts.
-const CMT_CPU_HZ = 1794000;
-// Canonical scale used when capturing writes into T77 pulse widths
-// (T77 width unit ≈ 16 CPU cycles).
-const T77_SAVE_SCALE = 16;
+// The tape advances in master clock periods (8 MHz, see scheduler.js);
+// `_scale` is the number of those per pulse-width unit.
+const TAPE_TICK_HZ = 8000000;
+// Width unit used when recording to T77: 9 us.
+const T77_SAVE_SCALE = 72;
+// Target length of the short pulse for loaded images: 252 us. Images are
+// scaled so that their most common short pulse takes this long, which keeps tapes
+// readable whatever width unit the image was made with.
+const SHORT_PULSE_TICKS = 252 * (TAPE_TICK_HZ / 1000000);
 const T77_MAX_WIDTH = 0x7FFF; // 15-bit width field
+// Serial frame of one tape byte, sent LSB first: start bit (0), the 8 data
+// bits from bit 0, two stop bits (1). Source: FM-7 User's Manual System
+// Specifications, 1.12 (audio cassette interface) and FM-7 User's Manual
+// System Description, 12.8 (data format on cassette tape).
+const FRAME_BITS       = 11;
+const FRAME_STOP_BITS  = 0x3 << 9;
 
 export class CMT {
     constructor() {
@@ -45,7 +54,7 @@ export class CMT {
         // (eject() keeps the buffer).
         this._recording = true;
         this._recPulses = [];   // captured pulses (uint16: bit15 polarity + width)
-        this._recCycles = 0;    // CPU cycles elapsed at current write level
+        this._recCycles = 0;    // ticks elapsed at the current write level
         this._recLevel = 0;     // current cassette write-data level (0/1)
         this._recDataEvents = 0; // write-data transitions seen (real SAVE output);
                                  // 0 means the buffer holds silence only (e.g.
@@ -55,7 +64,7 @@ export class CMT {
     /**
      * Load a T77 tape image with auto byte-order detection.
      */
-    loadT77(buffer) {
+    mountT77(buffer) {
         this._pulses = null;
         this._loaded = false;
         this._eot = false;
@@ -101,8 +110,7 @@ export class CMT {
         // that gives more plausible pulse widths.
         const littleEndian = this._detectByteOrder(view, numPulses);
 
-        // Read ALL pulses — 0x0000 is a gap marker, NOT end-of-tape.
-        // End of tape is the end of the file.
+        // 0x0000 is a gap record; the stream ends at the end of the file.
         this._pulses = new Uint16Array(numPulses);
         let validCount = numPulses;
         for (let i = 0; i < numPulses; i++) {
@@ -144,11 +152,11 @@ export class CMT {
     }
 
     /**
-     * Detect the scale factor (CPU cycles per width unit) from the
+     * Detect the scale factor (ticks per width unit) from the
      * short-pulse cluster of the width distribution.
      */
     _detectScale(validCount) {
-        if (validCount < 100) return 16;
+        if (validCount < 100) return T77_SAVE_SCALE;
 
         // Collect widths, skip zeros (gaps), very large (silence) and very small (noise)
         const widths = [];
@@ -156,7 +164,7 @@ export class CMT {
             const w = this._pulses[i] & 0x7FFF;
             if (w >= 5 && w < 200) widths.push(w);
         }
-        if (widths.length < 100) return 16;
+        if (widths.length < 100) return T77_SAVE_SCALE;
 
         // Estimate the playback scale from the pulse width distribution.
         const hist = new Array(200).fill(0);
@@ -190,7 +198,7 @@ export class CMT {
             widths.sort((a, b) => a - b);
             shortCluster = widths[Math.floor(widths.length * 0.10)];
         }
-        const scale = 416 / shortCluster;
+        const scale = SHORT_PULSE_TICKS / shortCluster;
         widths.sort((a, b) => a - b);
         const longCluster = (widths[Math.floor(widths.length * 0.60)] +
                              widths[Math.floor(widths.length * 0.80)]) / 2;
@@ -206,7 +214,7 @@ export class CMT {
             const raw = this._pulses[i];
             const pol = (raw & 0x8000) ? 'H' : 'L';
             const w = raw & 0x7FFF;
-            lines.push(`  [${i}] ${pol} w=${w} (${(w * this._scale)|0}cy)`);
+            lines.push(`  [${i}] ${pol} w=${w} (${(w * this._scale)|0}t)`);
         }
         // Sample from data section
         const mid = Math.min(validCount - 1, Math.floor(validCount * 0.3));
@@ -216,7 +224,7 @@ export class CMT {
                 const raw = this._pulses[i];
                 const pol = (raw & 0x8000) ? 'H' : 'L';
                 const w = raw & 0x7FFF;
-                lines.push(`  [${i}] ${pol} w=${w} (${(w * this._scale)|0}cy)`);
+                lines.push(`  [${i}] ${pol} w=${w} (${(w * this._scale)|0}t)`);
             }
         }
         // One-line summary; the per-pulse dump is optional.
@@ -225,8 +233,8 @@ export class CMT {
     }
 
     /**
-     * Advance tape by CPU cycles with proper timing.
-     * The scale factor converts T77 pulse widths to CPU cycles.
+     * Advance the tape by master clock ticks (8 MHz, see scheduler.js).
+     * The scale factor converts T77 pulse widths to ticks.
      * Speed is controlled by the simulator running more cycles per frame.
      */
     step(cycles) {
@@ -283,9 +291,9 @@ export class CMT {
         return this._level ? 0x80 : 0x00;
     }
 
-    writeControl(value) {
+    setControl(value) {
         const newMotor = (value & 0x02) !== 0;
-        const writeBit = (value & 0x01);   // cassette WRITE data (recording)
+        const recordLevel = (value & 0x01);   // cassette WRITE data (recording)
 
         if (newMotor && !this._motor) {
             console.log(`[CMT] Motor ON`);
@@ -295,26 +303,26 @@ export class CMT {
             if (this._recording) {
                 // Start a fresh timing window at the current write level.
                 this._recCycles = 0;
-                this._recLevel = writeBit;
+                this._recLevel = recordLevel;
             }
         } else if (!newMotor && this._motor) {
             console.log(`[CMT] Motor OFF`);
             // Flush the pending pulse at motor stop.
             if (this._recording) this._emitRecPulse(this._recLevel, this._recCycles);
             this._recCycles = 0;
-        } else if (newMotor && this._recording && writeBit !== this._recLevel) {
+        } else if (newMotor && this._recording && recordLevel !== this._recLevel) {
             // Write-data transition while recording: emit the pulse just held.
             this._recDataEvents++;
             this._emitRecPulse(this._recLevel, this._recCycles);
             this._recCycles = 0;
-            this._recLevel = writeBit;
+            this._recLevel = recordLevel;
         }
 
         this._motor = newMotor;
     }
 
     /**
-     * Append a captured pulse (level held for `cycles` CPU cycles) to the
+     * Append a captured pulse (level held for `cycles` ticks) to the
      * recording buffer, splitting widths that exceed the 15-bit field.
      */
     _emitRecPulse(level, cycles) {
@@ -430,7 +438,7 @@ export class CMT {
     /**
      * Render a pulse list to a mono 8-bit PCM WAV file (square-wave carrier).
      * Used by the .wav export of the recording; the output can be loaded
-     * back with loadWAV.
+     * back with mountWave.
      *
      * @param {number} [sampleRate=48000]
      * @param {number[]} [pulses] override pulse list (defaults to recording)
@@ -439,11 +447,12 @@ export class CMT {
      */
     exportWAV(sampleRate = 48000, pulses, scale = T77_SAVE_SCALE) {
         const arr = pulses || this._recordingSnapshot();
-        const cyclesPerSample = CMT_CPU_HZ / sampleRate;
+        const cyclesPerSample = TAPE_TICK_HZ / sampleRate;
 
         // Build the PCM sample stream from pulse run-lengths.
         const samples = [];
-        const HI = 0xC0, LO = 0x40; // 8-bit unsigned around 0x80 mid
+        // Square wave in 8-bit unsigned PCM: centre $80, $60 to either side.
+        const HI = 0x80 + 0x60, LO = 0x80 - 0x60;
         const pushRun = (v, widthUnits) => {
             const n = Math.max(1, Math.round(widthUnits * scale / cyclesPerSample));
             for (let s = 0; s < n; s++) samples.push(v);
@@ -503,7 +512,7 @@ export class CMT {
      *
      * @returns {boolean}
      */
-    loadWAV(buffer) {
+    mountWave(buffer) {
         this._pulses = null;
         this._loaded = false;
         this._eot = false;
@@ -591,7 +600,7 @@ export class CMT {
             mode = `${dbg.okBlocks} blocks OK, ${dbg.badBlocks} BAD`;
         } else {
             this._pulses = Uint16Array.from(slicePulses);
-            this._scale = CMT_CPU_HZ / sampleRate;  // 1 width unit = 1 sample frame
+            this._scale = TAPE_TICK_HZ / sampleRate;  // 1 width unit = 1 sample frame
             this._wavQuality = { mode: 'slice', okBlocks: sliceQ.ok, badBlocks: sliceQ.bad };
             mode = `${sliceQ.ok} blocks OK, ${sliceQ.bad} BAD`;
         }
@@ -697,7 +706,7 @@ export class CMT {
      * centre with a one-pole low-pass (recentres drifting/asymmetric half-
      * cycles) and auto-calibrates the hysteresis band by trying several bands
      * and keeping the one whose blocks validate best.
-     * Widths stay in sample-frame units (scale = CMT_CPU_HZ / sampleRate).
+     * Widths stay in sample-frame units (scale = TAPE_TICK_HZ / sampleRate).
      * @param {Int16Array} smp  @param {number} rate
      * @returns {number[]} uint16 pulse list
      */
@@ -854,12 +863,17 @@ export class CMT {
      * length byte.
      */
     _wavCleanLeaders(decoded) {
-        // Strip pre-leader garbage before the first run of three 0xFF.
-        let ls = -1;
-        for (let j = 0; j < decoded.length - 2; j++) {
-            if (decoded[j] === 0xFF && decoded[j + 1] === 0xFF && decoded[j + 2] === 0xFF) { ls = j; break; }
+        // Each block is its $FF leader followed by the $01 $3C marker. Find
+        // the first marker that has leader bytes in front of it, step back
+        // to where that leader begins, and drop what was decoded before it.
+        let start = 0;
+        for (let j = 1; j + 1 < decoded.length; j++) {
+            if (decoded[j] !== 0x01 || decoded[j + 1] !== 0x3C || decoded[j - 1] !== 0xFF) continue;
+            start = j;
+            while (start > 0 && decoded[start - 1] === 0xFF) start--;
+            break;
         }
-        const d = ls > 0 ? decoded.slice(ls) : decoded.slice();
+        const d = decoded.slice(start);
         // Map out block byte-ranges.
         const ranges = [];
         let bk = 0;
@@ -888,6 +902,9 @@ export class CMT {
      * of type 0x00 or 0x01. Returns the number of good and bad blocks.
      * @returns {{ok:number, bad:number}}
      */
+    // Block layout: gap, $01 $3C, block type, length, data, checksum. Source:
+    // FM-7 User's Manual System Description, 12.8 (data format on cassette
+    // tape); F-BASIC Grammar, chapter 2 (block format figure).
     _wavVerifyBlocks(d) {
         let i = 0, ok = 0, bad = 0;
         while (i < d.length - 4) {
@@ -960,17 +977,19 @@ export class CMT {
         return false;
     }
 
-    /** Encode one byte as an FM-7 serial frame of canonical pulses. */
+    /**
+     * Encode one byte as an FM-7 serial frame of canonical pulses: the 11
+     * frame bits go out from bit 0 up, each as one cycle (high half then
+     * low half) of the short width for 0 or the long width for 1.
+     */
     _wavEncodeByte(val, pulses) {
         const S = CMT._TICK_SHORT, L = CMT._TICK_LONG;
-        const addBit = (bit) => {
-            const w = bit ? L : S;
-            pulses.push(0x8000 | w);   // high half-cycle
-            pulses.push(w);            // low half-cycle
-        };
-        addBit(0);                                         // start bit
-        for (let b = 0; b < 8; b++) addBit((val >> b) & 1);
-        addBit(1); addBit(1);                              // 2 stop bits
+        let frame = ((val & 0xFF) << 1) | FRAME_STOP_BITS;
+        for (let n = 0; n < FRAME_BITS; n++, frame >>= 1) {
+            const w = (frame & 1) ? L : S;
+            pulses.push(0x8000 | w);
+            pulses.push(w);
+        }
     }
 
     /** Append a run of silence (gap) pulses (seconds converted at 9 us per width unit). */

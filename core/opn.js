@@ -26,12 +26,10 @@ const MASTER_CLOCK  = 1228800;
 const OPN_TIMER_CLOCK_AV = 1228800;
 const SAMPLE_RATE   = 44100;
 
-const NUM_CHANNELS  = 3;
 
 // ---------------------------------------------------------------------------
 // Envelope phase identifiers
 // ---------------------------------------------------------------------------
-const ENV_PHASE_NEXT    = 0;
 const ENV_PHASE_ATTACK  = 1;
 const ENV_PHASE_DECAY   = 2;
 const ENV_PHASE_SUSTAIN = 3;
@@ -47,14 +45,11 @@ const SINE_TABLE_SIZE    = 1 << SINE_INDEX_BITS;    // 1024
 const PHASE_EXTRA_BITS   = 2;
 const CLOCK_RATIO_BITS   = 8;
 const ENV_BITS           = 16;
-const ENV_COUNTER_BITS   = 18;
 const LFO_BITS           = 8;
 const LFO_TABLE_SIZE     = 1 << LFO_BITS;           // 256
 const TOTAL_LEVEL_BITS   = 7;
 const TOTAL_LEVEL_COUNT  = 1 << TOTAL_LEVEL_BITS;   // 128
-const TOTAL_LEVEL_QUARTER = TOTAL_LEVEL_COUNT / 4;   // 32
 const LOG_TO_LIN_SIZE    = 0x1000 * 2;               // 8192
-const OUTPUT_SHIFT       = 3;
 const OUTPUT_SCALE       = 16384;
 const PI_CONST           = Math.PI;
 
@@ -209,18 +204,6 @@ function buildAttackTable() {
 }
 const ATTACK_CURVE_TABLE = buildAttackTable();
 
-// SSG-EG envelope control table
-// [ssg_type & 7] -> [[vector per phase], [offset per phase]]
-const SSG_ENV_TABLE = [
-    [[1, 1, 1], [0, 0, 0]],
-    [[0, 1, 1], [0, 0, 0]],
-    [[0,-1, 0], [0, 0, 0]],
-    [[0, 1, 1], [0, 0, 0]],
-    [[-1, 0, 0], [1023, 1023, 1023]],
-    [[0, 0, 0], [1023, 1023, 1023]],
-    [[0, 1, 0], [1023, 1023, 1023]],
-    [[0, 0, 0], [1023, 1023, 1023]],
-];
 
 // ---------------------------------------------------------------------------
 // Computed waveform and conversion tables (built once at module load)
@@ -323,6 +306,8 @@ class SynthChip {
         }
     }
 
+    // Part of the fmgen port (see the file header and LICENSE-fmgen.md): the
+    // clock ratio is folded into the multiplier table.
     _buildDerivedTables() {
         const dt2Coefficients = [1.0, 1.414, 1.581, 1.732];
         for (let h = 0; h < 4; h++) {
@@ -385,7 +370,7 @@ class FMOperator {
         this.ssgEnvState = 0;
 
         this.keyScaleAdjust = 0;
-        this.envPhase = ENV_PHASE_OFF;
+        this.egStage = ENV_PHASE_OFF;
         this.ampModSource = lfoAmpTable[0][0];
         this.lfoSensitivity = 0;
 
@@ -422,7 +407,7 @@ class FMOperator {
     }
 
     isActive() {
-        return this.envPhase - ENV_PHASE_OFF;
+        return this.egStage - ENV_PHASE_OFF;
     }
 
     currentOutput() { return this.outputVal; }
@@ -462,7 +447,7 @@ class FMOperator {
     keyOn() {
         if (!this.keyPressed) {
             this.keyPressed = true;
-            if (this.envPhase === ENV_PHASE_OFF || this.envPhase === ENV_PHASE_RELEASE) {
+            if (this.egStage === ENV_PHASE_OFF || this.egStage === ENV_PHASE_RELEASE) {
                 if (this.ssgMode & 8) {
                     this.ssgMode &= ~0x10;
                     this.ssgMode |= (this.ssgMode & 4) << 2;
@@ -516,7 +501,7 @@ class FMOperator {
             this.keyScaleAdjust = this.keyNote >> (3 - this.keyScale);
             this.totalLevelScaled = this.silenced ? 0x3ff : this.totalLevel * 8;
 
-            switch (this.envPhase) {
+            switch (this.egStage) {
                 case ENV_PHASE_ATTACK:
                     this._configureEnvRate(this.attackRate ? _clampLow(63, this.attackRate + this.keyScaleAdjust) : 0);
                     break;
@@ -562,10 +547,11 @@ class FMOperator {
     }
 
     _advanceEnvelope() {
-        // Reset counter using ratio-based timing
+        // Part of the fmgen port (see the file header and LICENSE-fmgen.md):
+        // the counter reload is scaled by the clock ratio.
         this.envCounter = Math.floor((2047 * 3 * (1 << CLOCK_RATIO_BITS)) / this.chip.clockRatio);
 
-        if (this.envPhase === ENV_PHASE_ATTACK) {
+        if (this.egStage === ENV_PHASE_ATTACK) {
             const c = ATTACK_CURVE_TABLE[this.envRate][this.envPatternIdx & 7];
             if (c >= 0) {
                 this.envLevel -= 1 + (this.envLevel >> c);
@@ -573,15 +559,15 @@ class FMOperator {
                     this._updatePhase(ENV_PHASE_DECAY);
             }
         } else {
-            if (!this.ssgMode || (this.envPhase === ENV_PHASE_RELEASE)) {
+            if (!this.ssgMode || (this.egStage === ENV_PHASE_RELEASE)) {
                 this.envLevel += ENV_RATE_PATTERN[this.envRate][this.envPatternIdx & 7];
                 if (this.envLevel >= this.envLevelNextThreshold)
-                    this._updatePhase(this.envPhase + 1);
+                    this._updatePhase(this.egStage + 1);
             } else {
                 this.envLevel += 4 * ENV_RATE_PATTERN[this.envRate][this.envPatternIdx & 7];
                 if (this.envLevel >= this.envLevelNextThreshold) {
-                    if (this.envPhase !== ENV_PHASE_OFF)
-                        this._updatePhase(this.envPhase + 1);
+                    if (this.egStage !== ENV_PHASE_OFF)
+                        this._updatePhase(this.egStage + 1);
                 }
             }
         }
@@ -596,13 +582,13 @@ class FMOperator {
     }
 
     // --- Phase Generator ---
-    _nextPhase() {
+    _stepPhase() {
         const ret = this.phaseAccum >>> 0;
         this.phaseAccum = (this.phaseAccum + this.phaseDelta) >>> 0;
         return ret;
     }
 
-    _nextPhaseLFO() {
+    _stepPhaseVibrato() {
         const ret = this.phaseAccum >>> 0;
         this.phaseAccum = (this.phaseAccum + this.phaseDelta +
             ((this.phaseDeltaLFO * this.chip.getPhaseModValue()) >> 5)) >>> 0;
@@ -620,7 +606,7 @@ class FMOperator {
         this._tickEnvelope();
         this.prevSample = this.outputVal;
 
-        let pgin = this._nextPhase() >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
+        let pgin = this._stepPhase() >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
         pgin += inp >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS - (2 + OUTPUT_TO_ENV_SHIFT));
         this.outputVal = this._expLookup(this.envOutput + logSinTable[pgin & (SINE_TABLE_SIZE - 1)]);
 
@@ -631,7 +617,7 @@ class FMOperator {
     generateSampleLFO(inp) {
         this._tickEnvelope();
 
-        let pgin = this._nextPhaseLFO() >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
+        let pgin = this._stepPhaseVibrato() >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
         pgin += inp >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS - (2 + OUTPUT_TO_ENV_SHIFT));
         this.outputVal = this._expLookup(
             this.envOutput + logSinTable[pgin & (SINE_TABLE_SIZE - 1)] + this.ampModSource[this.chip.getAmpModLevel()]
@@ -647,7 +633,7 @@ class FMOperator {
         const combined = this.outputVal + this.prevSample;
         this.prevSample = this.outputVal;
 
-        let pgin = this._nextPhase() >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
+        let pgin = this._stepPhase() >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
         if (fb < 31) {
             pgin += ((combined << (1 + OUTPUT_TO_ENV_SHIFT)) >> fb) >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
         }
@@ -663,7 +649,7 @@ class FMOperator {
         const combined = this.outputVal + this.prevSample;
         this.prevSample = this.outputVal;
 
-        let pgin = this._nextPhaseLFO() >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
+        let pgin = this._stepPhaseVibrato() >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
         if (fb < 31) {
             pgin += ((combined << (1 + OUTPUT_TO_ENV_SHIFT)) >> fb) >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
         }
@@ -686,7 +672,7 @@ class FMOperator {
                 this.totalLevel = this.totalLevelLatched;
                 if ((this.attackRate + this.keyScaleAdjust) < 62) {
                     this._configureEnvRate(this.attackRate ? _clampLow(63, this.attackRate + this.keyScaleAdjust) : 0);
-                    this.envPhase = ENV_PHASE_ATTACK;
+                    this.egStage = ENV_PHASE_ATTACK;
                     break;
                 }
                 // fall through to decay
@@ -696,7 +682,7 @@ class FMOperator {
                     this.envLevel = 0;
                     this.envLevelNextThreshold = this.sustainLevel * 8;
                     this._configureEnvRate(this.decayRate ? _clampLow(63, this.decayRate + this.keyScaleAdjust) : 0);
-                    this.envPhase = ENV_PHASE_DECAY;
+                    this.egStage = ENV_PHASE_DECAY;
                     break;
                 }
                 // fall through to sustain
@@ -704,18 +690,18 @@ class FMOperator {
             case ENV_PHASE_SUSTAIN:
                 if (this.ssgMode && (this.sustainLevel >= 124)) {
                     this.envLevel = this.envLevelNextThreshold = 0x400;
-                    this.envPhase = ENV_PHASE_RELEASE;
+                    this.egStage = ENV_PHASE_RELEASE;
                 } else {
                     this.envLevel = this.sustainLevel * 8;
                     this.envLevelNextThreshold = 0x400;
                     this._configureEnvRate(this.sustainRate ? _clampLow(63, this.sustainRate + this.keyScaleAdjust) : 0);
-                    this.envPhase = ENV_PHASE_SUSTAIN;
+                    this.egStage = ENV_PHASE_SUSTAIN;
                     break;
                 }
                 // fall through to release
             // falls through
             case ENV_PHASE_RELEASE:
-                if (this.envPhase === ENV_PHASE_ATTACK ||
+                if (this.egStage === ENV_PHASE_ATTACK ||
                     (this.envLevel < (this.ssgMode ? 0x400 : ENV_QUIET_LEVEL))) {
                     if (this.ssgMode) {
                         if (this.ssgMode & 0x10) {
@@ -725,7 +711,7 @@ class FMOperator {
                     }
                     this.envLevelNextThreshold = 0x400;
                     this._configureEnvRate(_clampLow(63, this.releaseRate + this.keyScaleAdjust));
-                    this.envPhase = ENV_PHASE_RELEASE;
+                    this.egStage = ENV_PHASE_RELEASE;
                     break;
                 } else if (this.ssgMode) {
                     if ((this.ssgMode & 3) !== 2) {
@@ -735,11 +721,11 @@ class FMOperator {
                     if (this.ssgMode & 1) {
                         // one shot
                         this._configureEnvRate(0);
-                        this.envPhase = ENV_PHASE_HOLD;
+                        this.egStage = ENV_PHASE_HOLD;
                     } else {
                         // repeat
                         this._configureEnvRate(this.attackRate ? _clampLow(63, this.attackRate + this.keyScaleAdjust) : 0);
-                        this.envPhase = ENV_PHASE_ATTACK;
+                        this.egStage = ENV_PHASE_ATTACK;
                     }
                     if (this.ssgMode & 2) {
                         // alternate
@@ -758,7 +744,7 @@ class FMOperator {
                 this.envLevelNextThreshold = ENV_QUIET_LEVEL;
                 this._refreshEnvOutput();
                 this._configureEnvRate(0);
-                this.envPhase = ENV_PHASE_OFF;
+                this.egStage = ENV_PHASE_OFF;
                 break;
         }
     }
@@ -769,9 +755,9 @@ class FMOperator {
 const FM_CARRIER_MASK = [0x08, 0x08, 0x08, 0x08, 0x0a, 0x0e, 0x0e, 0x0f];
 
 // ---------------------------------------------------------------------------
-// FMChannel: 4-operator FM channel
+// OpnVoice: 4-operator FM channel
 // ---------------------------------------------------------------------------
-class FMChannel {
+class OpnVoice {
     constructor() {
         this.op = [new FMOperator(), new FMOperator(), new FMOperator(), new FMOperator()];
         this.fb = 31;   // feedback shift (from FEEDBACK_SHIFT_TABLE)
@@ -811,6 +797,12 @@ class FMChannel {
         for (let i = 0; i < 4; i++) this.op[i].needsRecalc = true;
     }
 
+    /** True while any operator's envelope is not OFF (bit 0 of prepareForRender()). */
+    isActive() {
+        const op = this.op;
+        return (op[0].isActive() | op[1].isActive() | op[2].isActive() | op[3].isActive()) !== 0;
+    }
+
     reset() {
         for (let i = 0; i < 4; i++) this.op[i].reset();
     }
@@ -820,7 +812,7 @@ class FMChannel {
         this.algorithm = algo;
     }
 
-    keyControl(key) {
+    setKeyOnSlots(key) {
         if (key & 0x1) this.op[0].keyOn(); else this.op[0].keyOff();
         if (key & 0x2) this.op[1].keyOn(); else this.op[1].keyOff();
         if (key & 0x4) this.op[2].keyOn(); else this.op[2].keyOff();
@@ -982,19 +974,134 @@ function clampRange(v, hi, lo) {
 // OPN Class (YM2203)
 // =============================================================================
 
+// -----------------------------------------------------------------------------
+// YM2203 timers (YM2203 data sheet, registers $24-$27)
+// -----------------------------------------------------------------------------
+
+/** Master clocks per timer A count for prescaler setting 0-2 ($2D / $2E / $2F). */
+const TIMER_A_UNIT = [72, 36, 24];
+
+/** One timer: counts (range - value) units of `scale` timer A counts, then overflows. */
+class OpnTimer {
+    constructor(range, scale) {
+        this.range = range;    // 1024 for timer A, 256 for timer B
+        this.scale = scale;    // 1 for timer A, 16 for timer B
+        this.reset();
+    }
+
+    reset() {
+        this.value = 0;        // NA / NB
+        this.load = false;     // $27 LOAD: counting
+        this.flagEnable = false; // $27 ENABLE: an overflow sets the flag
+        this.elapsed = 0;      // master clocks counted in this period
+        this.length = 0;       // master clocks of this period
+    }
+
+    /** Period in master clocks with `unit` clocks per timer A count. */
+    periodFor(unit) {
+        return unit * this.scale * (this.range - this.value);
+    }
+
+    /** $27 LOAD written: 0 -> 1 starts from the set value; 0 stops. */
+    setLoad(on, unit) {
+        if (on && !this.load) {
+            this.length = this.periodFor(unit);
+            this.elapsed = 0;
+        }
+        this.load = on;
+    }
+
+    /** Count `clocks`; returns the overflows. Each one restarts from the value set now. */
+    advance(clocks, unit) {
+        if (!this.load || this.length <= 0) return 0;
+        this.elapsed += clocks;
+        let overflows = 0;
+        while (this.elapsed >= this.length) {
+            this.elapsed -= this.length;
+            this.length = this.periodFor(unit);
+            overflows++;
+        }
+        return overflows;
+    }
+}
+
+// $27, timer control and channel 3 mode (YM2203 data sheet, register $27;
+// FM77AV BIOS manual appendix 3 (2)). Each timer owns one bit of three
+// pairs, timer B one place above timer A:
+//   bits 1-0  LOAD    the timer counts while the bit is 1
+//   bits 3-2  ENABLE  an overflow sets the timer's status flag
+//   bits 5-4  RESET   1 clears the timer's status flag
+// and bits 7-6 select the mode of channel 3.
+const CTRL_LOAD_SHIFT = 0;
+const CTRL_ENABLE_SHIFT = 2;
+const CTRL_RESET_SHIFT = 4;
+const CTRL_CH3_MODE_SHIFT = 6;
+
+// Channel 3 modes. Any mode but the normal one gives the operators of
+// channel 3 their own F-numbers ($A8-$AE); the CSM mode also keys the
+// channel on at each timer A overflow (YM2203 data sheet, register $27).
+const CH3_MODE_NORMAL = 0;
+const CH3_MODE_CSM = 2;
+
+// Timer counts (YM2203 data sheet, registers $24-$26): NA has 10 bits,
+// the upper 8 in $24 and the lower 2 in $25; NB is the 8 bits of $26.
+// register -> [timer (0 = A, 1 = B), lowest count bit it sets, bit width]
+const TIMER_COUNT_FIELDS = new Map([
+    [0x24, [0, 2, 8]],
+    [0x25, [0, 0, 2]],
+    [0x26, [1, 0, 8]],
+]);
+
+// Operator parameters $30-$9E by the upper hex digit of the register
+// (YM2203 data sheet, register map). Each takes the operator, the value
+// written and whether the operator belongs to the channel keyed by CSM.
+const OPERATOR_WRITERS = [];
+OPERATOR_WRITERS[0x3] = (op, v) => {                 // DT, MULTI
+    op.writeDT((v >> 4) & 7);
+    op.writeMUL(v & 0x0F);
+};
+OPERATOR_WRITERS[0x4] = (op, v, csmKeyed) => op.writeTL(v & 0x7F, csmKeyed); // TL
+OPERATOR_WRITERS[0x5] = (op, v) => {                 // KS, AR
+    op.writeKS(v >> 6);
+    op.writeAR((v & 0x1F) * 2);
+};
+OPERATOR_WRITERS[0x6] = (op, v) => {                 // DR
+    op.writeDR((v & 0x1F) * 2);
+    op.writeAMON(false);    // the YM2203 has no amplitude modulation
+};
+OPERATOR_WRITERS[0x7] = (op, v) => op.writeSR((v & 0x1F) * 2); // SR
+OPERATOR_WRITERS[0x8] = (op, v) => {                 // SL, RR
+    op.writeSL(SUSTAIN_LEVEL_TABLE[v >> 4]);
+    op.writeRR((v & 0x0F) * 4 + 2);
+};
+OPERATOR_WRITERS[0x9] = (op, v) => op.writeSSGEG(v & 0x0F); // SSG-EG
+
+// Register writes by the upper hex digit of the register (YM2203 data
+// sheet, register map): $0x the SSG, $2x mode and timers, $3x-$9x
+// operator parameters, $Ax F-numbers, $Bx feedback and algorithm. The
+// other digits hold no register on the YM2203; writing them does nothing.
+const REGISTER_GROUPS = new Array(16).fill(null);
+REGISTER_GROUPS[0x0] = (opn, reg, v) => opn._ssg._writeReg(reg, v);
+REGISTER_GROUPS[0x2] = (opn, reg, v) => opn._writeModeRegister(reg, v);
+for (let digit = 0x3; digit <= 0x9; digit++) {
+    REGISTER_GROUPS[digit] = (opn, reg, v) => opn._writeOperatorRegister(reg, v);
+}
+REGISTER_GROUPS[0xA] = (opn, reg, v) => opn._writeFrequencyRegister(reg, v);
+REGISTER_GROUPS[0xB] = (opn, reg, v) => opn._writeVoiceRegister(reg, v);
+
 export class OPN {
     constructor() {
         this._chip = new SynthChip();
 
         // FM channels
-        this._ch = [new FMChannel(), new FMChannel(), new FMChannel()];
+        this._ch = [new OpnVoice(), new OpnVoice(), new OpnVoice()];
         for (let i = 0; i < 3; i++) {
             this._ch[i].assignChip(this._chip);
         }
         this._csmch = this._ch[2];
 
         // Embedded SSG section. Receives YM2203 register writes 0x00-0x0F via
-        // _writeRegister() and contributes one mixed sample per OPN sample
+        // _storeRegister() and contributes one mixed sample per OPN sample
         // tick in _renderSamples().
         this._ssg = new PSGCore();
 
@@ -1003,14 +1110,12 @@ export class OPN {
 
         // F-number registers
         this._fnum = [0, 0, 0];
-        this._fnum2 = new Uint8Array(6); // [0..2] = normal, [3..5] = ch3 special high
+        this._fnumHighLatch = new Uint8Array(6); // [0..2] = $A4-$A6, [3..5] = $AC-$AE
         this._fnum3 = [0, 0, 0];
 
         // State
-        this._status = 0;
-        this._regtc = 0;        // Timer control register ($27) bits 6-7
+        this._ch3Mode = CH3_MODE_NORMAL;   // $27 bits 7-6
         this._prescale = 0;     // Current prescaler index
-        this._prescalerScale = 6; // Timer scale multiplier (6/3/2 for ÷6/÷3/÷2)
 
         // Clock/rate
         this._clock = MASTER_CLOCK;
@@ -1026,31 +1131,17 @@ export class OPN {
         this._mixdelta = 0;
         this._mb = [0, 0, 0, 0];
 
-        // Ring buffer for per-channel output
-        this._rcnt = 0;
-        this._rbuf = [
-            new Int32Array(512),
-            new Int32Array(512),
-            new Int32Array(512),
-        ];
+        // Timers
+        this._timerUnit = TIMER_A_UNIT[0];
+        this._timerA = new OpnTimer(1024, 1);
+        this._timerB = new OpnTimer(256, 16);
+        this._timers = [this._timerA, this._timerB];   // in the order of the $27 bits
+        this._timerFlags = 0;         // bit 0: timer A overflow, bit 1: timer B overflow
 
-        // Timers keep separate "loaded" and "active" periods; the active
-        // period is recomputed from the reload value at each overflow.
-        this._timerA = 0;
-        this._timerB = 0;
-        this._timerACount = 0;
-        this._timerBCount = 0;
-        this._timerAPeriod = 0;       // Active period (used for current count cycle)
-        this._timerBPeriod = 0;
-        this._timerAEn = false;
-        this._timerBEn = false;
-        this._timerAIRQ = false;
-        this._timerBIRQ = false;
-
-        // Timer clock ratio: OPN_TIMER_CLOCK_AV / CPU clock.
-        // Recomputed in _recomputeTimerRatio() when CPU clock or AV mode changes.
+        // Timer clock ratio: OPN_TIMER_CLOCK_AV / tick rate (FM77AV mode).
+        // Recomputed in _recomputeTimerRatio() when the tick rate or AV mode changes.
         this._isAV = false;
-        this._cpuHz = 0;
+        this._tickHz = 0;
         this._timerClockRatio = 1.0;
 
         // Audio output
@@ -1062,13 +1153,18 @@ export class OPN {
         this._sampleBuf = new Float32Array(2048);
         this._sampleLen = 0;
 
-        // CPU cycles accumulator — step() receives CPU cycles,
-        // not OPN clock cycles, so use CPU clock for sample timing.
-        this._cyclesPerSample = 1794000 / SAMPLE_RATE;  // default FM-7
+        // Tick accumulator for sample timing. step() receives ticks at the
+        // rate given to setTickRate(); one output sample is produced every
+        // _cyclesPerSample ticks.
+        this._cyclesPerSample = 0;   // ticks per output sample, set by setTickRate()
         this._fmAccum = 0;
-
-        // Address latch (for external register write protocol)
-        this._addrLatch = 0;
+        // Samples step() has counted but not made yet. They are made in one
+        // call by renderPendingSamples(), before anything that changes the
+        // sound (register writes, the CSM key-on, the tick rate) and before
+        // the buffer is read, so each one still comes out of the state it
+        // had at its own time.
+        this._pendingSamples = 0;
+        this._renderTmp = new Float64Array(1024);
 
         // Register file for readback
         this._regs = new Uint8Array(256);
@@ -1091,25 +1187,28 @@ export class OPN {
 
     /**
      * Set FM77AV mode. The timer count is scaled by the ratio of the OPN
-     * timer clock to the CPU clock.
+     * timer clock to the tick rate (the master clock).
      */
     setAVMode(isAV) {
         this._isAV = isAV;
         this._recomputeTimerRatio();
     }
 
-    setCPUClock(hz) {
-        this._cpuHz = hz;
+    /** Rate of the time units passed to step() (master clock periods). */
+    setTickRate(hz) {
+        this.renderPendingSamples();
+        this._tickHz = hz;
         this._cyclesPerSample = hz / SAMPLE_RATE;
-        this._ssg.setCPUClock(hz);
+        this._ssg.setTickRate(hz);
         this._recomputeTimerRatio();
     }
 
     _recomputeTimerRatio() {
-        // In FM77AV mode, CPU cycles are converted to timer cycles by the clock
-        // ratio; otherwise they are counted as they are.
-        if (this._isAV && this._cpuHz > 0) {
-            this._timerClockRatio = OPN_TIMER_CLOCK_AV / this._cpuHz;
+        // In FM77AV mode the timers are fed master clock periods (ticks),
+        // scaled to the OPN timer clock by this ratio; otherwise they are
+        // fed CPU cycles as they are.
+        if (this._isAV && this._tickHz > 0) {
+            this._timerClockRatio = OPN_TIMER_CLOCK_AV / this._tickHz;
         } else {
             this._timerClockRatio = 1.0;
         }
@@ -1132,19 +1231,10 @@ export class OPN {
 
     _configurePrescaler(p) {
         const dividers = [[6, 4], [3, 2], [2, 1]];
-        const timerScales = [6, 3, 2];
         const lfoRateDivisors = [109, 78, 72, 68, 63, 45, 9, 6];
 
         if (this._prescale !== p) {
             this._prescale = p;
-            this._prescalerScale = timerScales[p];
-            // Recompute active timer periods on prescaler change
-            if (this._timerAEn) {
-                this._timerAPeriod = 12 * this._prescalerScale * (1024 - this._timerA);
-            }
-            if (this._timerBEn) {
-                this._timerBPeriod = 192 * this._prescalerScale * (256 - this._timerB);
-            }
             const fmclock = Math.floor(this._clock / dividers[p][0] / 12);
 
             if (this._interpolation) {
@@ -1182,42 +1272,35 @@ export class OPN {
 
     reset() {
         this._regs.fill(0);
-        this._addrLatch = 0;
-        this._status = 0;
-        this._regtc = 0;
+        this._ch3Mode = CH3_MODE_NORMAL;
 
-        this._timerA = 0;
-        this._timerB = 0;
-        this._timerACount = 0;
-        this._timerBCount = 0;
-        this._timerAPeriod = 0;
-        this._timerBPeriod = 0;
-        this._timerAEn = false;
-        this._timerBEn = false;
-        this._timerAIRQ = false;
-        this._timerBIRQ = false;
+        this._timerA.reset();
+        this._timerB.reset();
+        this._timerFlags = 0;
+        this._timerUnit = TIMER_A_UNIT[0];
 
-        // BUSY flag countdown in CPU cycles (set in writeReg()).
+        // BUSY countdown in the units _advanceTimers() receives (ticks in
+        // FM77AV mode, CPU cycles otherwise). Set in writeReg().
         this._busyCycles = 0;
 
         this._fnum = [0, 0, 0];
-        this._fnum2.fill(0);
+        this._fnumHighLatch.fill(0);
         this._fnum3 = [0, 0, 0];
 
         this._mixdelta = 0;
         this._mb = [0, 0, 0, 0];
         this._fmAccum = 0;
+        // Counted samples are dropped with the buffer below.
+        this._pendingSamples = 0;
 
         // Reset registers
         this._configurePrescaler(0);
-        for (let i = 0x20; i < 0x28; i++) this._writeRegister(i, 0);
-        for (let i = 0x30; i < 0xc0; i++) this._writeRegister(i, 0);
+        // Every voice register $30-$BF to 0. The timers and the channel 3
+        // mode ($24-$27) were cleared above.
+        for (let reg = 0x30; reg < 0xC0; reg++) this._storeRegister(reg, 0);
         this._ch[0].reset();
         this._ch[1].reset();
         this._ch[2].reset();
-
-        this._rcnt = 0;
-        for (let i = 0; i < 3; i++) this._rbuf[i].fill(0);
 
         this._sampleLen = 0;
 
@@ -1228,7 +1311,21 @@ export class OPN {
     // Register interface (public API)
     // =========================================================================
 
+    /**
+     * Register address select. Selecting $2D, $2E or $2F picks the
+     * prescaler by itself (YM2203 data sheet, prescaler registers); the
+     * other addresses only wait for the data write.
+     */
+    selectAddress(addr) {
+        addr &= 0xFF;
+        if (addr >= 0x2D && addr <= 0x2F) {
+            this.renderPendingSamples();
+            this._selectPrescaler(addr - 0x2D);
+        }
+    }
+
     writeReg(reg, value) {
+        this.renderPendingSamples();
         reg &= 0xFF;
         value &= 0xFF;
         this._regs[reg] = value;
@@ -1236,184 +1333,99 @@ export class OPN {
         // BUSY is held for a short period after a register write.
         this._busyCycles = Math.round(83 / this._timerClockRatio);
 
-        // Timer registers — update reload value (the active period is recomputed at overflow)
-        if (reg === 0x24) {
-            this._timerA = (this._timerA & 0x03) | (value << 2);
-            // Reload period updated but NOT applied to current countdown
-            return;
-        }
-        if (reg === 0x25) {
-            this._timerA = (this._timerA & 0x3FC) | (value & 0x03);
-            return;
-        }
-        if (reg === 0x26) {
-            this._timerB = value;
-            return;
-        }
-        if (reg === 0x27) {
-            const prevAEn = this._timerAEn;
-            const prevBEn = this._timerBEn;
-
-            this._timerAEn  = !!(value & 0x01);
-            this._timerBEn  = !!(value & 0x02);
-            this._timerAIRQ = !!(value & 0x04);
-            this._timerBIRQ = !!(value & 0x08);
-            if (value & 0x10) this._status &= ~0x01;
-            if (value & 0x20) this._status &= ~0x02;
-
-            // On fresh enable: load period and reset count
-            if (this._timerAEn && !prevAEn) {
-                this._timerAPeriod = 12 * this._prescalerScale * (1024 - this._timerA);
-                this._timerACount = 0;
-            }
-            if (this._timerBEn && !prevBEn) {
-                this._timerBPeriod = 192 * this._prescalerScale * (256 - this._timerB);
-                this._timerBCount = 0;
-            }
-
-            // Ch3 mode + CSM stored in regtc
-            this._regtc = (value & 0xc0);
-            return;
-        }
-
-        // Forward to internal register handler
-        this._writeRegister(reg, value);
+        this._storeRegister(reg, value);
     }
 
-    _writeRegister(addr, data) {
-        const c = addr & 3;
+    /** A register value takes effect (REGISTER_GROUPS). */
+    _storeRegister(reg, v) {
+        const write = REGISTER_GROUPS[reg >> 4];
+        if (write !== null) write(this, reg, v);
+    }
 
-        switch (addr) {
-            // SSG registers (0x00-0x0F) are forwarded to the embedded PSGCore.
-            case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
-            case 8: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
-                this._ssg._writeReg(addr, data);
-                break;
-
-            case 0x24: case 0x25: case 0x26:
-                break;
-
-            case 0x27:
-                this._regtc = data & 0xc0;
-                break;
-
-            case 0x28: {
-                // Key On/Off
-                if ((data & 3) < 3)
-                    this._ch[data & 3].keyControl(data >> 4);
-                break;
-            }
-
-            case 0x2d: case 0x2e: case 0x2f:
-                this._configurePrescaler(addr - 0x2d);
-                break;
-
-            // F-Number low
-            case 0xa0: case 0xa1: case 0xa2:
-                this._fnum[c] = data + this._fnum2[c] * 0x100;
-                break;
-
-            // F-Number high (latch)
-            case 0xa4: case 0xa5: case 0xa6:
-                this._fnum2[c] = data;
-                break;
-
-            // Ch3 special F-Number low
-            case 0xa8: case 0xa9: case 0xaa:
-                this._fnum3[c] = data + this._fnum2[c + 3] * 0x100;
-                break;
-
-            // Ch3 special F-Number high (latch)
-            case 0xac: case 0xad: case 0xae:
-                this._fnum2[c + 3] = data;
-                break;
-
-            // FB/Algorithm
-            case 0xb0: case 0xb1: case 0xb2:
-                this._ch[c].writeFeedback((data >> 3) & 7);
-                this._ch[c].configureAlgorithm(data & 7);
-                break;
-
-            case 0xff:
-                this._handleCSMTrigger();
-                break;
-
-            default:
-                if (c < 3) {
-                    if ((addr & 0xf0) === 0x60)
-                        data &= 0x1f;
-                    this._applyParameter(this._ch[c], addr, data);
-                }
-                break;
+    /**
+     * $20-$2F (YM2203 data sheet, register map): $24-$27 the timers,
+     * $28 key on / off, $2D-$2F the prescaler. The rest do nothing.
+     */
+    _writeModeRegister(reg, v) {
+        if (reg >= 0x2D) {
+            this._selectPrescaler(reg - 0x2D);
+        } else if (reg === 0x28) {
+            // Bits 1-0 pick the channel (3 is none), bits 7-4 the
+            // operators keyed on.
+            const voice = this._ch[v & 3];
+            if (voice !== undefined) voice.setKeyOnSlots(v >> 4);
+        } else if (reg >= 0x24 && reg <= 0x27) {
+            this._writeTimerRegister(reg, v);
         }
     }
 
-    // Set per-operator parameters
-    _applyParameter(ch, addr, data) {
-        if ((addr & 3) >= 3) return;
+    /** Prescaler $2D / $2E / $2F (index 0-2): the FM clock and the timer unit. */
+    _selectPrescaler(index) {
+        this._configurePrescaler(index);
+        this._setTimerUnit(TIMER_A_UNIT[index]);
+    }
 
-        const slot = REG_TO_OP_MAP[(addr >> 2) & 3];
-        const op = ch.op[slot];
+    /**
+     * $30-$9E: bits 1-0 of the register pick the channel (3 is none),
+     * bits 3-2 the operator slot through REG_TO_OP_MAP (YM2203 data
+     * sheet, register map).
+     */
+    _writeOperatorRegister(reg, v) {
+        const channel = reg & 3;
+        if (channel === 3) return;
+        const voice = this._ch[channel];
+        const op = voice.op[REG_TO_OP_MAP[(reg >> 2) & 3]];
+        OPERATOR_WRITERS[reg >> 4](op, v, voice === this._csmch && this._isCSMMode());
+    }
 
-        switch ((addr >> 4) & 15) {
-            case 3: // 30-3E DT/MULTI
-                op.writeDT((data >> 4) & 0x07);
-                op.writeMUL(data & 0x0f);
-                break;
-
-            case 4: // 40-4E TL
-                op.writeTL(data & 0x7f, this._isCSMMode() && (this._csmch === ch));
-                break;
-
-            case 5: // 50-5E KS/AR
-                op.writeKS((data >> 6) & 3);
-                op.writeAR((data & 0x1f) * 2);
-                break;
-
-            case 6: // 60-6E DR/AMON
-                op.writeDR((data & 0x1f) * 2);
-                op.writeAMON(!!(data & 0x80));
-                break;
-
-            case 7: // 70-7E SR
-                op.writeSR((data & 0x1f) * 2);
-                break;
-
-            case 8: // 80-8E SL/RR
-                op.writeSL(SUSTAIN_LEVEL_TABLE[(data >> 4) & 15]);
-                op.writeRR((data & 0x0f) * 4 + 2);
-                break;
-
-            case 9: // 90-9E SSG-EC
-                op.writeSSGEG(data & 0x0f);
-                break;
+    /**
+     * $A0-$AE (YM2203 data sheet, F-number registers): bit 2 of the
+     * register selects the high byte (block and F-number bits 10-8), which
+     * is held until the low byte is written; bit 3 selects the per-operator
+     * F-numbers of channel 3 ($A8-$AE) instead of the channel F-numbers.
+     */
+    _writeFrequencyRegister(reg, v) {
+        const channel = reg & 3;
+        if (channel === 3) return;
+        const perOperator = (reg & 0x08) !== 0;
+        const latch = perOperator ? channel + 3 : channel;
+        if (reg & 0x04) {
+            this._fnumHighLatch[latch] = v;
+        } else {
+            (perOperator ? this._fnum3 : this._fnum)[channel] = this._fnumHighLatch[latch] * 0x100 + v;
         }
     }
 
-    // Only one value of the 2-bit ch3 mode field selects CSM.
+    /** $B0-$B2: feedback (bits 5-3) and algorithm (bits 2-0) (YM2203 data sheet). */
+    _writeVoiceRegister(reg, v) {
+        if (reg > 0xB2) return;
+        const voice = this._ch[reg & 3];
+        voice.writeFeedback((v >> 3) & 7);
+        voice.configureAlgorithm(v & 7);
+    }
+
     _isCSMMode() {
-        return (this._regtc & 0xc0) === 0x80;
-    }
-
-    // CSM Timer A callback
-    _handleCSMTrigger() {
-        if (this._isCSMMode()) {
-            this._csmch.keyControl(0x00);
-            this._csmch.keyControl(0x0f);
-        }
+        return this._ch3Mode === CH3_MODE_CSM;
     }
 
     readStatus() {
         const busy = this._busyCycles > 0 ? 0x80 : 0;
-        return (this._status & 0x03) | busy;
+        return this._timerFlags | busy;
     }
 
-    get timerAFlag() { return !!(this._status & 0x01); }
-    get timerBFlag() { return !!(this._status & 0x02); }
+    get timerAFlag() { return (this._timerFlags & 0x01) !== 0; }
+    get timerBFlag() { return (this._timerFlags & 0x02) !== 0; }
+
+    /** A timer flag is set and its ENABLE bit is on (the OPN's IRQ request). */
+    get irqAsserted() {
+        return (this.timerAFlag && this._timerA.flagEnable) ||
+               (this.timerBFlag && this._timerB.flagEnable);
+    }
 
     // =========================================================================
-    // Read-only inspection (for a debug view). These never touch chip state
-    // and never affect synthesis or timing.
+    // Read-only inspection (for a debug view). The level getters first make
+    // the samples step() has already counted, then read the state; they do
+    // not change the sound or the timing.
     // =========================================================================
 
     /** Embedded SSG section (a PSGCore). Read-only use. */
@@ -1429,6 +1441,7 @@ export class OPN {
 
     /** Per-channel SSG level for A/B/C as 0-15 (see PSGCore.getChannelLevels). */
     getSSGChannelLevels(out) {
+        this.renderPendingSamples();
         return this._ssg.getChannelLevels(out);
     }
 
@@ -1438,6 +1451,7 @@ export class OPN {
      * @param {number[]} [out] optional 3-element array to fill (avoids garbage)
      */
     getFMChannelLevels(out = [0, 0, 0]) {
+        this.renderPendingSamples();
         for (let i = 0; i < 3; i++) {
             const ch = this._ch[i];
             let level = 0;
@@ -1446,7 +1460,7 @@ export class OPN {
                 for (let o = 0; o < 4; o++) {
                     if (!(mask & (1 << o))) continue;
                     const op = ch.op[o];
-                    if (op.envPhase === ENV_PHASE_OFF) continue;
+                    if (op.egStage === ENV_PHASE_OFF) continue;
                     const att = op.envOutput >> 3;
                     if (att >= 1023) continue;
                     level += Math.pow(2, -att / 64);
@@ -1462,13 +1476,11 @@ export class OPN {
     // =========================================================================
 
     _setStatus(bits) {
-        if (!(this._status & bits)) {
-            this._status |= bits;
-        }
+        this._timerFlags |= bits;
     }
 
-    _resetStatus(bit) {
-        this._status &= ~bit;
+    _clearStatusBit(bit) {
+        this._timerFlags &= ~bit;
     }
 
     // =========================================================================
@@ -1485,7 +1497,7 @@ export class OPN {
         // Set F-Numbers
         ch[0].setFrequency(this._fnum[0]);
         ch[1].setFrequency(this._fnum[1]);
-        if (!(this._regtc & 0xc0)) {
+        if (this._ch3Mode === CH3_MODE_NORMAL) {
             ch[2].setFrequency(this._fnum[2]);
         } else {
             ch[2].op[0].setFrequency(this._fnum3[1]);
@@ -1499,19 +1511,20 @@ export class OPN {
         const ssg = this._ssg;
         const ssgGain = this._ssgMixGain;
 
+        let act = actch;
         for (let n = 0; n < nsamples; n++) {
             let fmSample = 0;
             if (fmActive) {
                 let x = 0, y = 0, z = 0;
-                if (actch & 0x01) x = ch[0].compute();
-                if (actch & 0x04) y = ch[1].compute();
-                if (actch & 0x10) z = ch[2].compute();
+                if (act & 0x01) x = ch[0].compute();
+                if (act & 0x04) y = ch[1].compute();
+                if (act & 0x10) z = ch[2].compute();
                 fmSample = x + y + z;
-
-                this._rcnt = (this._rcnt + 1) & 0x1ff;
-                this._rbuf[0][this._rcnt] = x << (OUTPUT_SHIFT + 3);
-                this._rbuf[1][this._rcnt] = y << (OUTPUT_SHIFT + 3);
-                this._rbuf[2][this._rcnt] = z << (OUTPUT_SHIFT + 3);
+                // A channel whose operators have all ended is skipped
+                // from the next sample on.
+                if ((act & 0x01) && !ch[0].isActive()) act &= ~0x01;
+                if ((act & 0x04) && !ch[1].isActive()) act &= ~0x04;
+                if ((act & 0x10) && !ch[2].isActive()) act &= ~0x10;
             }
 
             // SSG always renders; generateSample() returns one output sample.
@@ -1531,31 +1544,56 @@ export class OPN {
             if (this._busyCycles < 0) this._busyCycles = 0;
         }
 
-        const opnCycles = cpuCycles * this._timerClockRatio;
+        const clocks = cpuCycles * this._timerClockRatio;
+        const unit = this._timerUnit;
+        for (let n = this._timerA.advance(clocks, unit); n > 0; n--) this._timerAOverflow();
+        if (this._timerB.advance(clocks, unit) > 0 && this._timerB.flagEnable) this._timerFlags |= 0x02;
+    }
 
-        if (this._timerAEn) {
-            const periodA = this._timerAPeriod;
-            if (periodA > 0) {
-                this._timerACount += opnCycles;
-                while (this._timerACount >= periodA) {
-                    this._timerACount -= periodA;
-                    if (this._timerAIRQ) this._status |= 0x01;
-                    this._handleCSMTrigger();
-                    this._timerAPeriod = 12 * this._prescalerScale * (1024 - this._timerA);
-                }
-            }
+    /** Timer A overflow: the flag (when enabled), and CSM key-on of channel 3. */
+    _timerAOverflow() {
+        if (this._timerA.flagEnable) this._timerFlags |= 0x01;
+        if (this._isCSMMode()) {
+            this.renderPendingSamples();
+            const ch3 = this._ch[2];
+            ch3.setKeyOnSlots(0x00);
+            ch3.setKeyOnSlots(0x0F);
         }
+    }
 
-        if (this._timerBEn) {
-            const periodB = this._timerBPeriod;
-            if (periodB > 0) {
-                this._timerBCount += opnCycles;
-                while (this._timerBCount >= periodB) {
-                    this._timerBCount -= periodB;
-                    if (this._timerBIRQ) this._status |= 0x02;
-                    this._timerBPeriod = 192 * this._prescalerScale * (256 - this._timerB);
-                }
-            }
+    /** $24-$26 set a timer count (TIMER_COUNT_FIELDS); $27 is _writeTimerControl. */
+    _writeTimerRegister(reg, v) {
+        if (reg === 0x27) {
+            this._writeTimerControl(v);
+            return;
+        }
+        const [index, low, width] = TIMER_COUNT_FIELDS.get(reg);
+        const timer = this._timers[index];
+        const field = ((1 << width) - 1) << low;
+        timer.value = (timer.value & ~field) | ((v << low) & field);
+    }
+
+    /**
+     * $27 (see CTRL_LOAD_SHIFT): for each timer its ENABLE, RESET and LOAD
+     * bits, then the channel 3 mode. A new set count is used when LOAD
+     * goes from 0 to 1 (OpnTimer.setLoad).
+     */
+    _writeTimerControl(v) {
+        for (let i = 0; i < 2; i++) {
+            const timer = this._timers[i];
+            timer.flagEnable = ((v >> (CTRL_ENABLE_SHIFT + i)) & 1) === 1;
+            if ((v >> (CTRL_RESET_SHIFT + i)) & 1) this._timerFlags &= ~(1 << i);
+            timer.setLoad(((v >> (CTRL_LOAD_SHIFT + i)) & 1) === 1, this._timerUnit);
+        }
+        this._ch3Mode = v >> CTRL_CH3_MODE_SHIFT;
+    }
+
+    /** Prescaler changed: running timers take the new period now. */
+    _setTimerUnit(unit) {
+        if (unit === this._timerUnit) return;
+        this._timerUnit = unit;
+        for (const t of [this._timerA, this._timerB]) {
+            if (t.load) t.length = t.periodFor(unit);
         }
     }
 
@@ -1563,32 +1601,29 @@ export class OPN {
     // Step -- called from emulation loop
     // =========================================================================
 
-    step(cpuCycles) {
-        this._advanceTimers(cpuCycles);
+    /**
+     * @param {number} ticks     - master clock periods elapsed
+     * @param {number} cpuCycles - main CPU cycles in the same span; the timers
+     *                             count these outside FM77AV mode
+     */
+    step(ticks, cpuCycles = ticks) {
+        this._advanceTimers(this._isAV ? ticks : cpuCycles);
 
         if (!this._audioCtx) return;
 
-        this._fmAccum += cpuCycles;
+        // Count the samples due; they are made later in one call.
+        this._fmAccum += ticks;
         const cps = this._cyclesPerSample;
-
-        let len = this._sampleLen;
-        let buf = this._sampleBuf;
-        const tmp = [0];
         while (this._fmAccum >= cps) {
             this._fmAccum -= cps;
-            this._renderSamples(tmp, 1);
-            if (len >= buf.length) {
-                const grown = new Float32Array(buf.length * 2);
-                grown.set(buf);
-                this._sampleBuf = buf = grown;
-            }
-            buf[len++] = tmp[0] / 32768.0;
+            this._pendingSamples++;
         }
-        this._sampleLen = len;
 
         // Batch flush — see psg.js for the same pattern.
         if (this._workletNode) {
             const FLUSH_SIZE = 1024;
+            if (this._sampleLen + this._pendingSamples < FLUSH_SIZE) return;
+            this.renderPendingSamples();
             while (this._sampleLen >= FLUSH_SIZE) {
                 const chunk = this._sampleBuf.slice(0, FLUSH_SIZE);
                 this._workletNode.port.postMessage(
@@ -1601,11 +1636,40 @@ export class OPN {
         }
     }
 
+    /**
+     * Make the samples step() has counted, in order, and add them to the
+     * sample buffer. The machine calls this at the end of each run; callers
+     * that read the buffer directly call it first.
+     */
+    renderPendingSamples() {
+        let left = this._pendingSamples;
+        if (left === 0) return;
+        this._pendingSamples = 0;
+        let len = this._sampleLen;
+        let buf = this._sampleBuf;
+        if (len + left > buf.length) {
+            let size = buf.length * 2;
+            while (len + left > size) size *= 2;
+            const grown = new Float32Array(size);
+            grown.set(buf);
+            this._sampleBuf = buf = grown;
+        }
+        const tmp = this._renderTmp;
+        while (left > 0) {
+            const n = left < tmp.length ? left : tmp.length;
+            tmp.fill(0, 0, n);
+            this._renderSamples(tmp, n);
+            for (let i = 0; i < n; i++) buf[len++] = tmp[i] / 32768.0;
+            left -= n;
+        }
+        this._sampleLen = len;
+    }
+
     // =========================================================================
     // Output volume (audio output is attached by the host, see psg.js)
     // =========================================================================
 
-    setVolume(v) {
+    setGain(v) {
         this._volume = Math.max(0, Math.min(1, v));
         if (this._gainNode) {
             this._gainNode.gain.value = this._volume;

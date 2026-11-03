@@ -37,9 +37,9 @@
             <span class="cap-badge" id="capBadgeAV" title="4096色表示・キースキャン読込・ALU/ハードウェア直線描画">77AV機能</span>
             <span class="cap-badge" id="capBadge2DD" title="2DD ディスク対応（ドライブモード切替 対応）">2DD</span>
             <span class="cap-badge" id="capBadgeDMAC" title="DMAC による DMA 転送">DMAC</span>
-            <span class="cap-badge" id="capBadgeFMMR" title="高速MMR（MMR 使用時の速度低下を抑止）">高速MMR</span>
+            <span class="cap-badge" id="capBadgeFMMR" title="高速MMR（MMR を使っても遅くならないモード。WebM7 ではメイン CPU の速さは変えていません）">高速MMR</span>
             <span class="cap-badge" id="capBadgeAV40" title="400ライン表示・26万色表示">AV40機能</span>
-            <span class="cap-badge" id="capBadgeEX" title="2面VRAM・ハードウェアウィンドウ・拡張サブROM・第2水準漢字/辞書">40EX機能</span>
+            <span class="cap-badge" id="capBadgeEX" title="2面VRAM・拡張サブROM・辞書（ハードウェアウィンドウは未対応）">40EX機能</span>
             <span class="cap-mem" id="capMem" title="メインRAM / VRAM 容量">RAM -- / VRAM --</span>
             <a href="#" class="machine-compare-trigger cap-compare-link" title="機種ごとの機能比較表を表示">機種比較</a>
         </div>
@@ -136,7 +136,7 @@
                     </div>
                     <span class="status-divider"></span>
                     <!-- MMR / TWR: memory mapper activity -->
-                    <div class="status-led-item" title="メモリ管理 (MMR) / テキストウィンドウレジスタ (TWR) 使用中に点灯。緑=高速MMR動作中">
+                    <div class="status-led-item" title="メモリ管理 (MMR) / テキストウィンドウレジスタ (TWR) 使用中に点灯。緑=ソフトが高速MMR のモードを選んでいる間">
                         <span class="fdc-led" id="tbMmrLed"></span>
                         <span class="status-led-name">MMR</span>
                     </div>
@@ -427,12 +427,12 @@
                     <option value="fm77av40ex">FM77AV40EX / FM77AV40SX</option>
                 </select>
             </div>
-            <!-- bootMode ラジオはハードウェアパネルと各処理が参照する非表示のコントロール。 -->
+            <!-- startupSystem ラジオはハードウェアパネルと各処理が参照する非表示のコントロール。 -->
             <div class="ctrl-row ctl-retired">
                 <label>Boot Mode:</label>
                 <div class="radio-group">
-                    <label title="BASIC モードで起動。ディスクがあればディスクから起動し、無ければ BASIC を起動（同梱互換 ROM では 7T-BASIC）"><input type="radio" name="bootMode" value="basic" checked> BASIC</label>
-                    <label title="DOS モードで起動（起動可能なディスクをセットしておく）"><input type="radio" name="bootMode" value="dos"> DOS</label>
+                    <label title="BASIC モードで起動。ディスクがあればディスクから起動し、無ければ BASIC を起動（同梱互換 ROM では 7T-BASIC）"><input type="radio" name="startupSystem" value="basic" checked> BASIC</label>
+                    <label title="DOS モードで起動（起動可能なディスクをセットしておく）"><input type="radio" name="startupSystem" value="dos"> DOS</label>
                 </div>
             </div>
             <div class="ctrl-row" id="fmCardRow">
@@ -441,14 +441,14 @@
                 <span id="fmCardHint" class="ui-note fs-10" style="margin-left:6px;display:none;">次回の電源投入 / リセットから有効になります</span>
             </div>
             <div class="ctrl-row" id="mouseRow">
-                <label for="mouseModeSelect" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用できます。インテリジェントマウスは、FM77AV 系以外では FM 音源カードが必要です">Mouse</label>
-                <select id="mouseModeSelect" class="fs-11" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用できます。インテリジェントマウスは、FM77AV 系以外では FM 音源カードが必要です">
+                <label for="mouseModeSelect" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用できます。ジョイスティック端子につなぐマウスは、FM77AV 系以外では FM 音源カードが必要です">Mouse</label>
+                <select id="mouseModeSelect" class="fs-11" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用できます。ジョイスティック端子につなぐマウスは、FM77AV 系以外では FM 音源カードが必要です">
                     <option value="none">(None)</option>
                     <option value="bus">Mouse Set (bus)</option>
-                    <option value="intel1">Intelligent Mouse (Port 1)</option>
-                    <option value="intel2">Intelligent Mouse (Port 2)</option>
+                    <option value="port1">Joystick-port Mouse (Port 1)</option>
+                    <option value="port2">Joystick-port Mouse (Port 2)</option>
                 </select>
-                <span id="mouseHint" class="ui-note fs-10" style="margin-left:6px;display:none;">インテリジェントマウスには FM 音源カードが必要です</span>
+                <span id="mouseHint" class="ui-note fs-10" style="margin-left:6px;display:none;">ジョイスティック端子のマウスには FM 音源カードが必要です</span>
             </div>
             <div class="ctrl-row">
                 <label>Joystick 1:</label>
@@ -489,14 +489,14 @@
                     <input type="file" id="romFBasic" accept=".rom,.ROM,.bin">
                     <span class="status-tag" id="statusFBasic">--</span>
                 </div>
-                <div class="rom-item" data-req="required">
-                    <span class="rom-name">BOOT_DOS.ROM <span class="rom-badge rom-badge-req" title="FM-7 系を Boot Mode: DOS で起動する場合に必須">DOS時必須</span></span>
+                <div class="rom-item" data-req="optional">
+                    <span class="rom-name">BOOT_DOS.ROM <span class="rom-badge rom-badge-opt" title="FM-7 / FM-77 を Boot Mode: DOS で起動する場合に必須（FM77AV 系では使わない）">任意</span></span>
                     <select class="rom-src" data-slot="bootdos" title="この ROM の供給元"><option value="builtin">同梱互換</option><option value="user">自分の ROM</option></select>
                     <input type="file" id="romBootDos" accept=".rom,.ROM,.bin">
                     <span class="status-tag" id="statusBootDos">--</span>
                 </div>
                 <div class="rom-item" data-req="required">
-                    <span class="rom-name">BOOT_BAS.ROM <span class="rom-badge rom-badge-req" title="FM-7 系を Boot Mode: BASIC で起動する場合に必須">BASIC時必須</span></span>
+                    <span class="rom-name">BOOT_BAS.ROM <span class="rom-badge rom-badge-req" title="FM-7 / FM-77 を Boot Mode: BASIC で起動する場合に必須（FM77AV 系では使わない）">BASIC時必須</span></span>
                     <select class="rom-src" data-slot="bootbas" title="この ROM の供給元"><option value="builtin">同梱互換</option><option value="user">自分の ROM</option></select>
                     <input type="file" id="romBootBas" accept=".rom,.ROM,.bin">
                     <span class="status-tag" id="statusBootBas">--</span>
@@ -511,7 +511,7 @@
             <!-- Kanji ROM: optional on FM-7 (漢字ROMカード相当), required on FM77AV+. Always visible. -->
             <div class="rom-list" id="romListKanji" style="margin-top:6px;">
                 <div class="rom-item" data-req="optional">
-                    <span class="rom-name">KANJI.ROM <span class="rom-badge rom-badge-opt" id="badgeKanji" title="FM-7 / FM-77 では任意（漢字を使う場合）。FM77AV 以降では必須">任意</span></span>
+                    <span class="rom-name">KANJI.ROM <span class="rom-badge rom-badge-opt" title="任意（無ければ同梱互換で補う）">任意</span></span>
                     <select class="rom-src" data-slot="kanji" title="この ROM の供給元"><option value="builtin">同梱互換</option><option value="user">自分の ROM</option></select>
                     <input type="file" id="romKanji" accept=".rom,.ROM,.bin">
                     <span class="status-tag" id="statusKanji">--</span>
@@ -519,52 +519,56 @@
             </div>
             <!-- FM77AV additional ROMs (hidden by default) -->
             <div class="rom-list rom-list-av" id="romListAV" style="display:none;margin-top:6px;">
-                <label class="ui-warn">FM77AV ROMs（この機種では必須）:</label>
+                <label class="ui-warn">FM77AV ROMs:</label>
                 <div class="rom-item" data-req="required">
-                    <span class="rom-name">INITIATE.ROM <span class="rom-badge rom-badge-req">必須</span></span>
+                    <span class="rom-name">INITIATE.ROM <span class="rom-badge rom-badge-req" title="FM77AV 系の起動に必須">必須</span></span>
                     <select class="rom-src" data-slot="initiate" title="この ROM の供給元"><option value="builtin">同梱互換</option><option value="user">自分の ROM</option></select>
                     <input type="file" id="romInitiate" accept=".rom,.ROM,.bin">
                     <span class="status-tag" id="statusInitiate">--</span>
                 </div>
-                <div class="rom-item" data-req="required">
-                    <span class="rom-name">SUBSYS_A.ROM <span class="rom-badge rom-badge-req">必須</span></span>
+                <div class="rom-item" data-req="optional">
+                    <span class="rom-name">SUBSYS_A.ROM <span class="rom-badge rom-badge-req" title="FM77AV 系で Drive 0 にディスクがあるとき必須">必須</span></span>
                     <select class="rom-src" data-slot="subsys_a" title="この ROM の供給元"><option value="builtin">同梱互換</option><option value="user">自分の ROM</option></select>
                     <input type="file" id="romSubSysA" accept=".rom,.ROM,.bin">
                     <span class="status-tag" id="statusSubSysA">--</span>
                 </div>
-                <div class="rom-item" data-req="required">
-                    <span class="rom-name">SUBSYS_B.ROM <span class="rom-badge rom-badge-req">必須</span></span>
+                <div class="rom-item" data-req="optional">
+                    <span class="rom-name">SUBSYS_B.ROM <span class="rom-badge rom-badge-req" title="FM77AV 系で Drive 0 にディスクがあるとき必須">必須</span></span>
                     <select class="rom-src" data-slot="subsys_b" title="この ROM の供給元"><option value="builtin">同梱互換</option><option value="user">自分の ROM</option></select>
                     <input type="file" id="romSubSysB" accept=".rom,.ROM,.bin">
                     <span class="status-tag" id="statusSubSysB">--</span>
                 </div>
-                <div class="rom-item" data-req="required">
-                    <span class="rom-name">SUBSYSCG.ROM <span class="rom-badge rom-badge-req">必須</span></span>
+                <div class="rom-item" data-req="optional">
+                    <span class="rom-name">SUBSYSCG.ROM <span class="rom-badge rom-badge-opt" title="任意（無ければ同梱互換で補う）">任意</span></span>
                     <select class="rom-src" data-slot="cg" title="この ROM の供給元"><option value="builtin">同梱互換</option><option value="user">自分の ROM</option></select>
                     <input type="file" id="romCG" accept=".rom,.ROM,.bin">
                     <span class="status-tag" id="statusCG">--</span>
                 </div>
             </div>
+            <!-- FM77AV20EX / FM77AV40 / FM77AV40EX additional ROM (hidden by default) -->
+            <div class="rom-list rom-list-av40" id="romListKanji2" style="display:none;margin-top:6px;">
+                <label class="ui-warn">FM77AV20EX / FM77AV40 / FM77AV40EX ROMs:</label>
+                <div class="rom-item" data-req="optional">
+                    <span class="rom-name">KANJI2.ROM <span class="rom-badge rom-badge-opt" title="任意（無ければ同梱互換で補う）">任意</span></span>
+                    <select class="rom-src" data-slot="kanji2" title="この ROM の供給元"><option value="builtin">同梱互換</option><option value="user">自分の ROM</option></select>
+                    <input type="file" id="romKanji2" accept=".rom,.ROM,.bin">
+                    <span class="status-tag" id="statusKanji2">--</span>
+                </div>
+            </div>
             <!-- FM77AV40EX additional ROMs (hidden by default) -->
             <div class="rom-list rom-list-av40" id="romListAV40" style="display:none;margin-top:6px;">
-                <label class="ui-warn">FM77AV40EX ROMs（この機種では必須）:</label>
-                <div class="rom-item" data-req="required">
-                    <span class="rom-name">EXTSUB.ROM <span class="rom-badge rom-badge-req">必須</span></span>
+                <label class="ui-warn">FM77AV40EX ROMs:</label>
+                <div class="rom-item" data-req="optional">
+                    <span class="rom-name">EXTSUB.ROM <span class="rom-badge rom-badge-opt" title="任意（無ければ同梱互換で補う）">任意</span></span>
                     <select class="rom-src" data-slot="extsub" title="この ROM の供給元"><option value="builtin">同梱互換</option><option value="user">自分の ROM</option></select>
                     <input type="file" id="romExtSub" accept=".rom,.ROM,.bin">
                     <span class="status-tag" id="statusExtSub">--</span>
                 </div>
-                <div class="rom-item" data-req="required">
-                    <span class="rom-name">DICROM.ROM <span class="rom-badge rom-badge-req">必須</span></span>
+                <div class="rom-item" data-req="optional">
+                    <span class="rom-name">DICROM.ROM <span class="rom-badge rom-badge-opt" title="任意（無ければ同梱互換で補う）">任意</span></span>
                     <select class="rom-src" data-slot="dicrom" title="この ROM の供給元"><option value="builtin">同梱互換</option><option value="user">自分の ROM</option></select>
                     <input type="file" id="romDicrom" accept=".rom,.ROM,.bin">
                     <span class="status-tag" id="statusDicrom">--</span>
-                </div>
-                <div class="rom-item" data-req="required">
-                    <span class="rom-name">KANJI2.ROM <span class="rom-badge rom-badge-req">必須</span></span>
-                    <select class="rom-src" data-slot="kanji2" title="この ROM の供給元"><option value="builtin">同梱互換</option><option value="user">自分の ROM</option></select>
-                    <input type="file" id="romKanji2" accept=".rom,.ROM,.bin">
-                    <span class="status-tag" id="statusKanji2">--</span>
                 </div>
             </div>
             </div><!-- /userRomBlock -->
@@ -858,7 +862,7 @@
             <div class="ip-label">FM-7 Key</div>
             <div class="ip-fm7key">
                 <span id="ipFm7Code">--</span>
-                <span class="ip-sublabel" id="ipFm7Buf">buf: 0</span>
+                <span class="ip-sublabel" id="ipFm7Wait"></span>
             </div>
         </div>
         <div class="ip-section">
@@ -925,7 +929,7 @@
         <h3 id="help-rom">1. ROM の供給元を選ぶ / ROMファイルを読み込む（ROM Files パネル）</h3>
         <p>本シミュレータは<strong>同梱の互換 ROM セットを常に土台</strong>として動作します。そのうえで、<strong>ROM 1 本ごとに供給元を選べます</strong>。各 ROM の行にある選択で「同梱互換」か「自分の ROM」を指定してください（例: <code>FBASIC30.ROM</code> だけ、あるいは <code>KANJI.ROM</code> だけをお手持ちのものにする、といった使い分けができます）。指定はブラウザに保存され、次回以降も維持されます。現在どの組み合わせで動作しているかは、同じパネル上部の <strong>ROM Set</strong> 表示で確認できます。</p>
         <ul>
-        <li><strong>同梱互換（既定）</strong> — 独立実装の互換 ROM セット（本体は MIT License）を使用します。ROM ファイルの用意は不要で、そのまま起動できます（行の横に「互換」と表示されます）。漢字 ROM（第1水準・全機種）も同梱されており、漢字表示に対応しています。ソフトウェアの動作条件は、下記の互換 ROM の互換性情報を参照してください（辞書 ROM を使うかな漢字変換には対応していません）。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>同梱互換 ROM の BASIC は、プログラムをアスキー形式（<code>SAVE ,A</code> と同じ形式）だけで読み書きします。中間コード（バイナリ）形式で保存されたファイルは読み込めません（<a href="https://github.com/7032JP/7032AltROMs/blob/v1.0.9/docs/COMPATIBILITY.md" target="_blank" rel="noopener">COMPATIBILITY.md §3.2</a>）。お手持ちのプログラムファイルをそのまま使う場合は、<code>FBASIC30.ROM</code> の行を「自分の ROM」に切り替えてください。機械語ファイル（<code>SAVEM</code> / <code>LOADM</code>）の形式は従来どおりです</li>
+        <li><strong>同梱互換（既定）</strong> — 独立実装の互換 ROM セット（本体は MIT License）を使用します。ROM ファイルの用意は不要で、そのまま起動できます（行の横に「互換」と表示されます）。漢字 ROM（第1水準は全機種、第2水準は FM77AV20EX・FM77AV40・FM77AV40EX/SX）も同梱されており、漢字表示に対応しています。ソフトウェアの動作条件は、下記の互換 ROM の互換性情報を参照してください（辞書 ROM を使うかな漢字変換には対応していません）。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>同梱互換 ROM の BASIC は、プログラムをアスキー形式（<code>SAVE ,A</code> と同じ形式）だけで読み書きします。中間コード（バイナリ）形式で保存されたファイルは読み込めません（<a href="https://github.com/7032JP/7032AltROMs/blob/v1.0.9/docs/COMPATIBILITY.md" target="_blank" rel="noopener">COMPATIBILITY.md §3.2</a>）。お手持ちのプログラムファイルをそのまま使う場合は、<code>FBASIC30.ROM</code> の行を「自分の ROM」に切り替えてください。機械語ファイル（<code>SAVEM</code> / <code>LOADM</code>）の形式は従来どおりです</li>
         <li><strong>自分の ROM</strong> — お手持ちの ROM ファイルを読み込んで使用します。ROM ファイルを読み込むと、その行は自動的に「自分の ROM」に切り替わります（行の横に「OK」と表示されます）</li>
         </ul>
         <p>「自分の ROM」に指定する行には以下の ROM ファイルが必要です（ご自身が適法に所有する実機から取得したものを用意してください）。</p>
@@ -934,29 +938,35 @@
         <table>
         <tr><th>ファイル名</th><th>内容</th></tr>
         <tr><td><code>FBASIC30.ROM</code></td><td>F-BASIC V3.0 ROM（本体搭載 ROM。起動に常に必須）</td></tr>
-        <tr><td><code>BOOT_DOS.ROM</code></td><td>DOS ブート ROM。FM-7 系を Boot Mode: DOS で起動する場合に必須</td></tr>
-        <tr><td><code>BOOT_BAS.ROM</code></td><td>BASIC ブート ROM。FM-7 系を Boot Mode: BASIC で起動する場合に必須</td></tr>
+        <tr><td><code>BOOT_DOS.ROM</code></td><td>DOS ブート ROM。FM-7 / FM-77 を Boot Mode: DOS で起動する場合に必須（FM77AV 系では使いません）</td></tr>
+        <tr><td><code>BOOT_BAS.ROM</code></td><td>BASIC ブート ROM。FM-7 / FM-77 を Boot Mode: BASIC で起動する場合に必須（FM77AV 系では使いません）</td></tr>
         <tr><td><code>SUBSYS_C.ROM</code></td><td>サブシステム ROM（CGフォント内蔵）。起動に常に必須</td></tr>
         </table>
 
         <h4>FM77AV 追加ROM</h4>
-        <p>FM77AVモードで起動する場合は、上記に加えて以下のROMも必要です。</p>
+        <p>FM77AVモードで起動する場合は、上記に加えて以下のROMを使います。</p>
         <table>
         <tr><th>ファイル名</th><th>内容</th></tr>
         <tr><td><code>INITIATE.ROM</code></td><td>イニシエータROM。FM77AV 系の起動に必須（BOOT_BAS / BOOT_DOS は不要）</td></tr>
-        <tr><td><code>KANJI.ROM</code></td><td>漢字 ROM（JIS第一水準）。FM77AV以降は必須。FM-7 / FM-77 では任意（漢字ROMカード相当。指定すると漢字を使うソフトで漢字が表示されます）</td></tr>
-        <tr><td><code>SUBSYSCG.ROM</code></td><td>キャラクタージェネレータ ROM（FM77AV 系で統合されたもの）</td></tr>
-        <tr><td><code>SUBSYS_A.ROM</code></td><td>サブシステム Type-A ROM</td></tr>
-        <tr><td><code>SUBSYS_B.ROM</code></td><td>サブシステム Type-B ROM</td></tr>
+        <tr><td><code>KANJI.ROM</code></td><td>漢字 ROM（JIS第一水準）。任意（無ければ同梱互換で補います）。FM-7 / FM-77 では漢字ROMカード相当で、指定すると漢字を使うソフトで漢字が表示されます</td></tr>
+        <tr><td><code>SUBSYSCG.ROM</code></td><td>キャラクタージェネレータ ROM（FM77AV 系で統合されたもの）。任意（無ければ同梱互換で補います）</td></tr>
+        <tr><td><code>SUBSYS_A.ROM</code></td><td>新サブモニタ ROM（640×200 モード用）。Drive 0 にディスクがあるとき必須</td></tr>
+        <tr><td><code>SUBSYS_B.ROM</code></td><td>新サブモニタ ROM（320×200 モード用）。Drive 0 にディスクがあるとき必須</td></tr>
+        </table>
+
+        <h4>FM77AV20EX / FM77AV40 / FM77AV40EX / SX 追加ROM</h4>
+        <p>FM77AV20EX・FM77AV40・FM77AV40EX / SX で起動する場合は、上記に加えて以下の ROM を使います。</p>
+        <table>
+        <tr><th>ファイル名</th><th>内容</th></tr>
+        <tr><td><code>KANJI2.ROM</code></td><td>漢字 ROM（JIS第二水準）。任意（無ければ同梱互換で補います）</td></tr>
         </table>
 
         <h4>FM77AV40EX / SX 追加ROM</h4>
-        <p>FM77AV40EX / SX で起動する場合は、上記に加えて以下の ROM も必要です。</p>
+        <p>FM77AV40EX / SX で起動する場合は、さらに以下の ROM を使います。</p>
         <table>
         <tr><th>ファイル名</th><th>内容</th></tr>
-        <tr><td><code>EXTSUB.ROM</code></td><td>拡張サブシステム ROM</td></tr>
-        <tr><td><code>DICROM.ROM</code></td><td>辞書 ROM</td></tr>
-        <tr><td><code>KANJI2.ROM</code></td><td>漢字 ROM（JIS第二水準）</td></tr>
+        <tr><td><code>EXTSUB.ROM</code></td><td>拡張サブシステム ROM。任意（無ければ同梱互換で補います）</td></tr>
+        <tr><td><code>DICROM.ROM</code></td><td>辞書 ROM。任意（無ければ同梱互換で補います）</td></tr>
         </table>
         <p>読み込み方法は2通りあります。</p>
         <ul>
@@ -970,7 +980,7 @@
         <tr><td><code>互換</code></td><td>「同梱互換」を指定（同梱の互換 ROM で動作）</td></tr>
         <tr><td><code>補完</code></td><td>「自分の ROM」を指定しているがファイルが未登録で、同梱互換 ROM で補って動作</td></tr>
         </table>
-        <p>ROM 名の横の <strong>必須</strong> / <strong>任意</strong> バッジは、選択中の機種の ROM 構成を示します。</p>
+        <p>ROM 名の横の <strong>必須</strong> / <strong>任意</strong> バッジは、選択中の機種・起動モード・Drive 0 のディスクの有無で、電源を入れるのに必要な ROM かどうかを示します（電源操作時の確認と同じ区分です）。</p>
         <p>「自分の ROM」に指定した行のファイルがまだ読み込まれていない場合は、<strong>その行だけ</strong>同梱の互換 ROM で自動的に補って起動します（パネル上部の <strong>ROM Set</strong> に補完中の件数が出ます）。</p>
         <p><strong>Clear ROMs</strong> ボタンを押すと、ブラウザに保存した ROM だけを消去できます（ディスクや Library はそのまま残ります）。供給元の指定もすべて「同梱互換」に戻ります。実行中に押したときは、電源を切った時点で切り替わります。</p>
 
@@ -982,7 +992,7 @@
         さらに <strong>BASIC からのディスク書き込み (SAVE 等)</strong> は、<strong>すべてブラウザ内で完結します。</strong><br>
         <strong>お使いの PC 本体にある D77 ファイルは変更されません。</strong>
         PC 本体へ書き出されるのは、<strong>Disk Images パネルの「Save」ボタンか Library の「Exp」ボタン
-        （.d77 書き出し）を押したときだけ</strong>です。元の D77 ファイルを上書きしたくない場合は、別名で保存してください。</p>
+        （Save は D77 形式、Exp は各項目の形式のまま）を押したときだけ</strong>です。元の D77 ファイルを上書きしたくない場合は、別名で保存してください。</p>
         <ul>
         <li><strong>取り込み (ファイル選択)</strong> — 物理ファイル (<code>.d77</code> / <code>.2d</code> / <code>.t77</code>) を棚に追加</li>
         <li><strong>＋2D / ＋2DD</strong> — 論理フォーマット済みの空ディスクを新規作成 (DISK BASIC からすぐ <code>SAVE</code> できます)</li>
@@ -1051,14 +1061,14 @@
         <li><strong>Toolbar 1行目</strong> — 画面下のバーに以下の機能があります。
             <ul>
             <li><strong>スピーカーアイコン (🔊/🔇)</strong> / スライダー — 音量調整（クリックでミュート切替）</li>
-            <li><strong>ステータス表示</strong>（2 段）— 1 段目はキーボード関連（<strong>CAP / カナ / INS</strong> の LED、<strong>SHIFT / CTRL / GRPH</strong> の状態、入力したキーのコード / スキャンコード）、2 段目はドライブ・画面情報（<strong>Drive 1 / Drive 0</strong> のアクセスランプと DMAC ランプ、ドライブ動作状態 <code>T:トラック S:セクタ 状態</code>、ドライブモード（2D / 2DD）、<strong>MMR</strong> ランプ、<strong>NO STEAL</strong> ランプ、フレームレート、画面解像度＆色数）。ドライブのアクセスランプは <strong>黄＝2D / 白＝2D DMA / 緑＝2DD / 青＝2DD DMA / 赤＝書き込み</strong>。MMR ランプはメモリ管理機能の使用中に点灯し、高速MMR動作中は緑。CAP / カナ / INS の LED は点灯すると赤<br><img class="help-figure" src="docs/images/ui_status_bar.svg" alt="ステータスバー 2 段目の読み方。ドライブのアクセス LED と DMAC、FDC の状態、2D / 2DD、MMR、NO STEAL、画面モードと色数"></li>
+            <li><strong>ステータス表示</strong>（2 段）— 1 段目はキーボード関連（<strong>CAP / カナ / INS</strong> の LED、<strong>SHIFT / CTRL / GRPH</strong> の状態、入力したキーのコード / スキャンコード）、2 段目はドライブ・画面情報（<strong>Drive 1 / Drive 0</strong> のアクセスランプと DMAC ランプ、ドライブ動作状態 <code>T:トラック S:セクタ 状態</code>、ドライブモード（2D / 2DD）、<strong>MMR</strong> ランプ、<strong>NO STEAL</strong> ランプ、フレームレート、画面解像度＆色数）。ドライブのアクセスランプは <strong>黄＝2D / 白＝2D DMA / 緑＝2DD / 青＝2DD DMA / 赤＝書き込み</strong>。MMR ランプはメモリ管理機能の使用中に点灯し、ソフトが高速MMR のモードを選んでいる間は緑（メイン CPU の速さは変わりません）。CAP / カナ / INS の LED は点灯すると赤<br><img class="help-figure" src="docs/images/ui_status_bar.svg" alt="ステータスバー 2 段目の読み方。ドライブのアクセス LED と DMAC、FDC の状態、2D / 2DD、MMR、NO STEAL、画面モードと色数"></li>
             <li><strong>⏸ Pause</strong> — シミュレータの一時停止 / 再開（停止中は Resume 表示）</li>
             <li><strong>📷</strong> — 現在の画面を PNG 画像として保存</li>
             </ul>
         </li>
         <li><strong>Toolbar 2行目 (Debug Panels)</strong> — 各ボタンで独立したフローティング・デバッグパネルを開閉できます。
             <ul>
-            <li><strong>CPU</strong> — Main/Sub CPU の全レジスタ (A/B/X/Y/S/U/PC/DP/CC)、動作状態、FM77AV では Monitor / Initiator を表示</li>
+            <li><strong>CPU</strong> — Main/Sub CPU の全レジスタ (A/B/X/Y/S/U/PC/DP/CC)、動作状態、FM77AV では Monitor（動いているサブモニタ。Old 640＝旧サブモニタ、New 640 / New 320＝新サブモニタ 640×200 / 320×200、Sub RAM＝サブ RAM に置いたプログラム）/ Initiator を表示</li>
             <li><strong>Memory</strong> — FM77AV 時のメモリ状態 (BASIC ROM/RAM / MMR / TWR / MMR Map / 物理メモリマップ)、State Dump ボタン</li>
             <li><strong>Keyboard</strong> — キー入力表示、FM-7 キーボードレイアウト、BREAK キー変更</li>
             <li><strong>Palette</strong> — 画面モードに応じたパレット表示 (Digital 8色 / 4,096色 / 262,144色)。320x200 / 262K モードではアナログパレットキャンバスも表示</li>
@@ -1083,7 +1093,7 @@
         <p>ツールバー 2 行目 (Debug Panels) の <strong>Input</strong> ボタンで開閉するフローティングパネルです。</p>
         <ul>
         <li><strong>Held Keys</strong> — 現在ブラウザ上で押下中のキー一覧</li>
-        <li><strong>FM-7 Key</strong> — シミュレータに渡されたFM-7キーコード（16進数）とキーバッファ残数</li>
+        <li><strong>FM-7 Key</strong> — シミュレータに渡されたFM-7キーコード（16進数）と、まだプログラムに読まれていないときの <code>unread</code> 表示</li>
         <li><strong>Joystick</strong> — 最初に見つかった接続済みのゲームパッドの、スティックの方向とボタン 2 つの状態を表示</li>
         </ul>
 
@@ -1100,7 +1110,7 @@
         <p>キー配置の全体図、FM-7 固有のキー（BREAK / GRPH / カナ / HOME など）が日本語配列・英語配列のどのキーに当たるか、キーの割り当ての変え方は <a href="#" class="keyboard-manual-trigger">キーボードマニュアル</a> に図入りでまとめています。</p>
         <ul>
         <li><strong>キー入力方式</strong> — 物理キーの位置でマッピングしています。JIS配列（106/109キー）・US配列（101/104キー）のどちらでも同じ配置で使えます</li>
-        <li><strong>クリックで入力（ソフトウェアキーボード）</strong> — Keyboard パネルのキーボード図のキーをクリックすると、その文字がシミュレータに入力されます（テンキーの <code>=</code> と EL / CLS / DUP は入力に対応していません）。Shift と CTR はスティッキー（押すたびに ON / OFF が切り替わり、次のキーを押して離すと自動で戻ります。CTR は入力コードの無いキーでは戻りません）、GRPH は押している間のみ、CAP / カナ はトグル動作です。タッチ端末では画面下部のソフトウェアキーボードでも同様に入力できます</li>
+        <li><strong>クリックで入力（ソフトウェアキーボード）</strong> — Keyboard パネルのキーボード図のキーをクリックすると、その文字がシミュレータに入力されます（テンキーの <code>=</code> は GRPH を押しながら押したときだけ入力されます）。Shift と CTR はスティッキー（押すたびに ON / OFF が切り替わり、次のキーを押して離すと自動で戻ります。CTR は入力コードの無いキーでは戻りません）、GRPH は押している間のみ、CAP / カナ はトグル動作です。タッチ端末では画面下部のソフトウェアキーボードでも同様に入力できます</li>
         <li><strong>Cursor → Ten Key</strong> — テンキーのないキーボード向けのオプションです。サイドパネルの Options セクションでチェックを入れると、カーソルキー（↑↓←→）がテンキーの 8/2/4/6 として動作します。テンキーを使うプログラムに便利です</li>
         <li><strong>キーカスタマイズ</strong> — Keyboard パネルの「キーカスタマイズ」で、お使いの物理キーボードを配列（日本語配列 / 英語配列）と種別（フルキー / テンキーレス / コンパクト）で選べます。「カスタマイズ開始」を押し、割り当てたい FM-7 キーをクリックしてから物理キーを押すと、そのキーが割り当てられます。割当は保存され、「リセット」で既定に戻せます（手順は <a href="#" class="keyboard-manual-trigger">キーボードマニュアル</a> の第 5 章）</li>
         <li><strong>BREAK キー</strong> — デフォルトでは <code>Esc</code> キーまたは <code>Pause</code> キーが BREAK キーに割り当てられています（PC の Esc の位置が BREAK です）。FM-7 の ESC キーは、日本語配列の <code>半角/全角</code>（英語配列の <code>`</code>）の位置です。変更は「キーカスタマイズ」と共通で、「カスタマイズ開始」を押してキーボード図の <strong>BRK</strong> キーをクリックし、割り当てたい物理キーを押します（<code>Pause</code> は常に予備として有効）。「リセット」で既定に戻ります</li>
@@ -1222,9 +1232,9 @@ SOFTWARE.</pre>
 <script type="module">
 import { MACHINE_FM7, MACHINE_FM77AV, MACHINE_FM77AV20, MACHINE_FM77AV20EX, MACHINE_FM77AV40, MACHINE_FM77AV40EX } from './core/fm7.js';
 import { FM7Browser } from './core/fm7_browser.js';
-import { D77Disk } from './core/fdc.js';
+import { FloppyImage } from './core/fdc.js';
 import {
-    GRPH_OVERRIDE, GRPH_SHIFT_OVERRIDE, GRPH_CURSOR,
+    GRAPH_MODE_CODES,
     KANA_OVERRIDE, KANA_SHIFT_OVERRIDE,
     CODE_TO_FM7_ASCII, SHIFTED_OVERRIDE,
 } from './core/keyboard.js';
@@ -1235,8 +1245,8 @@ import { initGuideBalloons } from './core/guide_balloons.js';
 const MACHINE_FM77 = 'fm77';
 // UI が「FM77AV 以降」として扱う機種か。FM-7 と FM-77 は AV 機ではないため、
 // AV 専用の ROM 行・デバッグ表示・能力バッジ等はいずれも対象外になる。
-function isAVMachine(machineType) {
-    return machineType !== MACHINE_FM7 && machineType !== MACHINE_FM77;
+function isAVMachine(model) {
+    return model !== MACHINE_FM7 && model !== MACHINE_FM77;
 }
 
 // =========================================================================
@@ -1331,6 +1341,7 @@ const psgRegsEl       = document.getElementById('psgRegs');
 // FM77AV ROM elements
 const romListAV       = document.getElementById('romListAV');
 const romListAV40     = document.getElementById('romListAV40');
+const romListKanji2   = document.getElementById('romListKanji2');
 const romInitiateInput = document.getElementById('romInitiate');
 const romSubSysAInput  = document.getElementById('romSubSysA');
 const romSubSysBInput  = document.getElementById('romSubSysB');
@@ -1358,20 +1369,13 @@ const initVal   = document.getElementById('initVal');
 const machineTypeSelect = document.getElementById('machineTypeSelect');
 
 function updateMachineType() {
-    const machineType = machineTypeSelect.value;
-    fm7.setMachineType(machineType);
+    const model = machineTypeSelect.value;
+    fm7.setMachineType(model);
 
-    const isAV = isAVMachine(machineType);
+    const isAV = isAVMachine(model);
     romListAV.style.display = isAV ? '' : 'none';
-    romListAV40.style.display = machineType === MACHINE_FM77AV40EX ? '' : 'none';
-    // KANJI.ROM is optional on FM-7 / FM-77 (Kanji card), required on FM77AV+.
-    const badgeKanji = document.getElementById('badgeKanji');
-    if (badgeKanji) {
-        badgeKanji.textContent = isAV ? '必須' : '任意';
-        badgeKanji.classList.toggle('rom-badge-req', isAV);
-        badgeKanji.classList.toggle('rom-badge-opt', !isAV);
-        badgeKanji.closest('.rom-item')?.setAttribute('data-req', isAV ? 'required' : 'optional');
-    }
+    romListAV40.style.display = model === MACHINE_FM77AV40EX ? '' : 'none';
+    romListKanji2.style.display = [MACHINE_FM77AV20EX, MACHINE_FM77AV40, MACHINE_FM77AV40EX].includes(model) ? '' : 'none';
     debugAV.style.display = isAV ? '' : 'none';
     document.getElementById('memAVSection').style.display = isAV ? '' : 'none';
     // FM sound card option: FM-7 / FM-77 only (FM77AV has OPN built-in)
@@ -1390,18 +1394,18 @@ function updateMachineType() {
         [MACHINE_FM77AV40]:   'WebM7 — FM77AV40 Web Simulator',
         [MACHINE_FM77AV40EX]: 'WebM7 — FM77AV40EX / FM77AV40SX Web Simulator',
     };
-    siteTitle.textContent = titles[machineType] || titles[MACHINE_FM7];
+    siteTitle.textContent = titles[model] || titles[MACHINE_FM7];
 
     // Capability badges: light up what the selected machine supports.
     // (Same mapping as core capability getters — see docs/MachineComparison.md)
     const caps = {
         mmr:  fm7.hasMMR,
         av:   isAV,
-        dd2:  [MACHINE_FM77AV20, MACHINE_FM77AV20EX, MACHINE_FM77AV40, MACHINE_FM77AV40EX].includes(machineType),
-        dmac: [MACHINE_FM77AV20EX, MACHINE_FM77AV40, MACHINE_FM77AV40EX].includes(machineType),
-        fmmr: [MACHINE_FM77AV20EX, MACHINE_FM77AV40EX].includes(machineType),
-        av40: [MACHINE_FM77AV40, MACHINE_FM77AV40EX].includes(machineType),
-        ex:   machineType === MACHINE_FM77AV40EX,
+        dd2:  [MACHINE_FM77AV20, MACHINE_FM77AV20EX, MACHINE_FM77AV40, MACHINE_FM77AV40EX].includes(model),
+        dmac: [MACHINE_FM77AV20EX, MACHINE_FM77AV40, MACHINE_FM77AV40EX].includes(model),
+        fmmr: [MACHINE_FM77AV20EX, MACHINE_FM77AV40EX].includes(model),
+        av40: [MACHINE_FM77AV40, MACHINE_FM77AV40EX].includes(model),
+        ex:   model === MACHINE_FM77AV40EX,
     };
     document.getElementById('capBadgeMMR').classList.toggle('cap-on', caps.mmr);
     document.getElementById('capBadgeAV').classList.toggle('cap-on', caps.av);
@@ -1421,15 +1425,15 @@ function updateMachineType() {
     document.body.classList.toggle('machine-av', isAV);
     // FM77AV20 以降のみ BREAK キーを朱色にする（キーボードパレット）
     document.body.classList.toggle('machine-av20up',
-        [MACHINE_FM77AV20, MACHINE_FM77AV20EX, MACHINE_FM77AV40, MACHINE_FM77AV40EX].includes(machineType));
+        [MACHINE_FM77AV20, MACHINE_FM77AV20EX, MACHINE_FM77AV40, MACHINE_FM77AV40EX].includes(model));
 
-    // Machine change can enable/disable the intelligent-mouse options (FM-7
+    // Machine change can enable/disable the joystick-port mouse options (FM-7
     // needs the FM Sound Card's OPN; FM77AV has it built in).
     updateMouseModeAvailability();
 
     // Sync the header machine tabs / skin chips / hardware
     // panel theme with the selected machine (function declaration is hoisted).
-    uiOnMachineChanged(machineType);
+    uiOnMachineChanged(model);
 }
 
 machineTypeSelect.addEventListener('change', () => {
@@ -1444,16 +1448,16 @@ machineTypeSelect.addEventListener('change', () => {
     saveSetting('machineType', machineTypeSelect.value);
 });
 
-// Lock control groups during VM run (machineType, bootMode, fmCard locked; joystick stays live)
+// Lock control groups during VM run (model, startupSystem, fmCard locked; joystick stays live)
 const _lockedRadioState = {};
 function setControlsLocked(locked) {
-    // machineType is a <select>
+    // model is a <select>
     machineTypeSelect.disabled = locked;
     if (locked) _lockedRadioState['machineType'] = machineTypeSelect.value;
     // ROM 供給元のスロット単位セレクト: 実行中は変更不可
     document.querySelectorAll('select.rom-src').forEach(sel => { sel.disabled = locked; });
-    // bootMode is radio group
-    ['bootMode'].forEach(name => {
+    // startupSystem is radio group
+    ['startupSystem'].forEach(name => {
         const group = document.querySelector(`input[name="${name}"]`).closest('.radio-group');
         group.classList.toggle('locked', locked);
         if (locked) {
@@ -1465,8 +1469,8 @@ function setControlsLocked(locked) {
     const fmCheck = document.getElementById('fmCardCheck');
     fmCheck.disabled = locked;
 }
-// Block bootMode radio changes during run by reverting to saved state
-['bootMode'].forEach(name => {
+// Block startupSystem radio changes during run by reverting to saved state
+['startupSystem'].forEach(name => {
     document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
         radio.addEventListener('click', (e) => {
             if (!fm7._running) return;
@@ -1480,12 +1484,11 @@ function setControlsLocked(locked) {
     });
 });
 // Boot mode: apply to fm7 and persist (takes effect on next reset/power-on)
-document.querySelectorAll('input[name="bootMode"]').forEach(radio => {
+document.querySelectorAll('input[name="startupSystem"]').forEach(radio => {
     radio.addEventListener('change', () => {
-        const v = document.querySelector('input[name="bootMode"]:checked').value;
-        fm7._bootModeOverride = v;
-        fm7._bootModeExplicit = true; // user chose a mode → FM77AV honors it too
-        saveSetting('bootMode', v);
+        const v = document.querySelector('input[name="startupSystem"]:checked').value;
+        fm7.setStartupSystem(v); // user chose a mode → FM77AV honors it too
+        saveSetting('startupSystem', v);
         // Required-ROM set depends on the boot mode → refresh the Power hint
         if (typeof updatePowerReadiness === 'function') updatePowerReadiness();
     });
@@ -1583,24 +1586,30 @@ cursorToNumpadCheck.addEventListener('change', () => {
 // =========================================================================
 // Mouse (all machines)
 // =========================================================================
-// No Pointer Lock: while a mouse mode is selected and the pointer is
-// over the canvas, relative motion is forwarded to fm7.addMouseDelta() and the
-// left/right buttons to fm7.setMouseButtons().
+// No Pointer Lock: while a mouse is connected and the pointer is over the
+// canvas, the pointer movement in host pixels is handed to fm7.moveMouse()
+// (1 count per pixel, right and down positive) and the buttons to
+// fm7.pressMouseButtons().
 
 const mouseModeSelect = document.getElementById('mouseModeSelect');
-let mouseLastX = null, mouseLastY = null;
-let mouseFracX = 0, mouseFracY = 0;
+let pointerPrevX = null, pointerPrevY = null;
 
 // A mouse is connected when the selected mode is anything but '(None)'.
 function mouseConnected() { return mouseModeSelect.value !== 'none'; }
 
+// Read an earlier saved value as the current one.
+const OLD_MOUSE_SETTING = { intel1: 'port1', intel2: 'port2' };
+function storedMouseKind(value) {
+    return OLD_MOUSE_SETTING[value] || value;
+}
+
 mouseModeSelect.addEventListener('change', () => {
-    const mode = mouseModeSelect.value;
-    fm7.setMouseMode(mode);
-    saveSetting('mouseMode', mode);
-    // Drop the position tracker so the next move does not emit a huge delta.
-    mouseLastX = null;
-    mouseLastY = null;
+    const kind = mouseModeSelect.value;
+    fm7.connectMouse(kind);
+    saveSetting('mouseMode', kind);
+    // Forget the last pointer position so the next move is not one big jump.
+    pointerPrevX = null;
+    pointerPrevY = null;
 });
 
 // FM Sound Card checkbox: persist the choice. This option only takes effect on
@@ -1615,70 +1624,53 @@ fmCardCheck.addEventListener('change', () => {
     updateMouseModeAvailability();
 });
 
-// Intelligent mouse rides the OPN on a joystick port. On an FM-7 / FM-77 that
-// OPN lives on the FM Sound Card, so with the card off the intel options are
-// unusable; FM77AV and later have the OPN built in. Disable the intel options when the
+// The joystick-port mouse is read through the OPN I/O ports. On an FM-7 / FM-77 that
+// OPN lives on the FM Sound Card, so with the card off the port options are
+// unusable; FM77AV and later have the OPN built in. Disable the port options when the
 // machine cannot reach an OPN, and if one was already selected, fall back to
 // '(None)' so the UI and the actual (non-responding) hardware stay in sync.
 const mouseHint = document.getElementById('mouseHint');
 function updateMouseModeAvailability() {
     const isAV = isAVMachine(machineTypeSelect.value);
     const blocked = !isAV && !fmCardCheck.checked;
-    for (const value of ['intel1', 'intel2']) {
+    for (const value of ['port1', 'port2']) {
         const opt = mouseModeSelect.querySelector(`option[value="${value}"]`);
         if (opt) opt.disabled = blocked;
     }
-    if (blocked && (mouseModeSelect.value === 'intel1' || mouseModeSelect.value === 'intel2')) {
+    if (blocked && (mouseModeSelect.value === 'port1' || mouseModeSelect.value === 'port2')) {
         mouseModeSelect.value = 'none';
-        fm7.setMouseMode('none');
+        fm7.connectMouse('none');
         saveSetting('mouseMode', 'none');
-        // Drop the position tracker so the next move does not emit a huge delta.
-        mouseLastX = null;
-        mouseLastY = null;
+        pointerPrevX = null;
+        pointerPrevY = null;
     }
     if (mouseHint) mouseHint.style.display = blocked ? '' : 'none';
 }
 
 canvas.addEventListener('mousemove', (e) => {
     if (!mouseConnected()) return;
-    if (mouseLastX === null) {
-        mouseLastX = e.clientX;
-        mouseLastY = e.clientY;
-        return;
+    if (pointerPrevX !== null) {
+        const dx = e.clientX - pointerPrevX;
+        const dy = e.clientY - pointerPrevY;
+        if (dx !== 0 || dy !== 0) fm7.moveMouse(dx, dy);
     }
-    const rawDX = e.clientX - mouseLastX;
-    const rawDY = e.clientY - mouseLastY;
-    mouseLastX = e.clientX;
-    mouseLastY = e.clientY;
-    // Scale host pixel motion to the guest coordinate space so the cursor
-    // tracks the pointer regardless of display zoom.
-    const rect = canvas.getBoundingClientRect();
-    const sx = rect.width  > 0 ? 320 / rect.width  : 1;
-    const sy = rect.height > 0 ? 200 / rect.height : 1;
-    mouseFracX += -rawDX * sx;
-    mouseFracY += -rawDY * sy;
-    const dx = Math.trunc(mouseFracX);
-    const dy = Math.trunc(mouseFracY);
-    mouseFracX -= dx;
-    mouseFracY -= dy;
-    if (dx !== 0 || dy !== 0) fm7.addMouseDelta(dx, dy);
+    pointerPrevX = e.clientX;
+    pointerPrevY = e.clientY;
 });
 
 canvas.addEventListener('mouseleave', () => {
-    mouseLastX = null;
-    mouseLastY = null;
-    // Release buttons when the pointer leaves the canvas.
-    if (mouseConnected()) fm7.setMouseButtons(false, false);
+    pointerPrevX = null;
+    pointerPrevY = null;
+    // Release the buttons when the pointer leaves the canvas.
+    if (mouseConnected()) fm7.pressMouseButtons(false, false);
 });
 
-function updateMouseButtons(e) {
+function forwardMouseButtons(e) {
     if (!mouseConnected()) return;
-    const left  = (e.buttons & 0x01) !== 0;
-    const right = (e.buttons & 0x02) !== 0;
-    fm7.setMouseButtons(left, right);
+    fm7.pressMouseButtons((e.buttons & 0x01) !== 0, (e.buttons & 0x02) !== 0);
 }
-canvas.addEventListener('mousedown', (e) => { updateMouseButtons(e); e.preventDefault(); });
-canvas.addEventListener('mouseup',   updateMouseButtons);
+canvas.addEventListener('mousedown', (e) => { forwardMouseButtons(e); e.preventDefault(); });
+canvas.addEventListener('mouseup',   forwardMouseButtons);
 
 // Suppress the browser context menu on right-click while the mouse is enabled.
 canvas.addEventListener('contextmenu', (e) => {
@@ -1705,9 +1697,9 @@ document.getElementById('screenshotBtn').addEventListener('click', () => {
         if (!blob) return;
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        const machineType = machineTypeSelect.value;
+        const model = machineTypeSelect.value;
         const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-        a.download = `${machineType}_${ts}.png`;
+        a.download = `${model}_${ts}.png`;
         a.href = url;
         a.click();
         URL.revokeObjectURL(url);
@@ -1742,8 +1734,8 @@ const storedVol = localStorage.getItem('fm7_volume');
 if (storedVol !== null) {
     savedVolume = parseFloat(storedVol);
     volumeSlider.value = Math.round(savedVolume * 100);
-    fm7.psg.setVolume(savedVolume);
-    fm7.opn.setVolume(savedVolume);
+    fm7.psg.setGain(savedVolume);
+    fm7.opn.setGain(savedVolume);
 }
 _refreshVolUI();
 
@@ -1751,8 +1743,8 @@ volumeSlider.addEventListener('input', () => {
     const v = parseInt(volumeSlider.value) / 100;
     savedVolume = v;
     isMuted = false;
-    fm7.psg.setVolume(v);
-    fm7.opn.setVolume(v);
+    fm7.psg.setGain(v);
+    fm7.opn.setGain(v);
     _refreshVolUI();
     localStorage.setItem('fm7_volume', v.toString());
 });
@@ -1760,11 +1752,11 @@ volumeSlider.addEventListener('input', () => {
 muteBtn.addEventListener('click', () => {
     isMuted = !isMuted;
     if (isMuted) {
-        fm7.psg.setVolume(0);
-        fm7.opn.setVolume(0);
+        fm7.psg.setGain(0);
+        fm7.opn.setGain(0);
     } else {
-        fm7.psg.setVolume(savedVolume);
-        fm7.opn.setVolume(savedVolume);
+        fm7.psg.setGain(savedVolume);
+        fm7.opn.setGain(savedVolume);
     }
     _refreshVolUI();
 });
@@ -1786,7 +1778,7 @@ fddSoundCheck.checked = fddEnabledInit;
 fddSoundVolume.value  = Math.round(fddVolumeInit * 100);
 fddSoundVolLabel.textContent = Math.round(fddVolumeInit * 100) + '%';
 fm7.fddSound.setEnabled(fddEnabledInit);
-fm7.fddSound.setVolume(fddVolumeInit);
+fm7.fddSound.setGain(fddVolumeInit);
 
 fddSoundCheck.addEventListener('change', () => {
     fm7.fddSound.setEnabled(fddSoundCheck.checked);
@@ -1795,7 +1787,7 @@ fddSoundCheck.addEventListener('change', () => {
 
 fddSoundVolume.addEventListener('input', () => {
     const v = parseInt(fddSoundVolume.value) / 100;
-    fm7.fddSound.setVolume(v);
+    fm7.fddSound.setGain(v);
     fddSoundVolLabel.textContent = Math.round(v * 100) + '%';
     localStorage.setItem('fm7_fdd_sound_volume', v.toString());
 });
@@ -1923,7 +1915,7 @@ for (const evt of ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenc
 const DB_NAME = 'WebM7Storage';
 const DB_VERSION = 4;
 const STORE_ROMS = 'roms';
-const STORE_DISKS = 'disks';           // 旧形式のディスク保存領域（ドライブごとに 1 スロット）
+const STORE_DISKS = 'disks';           // ドライブごとに 1 スロットのディスク保存領域（最後に入れたディスクの復元に使う）
 const STORE_SETTINGS = 'settings';
 const STORE_LIBRARY = 'library';       // 仮想フロッピー/テープの棚
 const STORE_BINDINGS = 'bindings';     // drive/tape → library id 紐付け
@@ -2298,15 +2290,27 @@ function inferKind(filename) {
     return null;
 }
 
+// Layout of a formatted mini floppy disk: 2 sides, 16 sectors per track,
+// 256 bytes per sector, 40 tracks per side for 2D (FM-7 ユーザーズマニュアル
+// システム解説 第 13 章 ミニフロッピィディスクの構成); 2DD keeps the same
+// layout with twice the tracks.
+const DISK_SIDES = 2;
+const DISK_SECTORS_PER_TRACK = 16;
+const DISK_SECTOR_BYTES = 256;
+const DISK_TRACKS_PER_SIDE = { '2D': 40, '2DD': 80 };
+function rawDiskBytes(kind) {
+    const tracks = DISK_TRACKS_PER_SIDE[kind] ?? DISK_TRACKS_PER_SIDE['2D'];
+    return tracks * DISK_SIDES * DISK_SECTORS_PER_TRACK * DISK_SECTOR_BYTES;
+}
+
 // Build a fresh blank D77 of the given kind.
 function makeBlankD77Buffer(kind /* '2D' | '2DD' */) {
-    const size = (kind === '2DD') ? 655360 : 327680;
-    const raw = new Uint8Array(size).buffer;
-    const d = new D77Disk();
+    const raw = new Uint8Array(rawDiskBytes(kind)).buffer;
+    const d = new FloppyImage();
     d.parseRaw2D(raw);
     // Initialise the DISK BASIC logical layer (FAT + directory) so the new
     // disk is immediately writable — no manual 論理FMT step needed.
-    d.logicalFormat();
+    d.formatForFBasic();
     d.name = (kind === '2DD') ? 'BLANK_2DD' : 'BLANK_2D';
     return d.serializeD77();
 }
@@ -2351,7 +2355,7 @@ for (const [filename, entry] of Object.entries(ROM_FILE_MAP)) {
 // 'user': 利用者の ROM ファイル (IndexedDB に保存) を使用。
 
 // ビルドスタンプ。
-const BUILD_STAMP = '20261008135559';
+const BUILD_STAMP = '20261103180922';
 
 const ALTROM_DIR = 'assets/altroms/';
 
@@ -2423,14 +2427,15 @@ function builtinRomEntries(machine) {
         );
     }
     if (machine === 'fm77av40ex') list.push({ file: 'extsub.rom', slot: 'extsub' });
-    // 漢字系 ROM (取得できないときは読み飛ばす): KANJI は全機種、KANJI2 / DICROM は FM77AV40EX/SX のみ。
+    // 漢字系 ROM (取得できないときは読み飛ばす): KANJI は全機種、KANJI2 は FM77AV20EX・FM77AV40・FM77AV40EX/SX、
+    // DICROM は FM77AV40EX/SX のみ。
     // ファイル名は assets/altroms/ に置かれた任意 ROM のファイル名と合わせること。
     list.push({ file: 'kanji.rom', slot: 'kanji', optional: true });
+    if (machine === 'fm77av20ex' || machine === 'fm77av40' || machine === 'fm77av40ex') {
+        list.push({ file: 'kanji2.rom', slot: 'kanji2', optional: true });
+    }
     if (machine === 'fm77av40ex') {
-        list.push(
-            { file: 'kanji2.rom', slot: 'kanji2', optional: true },
-            { file: 'dicrom.rom', slot: 'dicrom', optional: true },
-        );
+        list.push({ file: 'dicrom.rom', slot: 'dicrom', optional: true });
     }
     return list;
 }
@@ -2845,11 +2850,15 @@ setupIndividualROM(romInitiateInput, (d) => fm7.loadInitiateROM(d), statusInitia
 setupIndividualROM(romSubSysAInput,  (d) => fm7.loadSubROM_A(d),   statusSubSysAEl, 'subsys_a');
 setupIndividualROM(romSubSysBInput,  (d) => fm7.loadSubROM_B(d),   statusSubSysBEl, 'subsys_b');
 setupIndividualROM(romCGInput,       (d) => fm7.loadCGROM(d),      statusCGEl,      'cg');
+
+// KANJI.ROM (all machines)
 setupIndividualROM(romKanjiInput,    (d) => fm7.loadKanjiROM(d),   statusKanjiEl,   'kanji');
 
 // FM77AV40EX ROMs
 setupIndividualROM(romExtSubInput,   (d) => fm7.loadExtSubROM(d),  statusExtSubEl,  'extsub');
 setupIndividualROM(romDicromInput,   (d) => fm7.loadDicromROM(d),  statusDicromEl,  'dicrom');
+
+// FM77AV20EX / FM77AV40 / FM77AV40EX ROMs
 setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2El,  'kanji2');
 
 // Restore persisted settings on startup (older formats are migrated).
@@ -2859,7 +2868,7 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
     if (mt === undefined) {
         // Not saved yet — leave default (FM-7)
     }
-    // 旧設定を機種 FM-77 へ一度だけ移行する。
+    // 以前の保存形式の設定を現在の形式へ一度だけ移し替える。
     if (!(await loadSetting('fm77MachineMigrated'))) {
         let oldSkins = null;
         try { oldSkins = await loadSetting('uiSkins'); } catch (e) { oldSkins = null; }
@@ -2867,7 +2876,6 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
         if (wasFm77Skin && (mt === undefined || mt === 'fm7')) {
             mt = 'fm77';
             await saveSetting('machineType', mt);
-            // 移行済みのスキン指定は消す (FM-7 の既定スキンへ戻す)
             const cleaned = { ...oldSkins };
             delete cleaned.fm7;
             await saveSetting('uiSkins', cleaned);
@@ -2884,13 +2892,22 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
     if (typeof updateRomInfo === 'function') updateRomInfo();
 
     // Boot mode override
-    let bm = await loadSetting('bootMode');
-    // Map an older saved value to the default.
+    let bm = await loadSetting('startupSystem');
+    // Accept the older setting key as well.
+    const OLD_STARTUP_SYSTEM_KEY = 'bootMode';
+    if (bm === undefined || bm === null) {
+        const oldValue = await loadSetting(OLD_STARTUP_SYSTEM_KEY);
+        if (oldValue !== undefined && oldValue !== null) {
+            bm = oldValue;
+            await saveSetting('startupSystem', (bm === 'auto') ? 'basic' : bm);
+            await dbDelete(STORE_SETTINGS, OLD_STARTUP_SYSTEM_KEY);
+        }
+    }
+    // Treat a saved 'auto' as 'basic'.
     if (bm === 'auto') bm = 'basic';
     if (bm === 'dos' || bm === 'basic') {
-        fm7._bootModeOverride = bm;
-        fm7._bootModeExplicit = true; // a saved choice is an explicit selection
-        const r = document.querySelector(`input[name="bootMode"][value="${bm}"]`);
+        fm7.setStartupSystem(bm); // a saved choice is an explicit selection
+        const r = document.querySelector(`input[name="startupSystem"][value="${bm}"]`);
         if (r) r.checked = true;
         // ハードウェアパネル側の起動モード表示を復元値に同期
         hwUpdateBootMode();
@@ -2925,15 +2942,18 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
         mouseMode = (legacyOn === true) ? 'bus' : 'none';
         if (mouseMode === 'bus') await saveSetting('mouseMode', 'bus');
     }
+    const currentKind = storedMouseKind(mouseMode);
+    if (currentKind !== mouseMode) await saveSetting('mouseMode', currentKind);
+    mouseMode = currentKind;
     mouseModeSelect.value = mouseMode;
-    fm7.setMouseMode(mouseMode);
+    fm7.connectMouse(mouseMode);
 
     // FM Sound Card checkbox (FM-7 / FM-77 only). The card is applied at the
     // next power-on / Reset, not live.
     const fmCard = await loadSetting('fmCard');
     if (fmCard === true) fmCardCheck.checked = true;
 
-    // Reconcile the intel-mouse options against the restored machine and card
+    // Reconcile the joystick-port mouse options against the restored machine and card
     // state (may fall the selection back to '(None)' on FM-7 without the card).
     updateMouseModeAvailability();
 
@@ -3027,6 +3047,9 @@ async function updateRomInfo() {
           size: fm7._bootSize },
         { name: 'SUBSYS_C.ROM', data: fm7.subROM, loaded: fm7.romLoaded.sub,
           size: fm7._subSize },
+        // KANJI.ROM は全機種で読み込める（FM-7 では任意）。読み込んだときだけ下で一覧に出る。
+        { name: 'KANJI.ROM',    data: fm7.kanjiROM, loaded: fm7.romLoaded.kanji,
+          size: fm7._kanjiSize },
         ...(isAV ? [
             { name: 'INITIATE.ROM', data: fm7.initiateROM, loaded: fm7.romLoaded.initiate,
               size: fm7._initiateROMSize },
@@ -3036,14 +3059,14 @@ async function updateRomInfo() {
               size: fm7._subROM_BSize },
             { name: 'SUBSYSCG.ROM', data: fm7.cgROM, loaded: fm7.romLoaded.cg,
               size: fm7._cgSize },
-            { name: 'KANJI.ROM',   data: fm7.kanjiROM, loaded: fm7.romLoaded.kanji,
-              size: fm7._kanjiSize },
         ] : []),
         ...(machineTypeSelect.value === 'fm77av40ex' ? [
-            { name: 'EXTSUB.ROM', data: fm7.extsubROM, loaded: fm7.romLoaded.extsub,
-              size: fm7._extsubROMSize },
-            { name: 'DICROM.ROM', data: fm7.dicromROM, loaded: fm7.romLoaded.dicrom },
-            { name: 'KANJI2.ROM', data: fm7.kanjiROM2, loaded: fm7.romLoaded.kanji2 },
+            { name: 'EXTSUB.ROM', data: fm7.ex.extSubRom, loaded: fm7.romLoaded.extsub,
+              size: fm7.ex.extSubRomBytes },
+            { name: 'DICROM.ROM', data: fm7.ex.dictionaryRom, loaded: fm7.romLoaded.dicrom },
+        ] : []),
+        ...(['fm77av20ex', 'fm77av40', 'fm77av40ex'].includes(machineTypeSelect.value) ? [
+            { name: 'KANJI2.ROM', data: fm7.ex.kanji2Rom, loaded: fm7.romLoaded.kanji2 },
         ] : []),
     ];
 
@@ -3109,7 +3132,7 @@ function updateDiskInfo(driveNum) {
         el.classList.remove('loaded');
         return;
     }
-    el.textContent = `${g.type}  C${g.cylinders} H${g.sides} R${g.sectorsPerTrack} N${g.sectorSize}`;
+    el.textContent = `${g.type}  C${g.cylinders} H${g.sides} R${g.sectorsInTrack} N${g.sectorBytes}`;
     el.classList.add('loaded');
 }
 
@@ -3173,6 +3196,13 @@ async function ensureReadPermission(handle) {
     }
 }
 
+// Read the same file into a drive again (Power on / Reset) without changing
+// which disk of a multi-disk image the user chose for that drive.
+function reloadDiskKeepingSelection(driveNum, data) {
+    const keep = fm7.fdc.getDiskList(driveNum).index;
+    return fm7.loadDisk(driveNum, data, keep);
+}
+
 // Re-read the disk for a given drive from the live FileSystemFileHandle.
 // Called on Reset / Power on so external file updates are picked up.
 // Returns true if reload succeeded. With no handle held, falls back to the
@@ -3189,7 +3219,7 @@ async function reloadDiskFromHandle(driveNum) {
         }
         const file = await handle.getFile();
         const data = await file.arrayBuffer();
-        const loaded = fm7.loadDisk(driveNum, data);
+        const loaded = reloadDiskKeepingSelection(driveNum, data);
         if (loaded) {
             statusEl.textContent = file.name;
             statusEl.classList.add('loaded');
@@ -3222,7 +3252,7 @@ async function reloadDiskFromRecent(driveNum) {
     if (id == null) return false;
     const statusEl = driveNum === 0 ? diskStatusEl0 : diskStatusEl1;
     const data = await recentGetData(id);
-    if (data && fm7.loadDisk(driveNum, data)) {
+    if (data && reloadDiskKeepingSelection(driveNum, data)) {
         statusEl.textContent = `${_diskName[driveNum]} (restored from history)`;
         statusEl.classList.add('loaded');
         updateDiskSelector(driveNum);
@@ -3636,7 +3666,9 @@ recentRefreshCounts();
 //   - With a saved handle (FS API path): keep handle in memory, mark "(saved)".
 //     Actual file read happens on the next Power on / Reset (user gesture
 //     required for permission prompt).
-//   - With cached data (legacy / fallback path): load directly.
+//   - With cached data (no file handle): a drive without a library binding
+//     moves the data into the disk library and drops the saved entry; a
+//     saved entry that still remains is loaded directly.
 const _restoreDisksPromise = (async function restoreDisks() {
     for (const driveNum of [0, 1]) {
         const slot = `drive${driveNum}`;
@@ -3654,9 +3686,8 @@ const _restoreDisksPromise = (async function restoreDisks() {
                     });
                     await libBindingSet(slot, id);
                     await dbDelete(STORE_DISKS, slot);
-                    console.log(`[migrate] saved disk in drive ${driveNum} → library #${id}`);
                 } catch (err) {
-                    console.warn('Legacy disk migration failed:', err);
+                    console.warn('Saved disk import failed:', err);
                 }
             }
         }
@@ -3710,7 +3741,7 @@ document.getElementById('clearStorageBtn').addEventListener('click', async () =>
         closeRecentPopover();
         await recentRefreshCounts();
         await renderLibrary();
-        alert('Storage cleared. Reload the page to re-select ROM files.');
+        alert('Storage cleared. Reload the page to apply (the bundled compatible ROMs are used until you select your own ROM files again).');
     } catch (e) {
         alert('Failed to clear storage: ' + e.message);
     }
@@ -3896,8 +3927,8 @@ async function pickTapeViaFsApi() {
 })();
 
 cmtRewindBtn.addEventListener('click', () => {
-    const stats = fm7.cmt.rewind();
-    cmtInfo.textContent = stats ? `REW (${stats})` : 'REW';
+    fm7.cmt.rewind();
+    cmtInfo.textContent = 'REW';
 });
 
 // Download a captured recording as T77 or WAV.
@@ -4148,7 +4179,7 @@ libImportFile.addEventListener('change', async (e) => {
         let name = file.name;
         // Raw 2D は D77 へ正規化（ヘッダ付与）して棚に入れる
         if (kind === '2d') {
-            const d = new D77Disk();
+            const d = new FloppyImage();
             if (!d.parseRaw2D(data)) { alert('2D イメージのパースに失敗しました'); return; }
             d.name = name.replace(/\.2d$/i, '');
             data = d.serializeD77();
@@ -4216,9 +4247,9 @@ libListEl.addEventListener('click', async (e) => {
             await renderLibrary();
         } else if (act === 'fmt') {
             if (!confirm(`論理フォーマットしますか？\nDISK BASIC で書き込み可能にします。\n(既存ファイルがあれば失われます)\n  ${item.name}`)) return;
-            const d = new D77Disk();
+            const d = new FloppyImage();
             if (!d.parseD77(item.data)) { alert('D77 の解析に失敗しました'); return; }
-            if (!d.logicalFormat()) { alert('論理フォーマットに失敗しました'); return; }
+            if (!d.formatForFBasic()) { alert('論理フォーマットに失敗しました'); return; }
             const buf = d.serializeD77();
             item.data = buf;
             item.size = buf.byteLength;
@@ -4350,40 +4381,67 @@ function setEmuState(state) {
     updatePowerReadiness();
 }
 
+// 電源投入前の判定と ROM Files 欄のバッジが共通で使う、必須の ROM の一覧。
+// 判定もバッジもこの一覧だけから作り、両者が食い違わないようにする。
+// FBASIC30 と SUBSYS_C は常に必須。FM-7 / FM-77 は起動モードに合う BOOT も必須。
+// FM77AV 系は BOOT の代わりに INITIATE が必須で、Drive 0 にディスクがあるときは
+// SUBSYS_A / SUBSYS_B も必須。ここに無い ROM（KANJI など）は任意で、無ければ同梱互換で補う。
+// label は必須のときにバッジへ出す文言、loaded は fm7.romLoaded の名前。
+// （関数の中に置き、スクリプトの読み込み途中に呼ばれても使えるようにする）
+function getRomRequirements() {
+    return [
+        { file: 'FBASIC30.ROM', slot: 'fbasic',   loaded: 'fbasic',   label: '必須',        when: () => true },
+        { file: 'BOOT_DOS.ROM', slot: 'bootdos',  loaded: 'boot',     label: 'DOS時必須',   when: c => !c.isAV && c.startupSystem === 'dos' },
+        { file: 'BOOT_BAS.ROM', slot: 'bootbas',  loaded: 'bootBas',  label: 'BASIC時必須', when: c => !c.isAV && c.startupSystem !== 'dos' },
+        { file: 'SUBSYS_C.ROM', slot: 'subsys_c', loaded: 'sub',      label: '必須',        when: () => true },
+        { file: 'INITIATE.ROM', slot: 'initiate', loaded: 'initiate', label: '必須',        when: c => c.isAV },
+        { file: 'SUBSYS_A.ROM', slot: 'subsys_a', loaded: 'subA',     label: '必須',        when: c => c.isAV && c.hasDisk },
+        { file: 'SUBSYS_B.ROM', slot: 'subsys_b', loaded: 'subB',     label: '必須',        when: c => c.isAV && c.hasDisk },
+    ];
+}
+
+// 今の機種・起動モード（ラジオボタンの状態）・Drive 0 のディスクの有無。
+function getRomRequirementContext() {
+    return {
+        isAV: !!fm7.isFM77AV,
+        startupSystem: (document.querySelector('input[name="startupSystem"]:checked') || {}).value || 'basic',
+        hasDisk: !!(fm7.fdc.disks[0] && fm7.fdc.disks[0].loaded),
+    };
+}
+
+function getRequiredRoms(ctx) {
+    return getRomRequirements().filter(r => r.when(ctx));
+}
+
+// ROM Files 欄のバッジを判定と同じ一覧に合わせる。必須でない行は「任意」。
+function updateRomBadges() {
+    const required = new Map(getRequiredRoms(getRomRequirementContext()).map(r => [r.slot, r]));
+    document.querySelectorAll('.rom-item').forEach(item => {
+        const badge = item.querySelector('.rom-badge');
+        const src = item.querySelector('.rom-src');
+        if (!badge || !src) return;
+        const req = required.get(src.dataset.slot);
+        badge.textContent = req ? req.label : '任意';
+        badge.classList.toggle('rom-badge-req', !!req);
+        badge.classList.toggle('rom-badge-opt', !req);
+        item.setAttribute('data-req', req ? 'required' : 'optional');
+    });
+}
+
 // Return the list of required ROM filenames that are not yet loaded for the
 // current machine type, boot mode and disk state. Empty list means power-on
-// is allowed. Required ROM set per machine type: FBASIC30 and SUBSYS_C
-// always; FM-7 models also need the boot ROM matching the selected boot
-// mode, while FM77AV models use INITIATE instead (plus SUBSYS_A/B when a
-// disk is in Drive 0).
+// is allowed.
 function getMissingRequiredRoms() {
-    const hasDisk = fm7.fdc.disks[0] && fm7.fdc.disks[0].loaded;
-    // Use the live radio state.
-    const bootMode = (document.querySelector('input[name="bootMode"]:checked') || {}).value || 'basic';
-    const missing = [];
-    if (!fm7.romLoaded.fbasic) missing.push('FBASIC30.ROM');
-    if (!fm7.isFM77AV) {
-        if (bootMode === 'dos') {
-            if (!fm7.romLoaded.boot) missing.push('BOOT_DOS.ROM');
-        } else {
-            if (!fm7.romLoaded.bootBas) missing.push('BOOT_BAS.ROM');
-        }
-    }
-    if (!fm7.romLoaded.sub) missing.push('SUBSYS_C.ROM');
-    if (fm7.isFM77AV) {
-        if (!fm7.romLoaded.initiate) missing.push('INITIATE.ROM');
-        if (hasDisk) {
-            if (!fm7.romLoaded.subA) missing.push('SUBSYS_A.ROM');
-            if (!fm7.romLoaded.subB) missing.push('SUBSYS_B.ROM');
-        }
-    }
-    return missing;
+    return getRequiredRoms(getRomRequirementContext())
+        .filter(r => !fm7.romLoaded[r.loaded])
+        .map(r => r.file);
 }
 
 // Dim the Power switch and show a hint while required ROMs are missing.
 // The ROM-missing modal still fires on click as a backup. Only meaningful
 // while stopped — when running/paused the switch reflects the live ON state.
 function updatePowerReadiness() {
+    updateRomBadges();
     const sw = document.querySelector('.power-switch');
     const hint = document.getElementById('powerHint');
     if (!sw) return;
@@ -4550,10 +4608,13 @@ resetBtn.addEventListener('click', async () => {
 // Debug: Palette Swatches
 // =========================================================================
 
-const PALETTE_COLORS = [
-    '#000000', '#0000ff', '#ff0000', '#ff00ff',
-    '#00ff00', '#00ffff', '#ffff00', '#ffffff',
-];
+// Digital colour code: bit 0 = blue, bit 1 = red, bit 2 = green (0 black,
+// 1 blue, 2 red, 3 magenta, 4 green, 5 cyan, 6 yellow, 7 white). Source:
+// FM-7 User's Manual System Description, 7.1.5 (colour code table).
+const PALETTE_COLORS = Array.from({ length: 8 }, (_, code) => {
+    const hex = (on) => (on ? 'ff' : '00');
+    return '#' + hex(code & 0x02) + hex(code & 0x04) + hex(code & 0x01);
+});
 
 for (let i = 0; i < 8; i++) {
     const sw = document.createElement('div');
@@ -4769,7 +4830,7 @@ const FM7_KBD_LAYOUT = [
     // --- Main row 3: CTRL~] + numpad 123= ---
     [K('CTR','ControlLeft','ctrl'),K('A','KeyA'),K('S','KeyS'),K('D','KeyD'),K('F','KeyF'),K('G','KeyG'),K('H','KeyH'),K('J','KeyJ'),K('K','KeyK'),K('L','KeyL'),K(';','Semicolon'),K(':','Quote'),K(']','IntlBackslash'),_,_,_,K('1','Numpad1'),K('2','Numpad2'),K('3','Numpad3'),K('=','NumpadEqual')],
     // --- Main row 4: SHIFT~SHIFT + numpad 0.+RT ---
-    [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('_','IntlRo'),K('SHF','ShiftRight'),_,_,_,K('0','Numpad0'),K('.','NumpadDecimal'),K('+','NumpadAdd'),K('RT','NumpadEnter')],
+    [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('"','IntlRo'),K('SHF','ShiftRight'),_,_,_,K('0','Numpad0'),K('.','NumpadDecimal'),K('+','NumpadAdd'),K('RT','NumpadEnter')],
     // --- Main row 5: CAP/GRP/(無変換)/(変換)/SPACE/カナ (main area only, no numpad) ---
     // 無変換 / 変換 は FM77AV 以降のみ表示する
     [K('CAP','CapsLock','led'),K('GRP','AltLeft'),K('無変換','NonConvert','av-key'),K('変換','Convert','av-key'),K('SPACE','Space','space'),K('カナ','AltRight','led')],
@@ -4875,14 +4936,14 @@ const TYPEWRITER_CODES = new Set([
     'Comma','Period','Slash','IntlRo',
 ]);
 // Label-driven shift table (FM-7 JIS typewriter row). Letters are handled
-// separately via caps XOR shift.
+// separately: CAP or Shift gives the capital.
 const LABEL_SHIFT = new Map([
     ['1','!'], ['2','"'], ['3','#'], ['4','$'], ['5','%'],
     ['6','&'], ['7','\''], ['8','('], ['9',')'],
     ['-','='], ['^','~'], ['¥','|'],
     ['@','`'], ['[','{'], [']','}'],
     [';','+'], [':','*'],
-    [',','<'], ['.','>'], ['/','?'],
+    [',','<'], ['.','>'], ['/','?'], ['"','_'],
 ]);
 // Unicode label → FM-7 CG ROM code remap (JIS X 0201 replaces 0x5C backslash
 // with the yen sign). Unicode `¥` is U+00A5 but FM-7 stores it at 0x5C.
@@ -4910,7 +4971,7 @@ function _glyphCodesFor(code, label) {
     return {
         left:   _labelCodeUnshifted(label),
         top:    _labelCodeShifted(label),
-        right:  GRPH_OVERRIDE.get(code) ?? null,
+        right:  GRAPH_MODE_CODES.get(code) ?? null,
         bottom: KANA_OVERRIDE.get(code) ?? null,
     };
 }
@@ -4919,7 +4980,7 @@ function _activePosition(shift, caps, graph, kana, label) {
     if (graph) return 'right';
     if (kana)  return 'bottom';
     if (label && /^[A-Z]$/.test(label)) {
-        return (shift !== caps) ? 'top' : 'left';   // caps inverts shift for letters
+        return (shift || caps) ? 'top' : 'left';   // CAP or Shift: the capital is sent
     }
     return shift ? 'top' : 'left';
 }
@@ -4980,9 +5041,9 @@ setInterval(() => {
     _refreshKbdLabels();
 }, 100);
 
-// BREAK key: load saved choice. The BREAK key is assigned through the key
-// customization UI below (clicking the BRK key on the layout) and is stored
-// separately from _customMap.
+// BREAK key: the user's choice of host key, restored here.  The choice is made
+// in the key customization UI below (click BRK on the layout) and is kept
+// apart from _customMap.  Out of the box it is Escape.
 const DEFAULT_BREAK_CODE = 'Escape';
 const savedBreakKey = localStorage.getItem('fm7_breakkey');
 if (savedBreakKey) {
@@ -5293,8 +5354,8 @@ fm7._frameCallback = () => {
             ? `${_rname} / ${modeColors[_dm]}`
             : '??';
     }
-    subStateValEl.textContent = status.subHalted ? 'HALT' : 'RUN';
-    subStateValEl.style.color = status.subHalted ? '#cc6666' : '#00cc66';
+    subStateValEl.textContent = status.subCpuStopped ? 'HALT' : 'RUN';
+    subStateValEl.style.color = status.subCpuStopped ? '#cc6666' : '#00cc66';
     // CPU registers
     const h2 = v => '$' + (v||0).toString(16).toUpperCase().padStart(2, '0');
     const h4 = v => '$' + (v||0).toString(16).toUpperCase().padStart(4, '0');
@@ -5319,21 +5380,22 @@ fm7._frameCallback = () => {
 
     // Update FDC access LEDs (use latch for access that completes between updates)
     if (status.running) {
-        const accessed = status.fdcAccess || status.fdcBusy;
-        const drive = status.fdcDrive;
+        const fd = status.floppy;
+        const accessed = fd.touchedSincePoll || fd.busy;
+        const drive = fd.drive;
         // Drive LED colour code:
         //   yellow = 2D read, white = 2D DMA, green = 2DD read,
         //   blue = 2DD DMA, red = write (any mode).
         // Write-path FDC states light the LED red.
-        const fdcWriting = (status.fdcState === 6 || status.fdcState === 7 || status.fdcState === 10);
-        const dmaNow = fm7.dmaActivityLatch;
-        fm7.dmaActivityLatch = false;
+        const fdcWriting = (fd.phase === 6 || fd.phase === 7 || fd.phase === 10);
+        const dmaNow = fm7.dmaTransferSeen;
+        fm7.dmaTransferSeen = false;
         const is2dd = fm7.fdc.driveModeIs2dd;
         const ledMode = fdcWriting ? ' led-red'
                       : is2dd ? (dmaNow ? ' led-blue' : ' led-green')
                               : (dmaNow ? ' led-white' : '');
-        const led0cls = 'fdc-led' + (drive === 0 && accessed ? ' active' + ledMode : (drive === 0 && status.fdcMotor ? ' motor' : ''));
-        const led1cls = 'fdc-led' + (drive === 1 && accessed ? ' active' + ledMode : (drive === 1 && status.fdcMotor ? ' motor' : ''));
+        const led0cls = 'fdc-led' + (drive === 0 && accessed ? ' active' + ledMode : (drive === 0 && fd.motorRunning ? ' motor' : ''));
+        const led1cls = 'fdc-led' + (drive === 1 && accessed ? ' active' + ledMode : (drive === 1 && fd.motorRunning ? ' motor' : ''));
         fdcLed0.className = led0cls;
         fdcLed1.className = led1cls;
         // Toolbar per-drive mirror: each toolbar LED tracks the exact same
@@ -5341,27 +5403,28 @@ fm7._frameCallback = () => {
         tbDrv0Led.className = led0cls;
         tbDrv1Led.className = led1cls;
         const stateNames = ['IDLE','CMD','SEEK','VRFY','RFND','READ','WFND','WRIT','RADR','RTRK','WTRK','DONE','RNFW'];
-        fdcTrackInfo.textContent = `T:${status.fdcTrack} S:${status.fdcSector} ${stateNames[status.fdcState] || '??'}`;
+        fdcTrackInfo.textContent = `T:${fd.headCylinder} S:${fd.sectorRegister} ${stateNames[fd.phase] || '??'}`;
         // Clear access latch after reading
         fm7.fdc.accessLatch = false;
         // MMR LED: lit while MMR/TWR is enabled; green while the high-speed
         // MMR mode is engaged on machines that have it.
-        const mmrOn = fm7._mmrEnabled || fm7._twrFlag;
-        const mmrFast = mmrOn && fm7._mmrFastMode && fm7.hasFastMMR;
-        tbMmrLed.className = 'fdc-led' + (mmrOn ? ' active' + (mmrFast ? ' led-green' : '') : '');
+        const mm = fm7.memoryManagementView();
+        const mmrOn = mm.mapping || mm.windowOn;
+        const exHighSpeedOn = mmrOn && fm7.ex.features.modeRegister2 && fm7.ex.highSpeedBit;
+        tbMmrLed.className = 'fdc-led' + (mmrOn ? ' active' + (exHighSpeedOn ? ' led-green' : '') : '');
         // Drive mode pill (2D / 2DD, lit while running; 2D fixed without 2DD).
         // One FDC setting shared by both drives, so a single pill.
-        tbDriveMode.textContent = (fm7.has2DD && is2dd) ? '2DD' : '2D';
+        tbDriveMode.textContent = (fm7.supports2DD && is2dd) ? '2DD' : '2D';
         tbDriveMode.classList.add('on');
         // Per-drive DMAC LED: lit while that drive is being accessed through
         // the DMAC (same dmaNow sample that colours the access LED white /
         // blue); always off on machines without a DMAC.
-        const dmaOn = fm7.hasDMAC && dmaNow && accessed;
+        const dmaOn = fm7.hasDmaController && dmaNow && accessed;
         tbDrv0Dmac.className = 'fdc-led' + (dmaOn && drive === 0 ? ' active' : '');
         tbDrv1Dmac.className = 'fdc-led' + (dmaOn && drive === 1 ? ' active' : '');
-        // Cycle steal LED (NO STEAL): lit while the sub CPU's VRAM access is
-        // not stolen by the display.
-        const stealReleased = fm7.isFM77AV || fm7.display.cycleStealMode;
+        // NO STEAL LED: lit while the sub CPU reaches VRAM without waiting
+        // for the blanking periods (FM77AV family, or $D405 bit 0 = 1).
+        const stealReleased = fm7.isFM77AV || fm7.display.subVramFastAccess;
         tbStealLed.className = 'fdc-led' + (stealReleased ? ' active' : '');
     } else {
         fdcLed0.className = 'fdc-led';
@@ -5380,7 +5443,7 @@ fm7._frameCallback = () => {
     // We deliberately do NOT auto-persist to IndexedDB or any library item —
     // the user explicitly commits via the Library "Commit" button so nothing
     // changes silently.
-    if (!status.fdcBusy) {
+    if (!status.floppy.busy) {
         for (const d of [0, 1]) {
             if (fm7.isDiskDirty(d)) {
                 const wasModified = _diskModified[d];
@@ -5421,10 +5484,24 @@ fm7._frameCallback = () => {
         pasteInfo._wasTyping = false;
     }
 
+    // Border color: the area around the picture takes the color of palette
+    // number 0 (FM77AV Hardware Manual 8.3.1). Only in fullscreen, where
+    // that area is plain; otherwise the page style keeps its own color.
+    {
+        const full = (document.fullscreenElement || document.webkitFullscreenElement) === screenContainer;
+        const c = full ? fm7.display.borderColor : '';
+        if (screenContainer._borderColorShown !== c) {
+            screenContainer.style.backgroundColor = c;
+            screenContainer._borderColorShown = c;
+        }
+    }
+
     // Update keyboard LEDs
     kbdLedCaps.className = 'kbd-led' + (fm7.keyboard.capsLock ? ' on' : '');
     kbdLedKana.className = 'kbd-led' + (fm7.keyboard.kanaMode ? ' on' : '');
-    kbdLedIns.className  = 'kbd-led' + ((fm7.keyboard.insMode || fm7.display.insLedOn) ? ' on' : '');
+    // INS: the sub CPU turns the LED on and off through $D40D (FM77AV
+    // Hardware Manual 5.1.3 (1)); the Insert key alone does not light it.
+    kbdLedIns.className  = 'kbd-led' + (fm7.display.insLedOn ? ' on' : '');
 
     // Toolbar modifier LEDs (Shift / Ctrl / GRPH) mirror the Keyboard panel state.
     const _modShift = _shiftDown || _panelShift;
@@ -5445,19 +5522,22 @@ fm7._frameCallback = () => {
     if (sndPanelEl.classList.contains('open')) updateSoundPanel();
 
     // FM77AV-only debug info
-    if (isAVMachine(status.machineType)) {
-        // Value 3 is not a separate monitor in the core; it is handled as Type-B.
-        const monNames = ['Type-C', 'Type-A', 'Type-B', 'Type-B (3)'];
-        const t = status.subMonitorType;
-        subMonVal.textContent = monNames[t] || (t >= 4 ? 'Type-D/E' : '??');
+    if (isAVMachine(status.model)) {
+        // The monitor started by the last $FD13 write (core status, a name).
+        const monitorLabels = {
+            'old sub (640x200)': 'Old 640', 'new sub (640x200)': 'New 640',
+            'new sub (320x200)': 'New 320', 'extended sub RAM': 'Sub RAM',
+        };
+        subMonVal.textContent = monitorLabels[status.subMonitor] || '??';
         initVal.textContent = status.initiatorActive ? 'ACTIVE' : 'OFF';
         initVal.style.color = status.initiatorActive ? '#e8a848' : '#6688aa';
 
-        document.getElementById('bootRamVal').textContent = fm7._basicRomEnabled ? 'ROM' : 'RAM';
-        document.getElementById('mmrVal').textContent = fm7._mmrEnabled ? 'ON' : 'OFF';
-        document.getElementById('mmrBankVal').textContent = '$' + (fm7._mmrBankReg & 7).toString(16);
-        document.getElementById('twrVal').textContent = fm7._twrFlag ? 'ON' : 'OFF';
-        document.getElementById('twrOffsetVal').textContent = '$' + (fm7._twrReg & 0xFF).toString(16).padStart(2, '0').toUpperCase();
+        document.getElementById('bootRamVal').textContent = fm7._upperSpaceIsRom ? 'ROM' : 'RAM';
+        const mm = fm7.memoryManagementView();
+        document.getElementById('mmrVal').textContent = mm.mapping ? 'ON' : 'OFF';
+        document.getElementById('mmrBankVal').textContent = '$' + mm.segment.toString(16);
+        document.getElementById('twrVal').textContent = mm.windowOn ? 'ON' : 'OFF';
+        document.getElementById('twrOffsetVal').textContent = '$' + mm.windowOffset.toString(16).padStart(2, '0').toUpperCase();
 
         const mmrMapLabel = document.getElementById('mmrMapLabel');
         const mmrMapGrid  = document.getElementById('mmrMapGrid');
@@ -5467,30 +5547,23 @@ fm7._frameCallback = () => {
         mmrMapGrid.style.display  = '';
         physMapLabel.style.display = '';
         physMapGrid.style.display  = '';
-        // 表示するバンクとページ番号には、MMR のアドレス変換と同じ制限を掛ける
-        // （拡張が無効の時は 4 バンク・ページ番号 6 ビット）。
-        const mmrExt = !!fm7._mmrExt;
-        const bankOff = (mmrExt ? (fm7._mmrBankReg & 7) : (fm7._mmrBankReg & 3)) * 16;
-        const extRamLen = fm7._extRAM ? fm7._extRAM.length : 0;
         let mmrRows = '';
         let physRows = '';
         for (let seg = 0; seg < 16; seg++) {
-            const rawPage = fm7._mmrRegs[bankOff + seg] & 0xFF;
-            const phys = mmrExt ? rawPage : (rawPage & 0x3F);
+            const phys = mm.pages[seg];
             const logHi = (seg * 0x1000).toString(16).toUpperCase().padStart(4, '0');
-            const physAddr = (phys * 0x1000).toString(16).toUpperCase().padStart(5, '0');
+            const physHex = (phys * 0x1000).toString(16).toUpperCase().padStart(5, '0');
             const physPg = phys.toString(16).toUpperCase().padStart(2, '0');
             // MMR が掛かるのは $0000-$FBFF だけ。seg F は $F000-$FBFF までを示す。
             const logEnd = seg === 15 ? 0xFBFF : (seg * 0x1000) + 0xFFF;
             mmrRows += `$${logHi}-$${logEnd.toString(16).toUpperCase().padStart(4,'0')} → page $${physPg}\n`;
-            let region;
-            if ((phys & 0x30) === 0x30) region = 'main RAM';
+            let region = fm7.ex.physicalRegion(phys);
+            if (region) { /* EX-series map */ }
+            else if ((phys & 0xF0) === 0x30) region = 'main RAM';
             else if ((phys & 0xF0) === 0x10) region = 'sub CPU space';
-            else if ((phys === 0x28 || phys === 0x29) && fm7._dicramEn) region = 'learning RAM';
-            else if ((phys & 0xFF) === 0x2E && fm7._dicromEn) region = fm7._extromSel ? 'ext ROM (read)' : 'dictionary ROM (read)';
-            else if ((phys << 12) < extRamLen) region = 'ext RAM';
+            else if ((phys << 12) < mm.physicalRamBytes) region = 'ext RAM';
             else region = 'unmapped';
-            physRows += `seg ${seg.toString(16).toUpperCase()} → $${physAddr} (${region})${seg === 15 ? ' [$F000-$FBFF]' : ''}\n`;
+            physRows += `seg ${seg.toString(16).toUpperCase()} → $${physHex} (${region})${seg === 15 ? ' [$F000-$FBFF]' : ''}\n`;
         }
         mmrRows  += '$FC00-$FFFF → fixed (not mapped by MMR)\n';
         physRows += '$FC00-$FFFF → fixed (not mapped by MMR)\n';
@@ -5516,9 +5589,9 @@ fm7._frameCallback = () => {
 
         // Update analog palette canvas (4096 colors in 64x64 grid)
         analogPaletteSection.style.display = (dm === 1 || dm === 2) ? '' : 'none';
-        if (fm7._analogPalette && (dm === 1 || dm === 2)) {
+        if (fm7._palette4096 && (dm === 1 || dm === 2)) {
             for (let i = 0; i < 4096; i++) {
-                const entry = fm7._analogPalette[i] || 0;
+                const entry = fm7._palette4096[i] || 0;
                 const g8 = ((entry >> 8) & 0xF) * 17;
                 const r8 = ((entry >> 4) & 0xF) * 17;
                 const b8 = (entry & 0xF) * 17;
@@ -5561,7 +5634,7 @@ const inputPanelBtn = document.getElementById('inputPanelBtn');
 const tbKeyLabel = document.getElementById('tbKeyLabel');
 const ipHeldKeys = document.getElementById('ipHeldKeys');
 const ipFm7Code = document.getElementById('ipFm7Code');
-const ipFm7Buf = document.getElementById('ipFm7Buf');
+const ipFm7Wait = document.getElementById('ipFm7Wait');
 const ipJoyStatus = document.getElementById('ipJoyStatus');
 
 inputPanelBtn.addEventListener('click', () => {
@@ -5664,6 +5737,8 @@ function _crc32(bytes) {
 
 function generateStateDump() {
     const h2 = v => (v & 0xFF).toString(16).padStart(2,'0');
+    const cpuRequests = (c) => [c.nmiRequest && 'NMI', c.firqRequest && 'FIRQ', c.irqRequest && 'IRQ',
+        ['', 'SYNC', 'CWAI'][c.waitState]].filter(Boolean).join(',') || '-';
     const h4 = v => (v & 0xFFFF).toString(16).padStart(4,'0');
     const mainHex = (a, n) => { const b=[]; for (let i=0;i<n;i++) b.push(h2(fm7._mainRead((a+i)&0xFFFF))); return b.join(' '); };
     const subHex  = (a, n) => { const b=[]; for (let i=0;i<n;i++) b.push(h2(fm7._subRead((a+i)&0xFFFF)));  return b.join(' '); };
@@ -5674,7 +5749,7 @@ function generateStateDump() {
     const lines = [];
     const ts = new Date().toISOString();
     lines.push(`=== WebM7 State Dump ${ts} ===`);
-    lines.push(`Machine: ${fm7.isFM77AV ? 'fm77av' : 'fm7'} (type=${fm7._machineType})`);
+    lines.push(`Machine: ${fm7.isFM77AV ? 'fm77av' : 'fm7'} (type=${fm7._model})`);
     lines.push('');
 
     // --- ROM checksums ---
@@ -5702,7 +5777,7 @@ function generateStateDump() {
     const mPC = mc.pc & 0xFFFF;
     lines.push('[Main CPU (MC6809)]');
     lines.push(`  PC=$${h4(mPC)} SP=$${h4(mc.s||0)} USP=$${h4(mc.u||0)} X=$${h4(mc.x||0)} Y=$${h4(mc.y||0)}`);
-    lines.push(`  A=$${h2(mc.a||0)} B=$${h2(mc.b||0)} DP=$${h2(mc.dp||0)} CC=$${h2(mc.cc||0)}  intr=$${h2(mc.intr||0)}`);
+    lines.push(`  A=$${h2(mc.a||0)} B=$${h2(mc.b||0)} DP=$${h2(mc.dp||0)} CC=$${h2(mc.cc||0)}  req=${cpuRequests(mc)}`);
     lines.push(`  Code @PC-16: ${mainHex(mPC - 16, 16)}`);
     lines.push(`  Code @PC   : ${mainHex(mPC, 32)}`);
     lines.push(`  Stack @SP  : ${mainHex((mc.s||0), 16)}`);
@@ -5712,9 +5787,9 @@ function generateStateDump() {
     const sPC = sc.pc & 0xFFFF;
     lines.push('[Sub CPU (MC6809)]');
     lines.push(`  PC=$${h4(sPC)} SP=$${h4(sc.s||0)} USP=$${h4(sc.u||0)} X=$${h4(sc.x||0)} Y=$${h4(sc.y||0)}`);
-    lines.push(`  A=$${h2(sc.a||0)} B=$${h2(sc.b||0)} DP=$${h2(sc.dp||0)} CC=$${h2(sc.cc||0)}  intr=$${h2(sc.intr||0)}`);
-    lines.push(`  Halted=${fm7._subHalted} Busy=${fm7._subBusy} Attn=${fm7._subAttn} NMImask=${fm7._nmiMaskSub} BREAK=${fm7._breakKey}`);
-    lines.push(`  Monitor bank: ${fm7._subMonitorType} (0=C,1=A,2=B,3=B,4=D/E)`);
+    lines.push(`  A=$${h2(sc.a||0)} B=$${h2(sc.b||0)} DP=$${h2(sc.dp||0)} CC=$${h2(sc.cc||0)}  req=${cpuRequests(sc)}`);
+    lines.push(`  Halted=${fm7._subStoppedByHalt} Busy=${fm7._busyToMain} Attn=${fm7._attentionLatch} NMImask=${fm7._nmiMaskSub} BREAK=${fm7._breakKey}`);
+    lines.push(`  Sub monitor: ${fm7._activeSubMonitor}`);
     lines.push(`  Code @PC-16: ${subHex(sPC - 16, 16)}`);
     lines.push(`  Code @PC   : ${subHex(sPC, 32)}`);
     lines.push(`  Stack @SP  : ${subHex((sc.s||0), 16)}`);
@@ -5752,12 +5827,11 @@ function generateStateDump() {
 
     // --- Display / VRAM ---
     lines.push('[Display]');
-    lines.push(`  Mode=${d.displayMode} ActivePage=${d.activeVramPage} DisplayPage=${d.displayVramPage}`);
-    lines.push(`  MISC=$${h2(d.miscReg||0)} multiPage=$${h2(d.multiPage||0)} vramAccessEnabled=${d.vramAccessEnabled}`);
-    lines.push(`  ALU cmd=$${h2(d.aluCommand||0)} color=$${h2(d.aluColor||0)} mask=$${h2(d.aluMask||0)} disable=$${h2(d.aluDisable||0)}`);
-    const co = d.appliedScrollOffset || [0,0];
-    const vo = d.vramOffset || [0,0];
-    lines.push(`  appliedScrollOffset=[$${h4(co[0])},$${h4(co[1])}] vramOffset=[$${h4(vo[0])},$${h4(vo[1])}]`);
+    lines.push(`  Mode=${d.displayMode} CpuPage=${d.cpuPage} ShownPage=${d.shownPage} D42F=${d.planeBank}`);
+    lines.push(`  D430=$${h2(d.pageControl||0)} planeMaskBits=$${h2(d.planeMaskBits||0)} vramAccessEnabled=${d.vramAccessEnabled}`);
+    lines.push(`  Logic cmd=$${h2(d.logicCommand||0)} color=$${h2(d.logicColor||0)} mask=$${h2(d.logicMask||0)} disable=$${h2(d.bankDisable||0)}`);
+    const vo = d.offsetRegister || [0,0];
+    lines.push(`  offset=[$${h4(vo[0])},$${h4(vo[1])}] OA=${d.fineOffsetEnable ? 1 : 0}`);
     lines.push('');
 
     // --- Palette ---
@@ -5765,19 +5839,19 @@ function generateStateDump() {
     const pal = [];
     for (let i = 0; i < 8; i++) pal.push(h2((d.palette && d.palette[i]) || 0));
     lines.push(`  ${pal.join(' ')}`);
-    if (fm7.isFM77AV && fm7._analogPalette) {
+    if (fm7.isFM77AV && fm7._palette4096) {
         lines.push('[Palette Analog 4096 (12-bit GRB, 16 entries per line)]');
         for (let row = 0; row < 4096; row += 16) {
             const ap = [];
             for (let i = 0; i < 16; i++) {
-                ap.push(h4(fm7._analogPalette[row + i] || 0));
+                ap.push(h4(fm7._palette4096[row + i] || 0));
             }
             lines.push(`  ${h4(row)}: ${ap.join(' ')}`);
         }
     }
     lines.push('');
 
-    // --- VRAM (vram and vramPage1, base64-encoded for compactness) ---
+    // --- VRAM (banks 0 and 1, base64-encoded for compactness) ---
     const vramToB64 = (arr) => {
         if (!arr) return '(none)';
         let bin = '';
@@ -5787,8 +5861,8 @@ function generateStateDump() {
         }
         return btoa(bin);
     };
-    const p0 = fm7.display && fm7.display.vram;
-    const p1 = fm7.display && fm7.display.vramPage1;
+    const p0 = fm7.display && fm7.display.vramBanks && fm7.display.vramBanks[0];
+    const p1 = fm7.display && fm7.display.vramBanks && fm7.display.vramBanks[1];
     if (p0) {
         lines.push('[VRAM buffer 0 (base64, 48KB raw)]');
         const b64 = vramToB64(p0);
@@ -5803,10 +5877,11 @@ function generateStateDump() {
     }
 
     // --- MMR (FM77AV) ---
-    if (fm7.isFM77AV && fm7._mmrRegs) {
+    if (fm7.isFM77AV && fm7.memoryManagementView) {
+        const mm = fm7.memoryManagementView();
         lines.push('[MMR]');
-        lines.push(`  enabled=${fm7._mmrEnabled} bankReg($FD90)=$${h2(fm7._mmrBankReg||0)} basicROM=${fm7._basicRomEnabled}`);
-        const mr = fm7._mmrRegs;
+        lines.push(`  enabled=${mm.mapping} window=${mm.windowOn} MSR($FD90)=$${h2(mm.segment)} basicROM=${fm7._upperSpaceIsRom}`);
+        const mr = mm.registers;
         const b0 = Array.from(mr.slice(0, 16)).map(h2).join(' ');
         const b1 = Array.from(mr.slice(16, 32)).map(h2).join(' ');
         lines.push(`  bank0: ${b0}`);
@@ -5819,7 +5894,7 @@ function generateStateDump() {
         const f = fm7.fdc;
         lines.push('[FDC (MB8877/WD179x)]');
         lines.push(`  status=$${h2(f.statusReg||0)} track=${f.trackReg} sector=${f.sectorReg} data=$${h2(f.dataReg||0)}`);
-        lines.push(`  drq=${f.drqFlag} irq=${f.irqFlag} state=${f.state} motor=${f.motorOn} drive=${f.currentDrive} side=${f.currentSide||0}`);
+        lines.push(`  drq=${f.drqFlag} irq=${f.irqFlag} state=${f.state} motor=${f.motorRunning} drive=${f.currentDrive} side=${f.currentSide||0}`);
         const disks = [];
         for (let i = 0; i < 4; i++) {
             const dk = f.disks && f.disks[i];
@@ -5833,7 +5908,7 @@ function generateStateDump() {
     if (fm7.opn) {
         const o = fm7.opn;
         lines.push('[OPN]');
-        lines.push(`  timerA=${o.timerAFlag?'on':'off'} timerB=${o.timerBFlag?'on':'off'} status=$${h2(o._status||0)}`);
+        lines.push(`  timerA=${o.timerAFlag?'on':'off'} timerB=${o.timerBFlag?'on':'off'} status=$${h2(o.readStatus())}`);
         lines.push('');
     }
 
@@ -5892,52 +5967,29 @@ document.addEventListener('keyup', (e) => {
     heldBrowserKeys.delete(e.code);
 });
 
-// Gamepad polling
-function pollGamepad() {
-    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-    let gp = null;
-    for (const g of gamepads) {
-        if (g && g.connected) { gp = g; break; }
+// Input Monitor: light the arrow and button marks of the first connected pad
+// (Gamepad API: axes[0] = X, axes[1] = Y, -1 at the left / top).
+const PAD_MARKS = [
+    ['jpL', (p) => (p.axes[0] || 0) < -0.5],
+    ['jpR', (p) => (p.axes[0] || 0) > 0.5],
+    ['jpU', (p) => (p.axes[1] || 0) < -0.5],
+    ['jpD', (p) => (p.axes[1] || 0) > 0.5],
+    ['jpBtn0', (p) => !!(p.buttons[0] && p.buttons[0].pressed)],
+    ['jpBtn1', (p) => !!(p.buttons[1] && p.buttons[1].pressed)],
+];
+function showPadInMonitor() {
+    const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
+    const pad = pads.find((g) => g && g.connected) || null;
+    ipJoyStatus.textContent = pad ? pad.id.substring(0, 16) : 'No gamepad';
+    for (const [id, lit] of PAD_MARKS) {
+        document.getElementById(id).classList.toggle('active', pad ? lit(pad) : false);
     }
-
-    const jpU = document.getElementById('jpU');
-    const jpD = document.getElementById('jpD');
-    const jpL = document.getElementById('jpL');
-    const jpR = document.getElementById('jpR');
-    const jpBtn0 = document.getElementById('jpBtn0');
-    const jpBtn1 = document.getElementById('jpBtn1');
-
-    if (!gp) {
-        ipJoyStatus.textContent = 'No gamepad';
-        jpU.classList.remove('active');
-        jpD.classList.remove('active');
-        jpL.classList.remove('active');
-        jpR.classList.remove('active');
-        jpBtn0.classList.remove('active');
-        jpBtn1.classList.remove('active');
-        return;
-    }
-
-    ipJoyStatus.textContent = gp.id.substring(0, 16);
-
-    // Axes (typically axis 0 = X, axis 1 = Y)
-    const ax = gp.axes[0] || 0;
-    const ay = gp.axes[1] || 0;
-    const threshold = 0.5;
-    jpL.classList.toggle('active', ax < -threshold);
-    jpR.classList.toggle('active', ax > threshold);
-    jpU.classList.toggle('active', ay < -threshold);
-    jpD.classList.toggle('active', ay > threshold);
-
-    // Buttons
-    jpBtn0.classList.toggle('active', gp.buttons[0] && gp.buttons[0].pressed);
-    jpBtn1.classList.toggle('active', gp.buttons[1] && gp.buttons[1].pressed);
 }
 
 // Input monitor update (100ms interval)
 setInterval(() => {
     // Toolbar: latest FM-7 key code
-    const fmKey = fm7.keyboard.currentKey();
+    const fmKey = fm7.keyboard.latchedKeyData();
     if (fmKey !== undefined && fmKey !== 0) {
         const hex = '$' + fmKey.toString(16).toUpperCase().padStart(2, '0');
         tbKeyLabel.textContent = hex;
@@ -5952,7 +6004,7 @@ setInterval(() => {
             ipHeldKeys.textContent = '--';
         }
 
-        // FM-7 key code + buffer
+        // FM-7 key code and whether it waits to be read
         if (fmKey !== undefined && fmKey !== 0) {
             const hex = '$' + fmKey.toString(16).toUpperCase().padStart(2, '0');
             const ch = (fmKey >= 0x20 && fmKey <= 0x7E) ? " '" + String.fromCharCode(fmKey) + "'" : '';
@@ -5960,10 +6012,10 @@ setInterval(() => {
         } else {
             ipFm7Code.textContent = '--';
         }
-        ipFm7Buf.textContent = 'buf: ' + fm7.keyboard.bufferCount();
+        ipFm7Wait.textContent = fm7.keyboard.hasKey() ? 'unread' : '';
 
         // Gamepad
-        pollGamepad();
+        showPadInMonitor();
     }
 }, 100);
 
@@ -6446,7 +6498,7 @@ const UI_MACHINE_GROUPS = {
 const UI_NAMEPLATES = {
     fm77av: 'FM77AV', fm77av20: 'FM77AV20', fm77av40: 'FM77AV40',
 };
-let _uiSkins = {};   // machineType -> 選択スキン（IndexedDB に永続化）
+let _uiSkins = {};   // model -> 選択スキン（IndexedDB に永続化）
 
 function uiCurrentSkin() {
     const machine = machineTypeSelect.value;
@@ -6742,12 +6794,12 @@ function setScaleMode(mode, persist = true) {
 }
 
 // ---- 起動モード (Boot Mode) のハードウェアパネル表示 ---------------------
-// 設定パネルの bootMode ラジオ（非表示・委譲先）を唯一の状態源とし、
+// 設定パネルの startupSystem ラジオ（非表示・委譲先）を唯一の状態源とし、
 // FM-7 (FM-7 / FM-NEW7 スキン) の DIP スイッチ・FM-77 の BOOT ボタン・FM77AV 系の BASIC/DOS
 // ボタンはいずれもラジオへ委譲する。実行中の切替可否も既存挙動
 // （実行中はロック）に従う。
 function hwCurrentBootMode() {
-    return (document.querySelector('input[name="bootMode"]:checked') || {}).value || 'basic';
+    return (document.querySelector('input[name="startupSystem"]:checked') || {}).value || 'basic';
 }
 function hwUpdateBootMode() {
     const v = hwCurrentBootMode();
@@ -6763,8 +6815,8 @@ function hwUpdateBootMode() {
     if (dip) dip.title = `起動モード (BOOT): 現在 ${v === 'dos' ? 'DOS' : 'BASIC'}。クリックで切り替え`;
 }
 function hwSetBootMode(v) {
-    if (fm7._running) return;   // 実行中は既存の bootMode ロックに従い無視
-    const r = document.querySelector(`input[name="bootMode"][value="${v}"]`);
+    if (fm7._running) return;   // 実行中は既存の startupSystem ロックに従い無視
+    const r = document.querySelector(`input[name="startupSystem"][value="${v}"]`);
     if (!r) return;
     if (!r.checked) {
         r.checked = true;
@@ -6791,7 +6843,7 @@ function hwSetBootMode(v) {
         c.addEventListener('click', () => hwSetBootMode(c.dataset.boot));
     });
     // ラジオ側の変更（復元・他 UI）にも追従
-    document.querySelectorAll('input[name="bootMode"]').forEach(r => {
+    document.querySelectorAll('input[name="startupSystem"]').forEach(r => {
         r.addEventListener('change', hwUpdateBootMode);
     });
     hwUpdateBootMode();
@@ -6803,11 +6855,11 @@ function hwSetBootMode(v) {
         const savedSkins = await loadSetting('uiSkins');
         if (savedSkins && typeof savedSkins === 'object') {
             _uiSkins = savedSkins;
-            // 保存値の互換のための読み替え
+            // 古い形式の保存値を現在のスキン名に読み替える
             for (const [k, v] of Object.entries(_uiSkins)) {
                 if (v === 'av40ex') _uiSkins[k] = 'avex';
                 else if (v === 'av40sx') _uiSkins[k] = 'avsx';
-                // FM-7 に無効なスキン指定が保存されていれば既定スキンに戻す。
+                // FM-7 に FM-77 のスキンが保存されていれば消す。
                 else if (k === 'fm7' && v === 'fm77') delete _uiSkins[k];
             }
         }
@@ -6941,8 +6993,10 @@ if ('serviceWorker' in navigator) {
                 const sw = reg.installing;
                 if (!sw) return;
                 sw.addEventListener('statechange', () => {
-                    // 待機のまま制御を取れない場合 (他のタブが開いている等) の受け皿。
-                    // 制御を取れたときは上の controllerchange 側で処理する。
+                    // sw.js は install の終わりで skipWaiting、activate で clients.claim を
+                    // 呼ぶので、新しい Service Worker は通常すぐ制御を取り、上の
+                    // controllerchange 側で処理する。ここは installed になっても waiting に
+                    // 留まった場合 (skipWaiting が効かなかった時) の受け皿。
                     if (sw.state === 'installed' && hadController && reg.waiting) notify(isBusy());
                 });
             });

@@ -6,7 +6,7 @@
  * Keytop glyphs are rendered from the CG ROM and update on modifier changes.
  */
 
-import { GRPH_OVERRIDE, KANA_OVERRIDE } from './keyboard.js';
+import { GRAPH_MODE_CODES, KANA_OVERRIDE } from './keyboard.js';
 import { getCGKeyCompositeDataURL } from './cgrom_glyph.js';
 
 const BREAK_CODE = '_BREAK_';
@@ -30,7 +30,7 @@ const LABEL_SHIFT = new Map([
     ['-','='], ['^','~'], ['\u00A5','|'],
     ['@','`'], ['[','{'], [']','}'],
     [';','+'], [':','*'],
-    [',','<'], ['.','>'], ['/','?'],
+    [',','<'], ['.','>'], ['/','?'], ['"','_'],
 ]);
 
 const LABEL_FM7_CODE = new Map([
@@ -53,7 +53,7 @@ function _glyphCodesFor(code, label) {
     return {
         left:   _labelCodeUnshifted(label),
         top:    _labelCodeShifted(label),
-        right:  GRPH_OVERRIDE.get(code) ?? null,
+        right:  GRAPH_MODE_CODES.get(code) ?? null,
         bottom: KANA_OVERRIDE.get(code) ?? null,
     };
 }
@@ -61,7 +61,7 @@ function _activePosition(shift, caps, graph, kana, label) {
     if (graph) return 'right';
     if (kana)  return 'bottom';
     if (label && /^[A-Z]$/.test(label)) {
-        return (shift !== caps) ? 'top' : 'left';
+        return (shift || caps) ? 'top' : 'left';
     }
     return shift ? 'top' : 'left';
 }
@@ -82,7 +82,7 @@ const LAYOUT = [
     // --- Main row 3: CTR~] + numpad 123= ---
     [K('CTR','ControlLeft','ctrl'),K('A','KeyA'),K('S','KeyS'),K('D','KeyD'),K('F','KeyF'),K('G','KeyG'),K('H','KeyH'),K('J','KeyJ'),K('K','KeyK'),K('L','KeyL'),K(';','Semicolon'),K(':','Quote'),K(']','IntlBackslash'),_,_,_,K('1','Numpad1'),K('2','Numpad2'),K('3','Numpad3'),K('=','NumpadEqual')],
     // --- Main row 4: SHF~SHF + numpad 0.+RT ---
-    [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('_','IntlRo'),K('SHF','ShiftRight'),_,_,_,K('0','Numpad0'),K('.','NumpadDecimal'),K('+','NumpadAdd'),K('RT','NumpadEnter')],
+    [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('"','IntlRo'),K('SHF','ShiftRight'),_,_,_,K('0','Numpad0'),K('.','NumpadDecimal'),K('+','NumpadAdd'),K('RT','NumpadEnter')],
     // --- Main row 5: CAP/GRP/(無変換)/(変換)/SPACE/カナ ---
     // 無変換 / 変換 は FM77AV 以降のみ表示
     [K('CAP','CapsLock','led'),K('GRP','AltLeft'),K('\u7121\u5909\u63DB','NonConvert','av-key'),K('\u5909\u63DB','Convert','av-key'),K('SPACE','Space','space'),K('\u30AB\u30CA','AltRight','led')],
@@ -103,7 +103,7 @@ const PORTRAIT_LAYOUT = [
     // --- Main row 3: CTR~] ---
     [K('CTR','ControlLeft','ctrl'),K('A','KeyA'),K('S','KeyS'),K('D','KeyD'),K('F','KeyF'),K('G','KeyG'),K('H','KeyH'),K('J','KeyJ'),K('K','KeyK'),K('L','KeyL'),K(';','Semicolon'),K(':','Quote'),K(']','IntlBackslash')],
     // --- Main row 4: SHF~SHF ---
-    [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('_','IntlRo'),K('SHF','ShiftRight')],
+    [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('"','IntlRo'),K('SHF','ShiftRight')],
     // --- Main row 5: CAP/GRP/(\u7121\u5909\u63DB)/(\u5909\u63DB)/SPACE/\u30AB\u30CA ---
     [K('CAP','CapsLock','led'),K('GRP','AltLeft'),K('\u7121\u5909\u63DB','NonConvert','av-key'),K('\u5909\u63DB','Convert','av-key'),K('SPACE','Space','space'),K('\u30AB\u30CA','AltRight','led')],
     // --- Cursor / edit cluster (left) + numeric keypad (right), below main ---

@@ -35,11 +35,11 @@ css/
   style.css         スタイルシート（機種テーマ・スキン・ハードウェアパネルの配色を含む）
   softkbd.css       ソフトウェアキーボードのスタイル
 assets/
-  granite.png       FM77AV40SX スキンのテクスチャ
+  granite.png       FM77AV40SX スキンの前面パネルのテクスチャ
   altroms/          同梱の互換 ROM セット（独立実装。本体は MIT License、漢字字形の扱いはルートの LICENSE-Shinonome.md）
 core/               共有エンジン（View 横断で再利用する中核）とブラウザ結合部
   [エンジン部: ブラウザ API 非依存。Node.js から直接動かせる（docs/Headless_Test_Manual.md）]
-  index.js          コアの公開 API 窓口（FM7 / D77Disk / CPU6809 / Display / キーボード定数 等を再エクスポート）
+  index.js          コアの公開 API 窓口（FM7 / FloppyImage / CPU6809 / Display / キーボード定数 等を再エクスポート）
   fm7.js            システム全体の統合クラス（メモリマップ、I/O、スケジューラ連携、キーボードエンコーダ）
   cpu6809.js        MC6809 CPU エミュレーション
   display.js        画面生成（VRAM、ALU、ライン描画、パレット、320×200/640×200/640×400/262K色。RGBA フレームへ描く）
@@ -49,15 +49,17 @@ core/               共有エンジン（View 横断で再利用する中核）�
   keyboard.js       キーボード入力（FM-7 ASCIIモード / FM77AV スキャンコードモード、カスタムリマップ対応）
   psg.js            PSG音源（AY-3-8910）のレジスタと波形生成
   opn.js            OPN FM音源（YM2203: 3ch FM合成 + SSG + タイマー）
+  exseries.js       FM77AV20EX / FM77AV40 / FM77AV40EX で増えるレジスタとメモリ（拡張 MMR、拡張サブシステム RAM、第 2 水準漢字 ROM ほか）
+  inputports.js     マウスとジョイスティックの口（マウスセットのカード、OPN の I/O ポートとジョイスティック端子、ジョイスティック端子のマウス）
   scheduler.js      タイミング制御（デュアルCPU同期、イベントスケジューラ）
   [ブラウザ結合部: DOM / Canvas / Web Audio を扱う。index.html はここから FM7Browser を生成する]
   fm7_browser.js    FM7 をブラウザに結び付ける（キー・フォーカスイベント、描画ループ、ゲームパッド、BEEP、音声の開始）
-  display_canvas.js 画面のフレームを Canvas へ写す（ImageData / putImageData）
-  audio_output.js   PSG / OPN の Web Audio 出力段（AudioContext / AudioWorklet の生成・再開・停止）
-  audio-worklet-processor.js  AudioWorklet 用の再生プロセッサ（音声チャンクのキュー）
+  display_canvas.js Canvas への画面出力
+  audio_output.js   音声出力
+  audio-worklet-processor.js  音声の再生処理
   fdd_sound.js      FDD動作音合成（シーク・ヘッドロード・モーター・挿入/取出し音）
-  softkbd.js        ソフトウェアキーボード（タッチ端末向け。スマホ縦向き専用レイアウト、画面直下ドック）
-  cgrom_glyph.js    CG ROMグリフレンダラ（8×8 1bpp → PNG data URL、Keyboardパネルのキートップ表示用）
+  softkbd.js        ソフトウェアキーボード
+  cgrom_glyph.js    キートップ用の文字描画
   guide_balloons.js 初回の操作案内（吹き出し）
 ```
 
@@ -88,9 +90,9 @@ core/               共有エンジン（View 横断で再利用する中核）�
 | FM-77 | 640×200 8色 | PSG (AY-3-8910)。FM 音源カード (OPN) はオプション | ASCIIコード |
 | FM77AV | 640×200 8色 / 320×200 4096色 | PSG + OPN FM (YM2203) | スキャンコード |
 | FM77AV20 | FM77AV + 2DD 対応 | PSG + OPN FM (YM2203) | スキャンコード |
-| FM77AV20EX | FM77AV20 + DMAC + 高速MMR | PSG + OPN FM (YM2203) | スキャンコード |
-| FM77AV40 | 640×200 / 320×200 4096色 / 262,144色 / 640×400 8色、2DD、DMAC | PSG + OPN FM (YM2203) | スキャンコード |
-| FM77AV40EX/SX | FM77AV40 + EXTSUB.ROM (Type-D/E) | PSG + OPN FM (YM2203) | スキャンコード |
+| FM77AV20EX | FM77AV20 + DMAC（高速MMR はモードの切り替えのみ）、KANJI2.ROM（第 2 水準漢字 ROM。オプション） | PSG + OPN FM (YM2203) | スキャンコード |
+| FM77AV40 | 640×200 / 320×200 4096色 / 262,144色 / 640×400 8色、2DD、DMAC、KANJI2.ROM（第 2 水準漢字 ROM） | PSG + OPN FM (YM2203) | スキャンコード |
+| FM77AV40EX/SX | FM77AV40 + EXTSUB.ROM（拡張サブシステム ROM）。ハードウェアウィンドウは未対応（設定を受け付けるだけ） | PSG + OPN FM (YM2203) | スキャンコード |
 
 ## ライセンス
 

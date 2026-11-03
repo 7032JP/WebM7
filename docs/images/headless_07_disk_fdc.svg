@@ -47,14 +47,14 @@
   <rect x="40" y="310" width="470" height="76" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/>
   <text x="60" y="336" font-family="sans-serif" font-size="13" font-weight="bold" fill="#8250df">連結ディスク（1 ファイルに複数枚を収録した D77）</text>
   <rect x="60" y="348" width="80" height="26" rx="6" fill="#ffffff" stroke="#8250df"/>
-  <text x="100" y="366" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">diskIdx 0</text>
+  <text x="100" y="366" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">slotIndex 0</text>
   <rect x="150" y="348" width="80" height="26" rx="6" fill="#ffffff" stroke="#8250df"/>
-  <text x="190" y="366" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">diskIdx 1</text>
+  <text x="190" y="366" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">slotIndex 1</text>
   <rect x="240" y="348" width="80" height="26" rx="6" fill="#ffffff" stroke="#8250df"/>
-  <text x="280" y="366" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">diskIdx 2</text>
+  <text x="280" y="366" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">slotIndex 2</text>
   <text x="345" y="366" font-family="sans-serif" font-size="13" fill="#57606a">… から 1 枚を選ぶ</text>
 
   <line x1="510" y1="348" x2="640" y2="272" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
-  <text x="610" y="330" font-family="monospace" font-size="12" fill="#8250df" text-anchor="middle">selectDisk(driveNum, diskIdx)</text>
+  <text x="610" y="330" font-family="monospace" font-size="12" fill="#8250df" text-anchor="middle">selectDisk(driveNum, slotIndex)</text>
   <text x="610" y="348" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">で挿入中のディスクを切り替え</text>
 </svg>
