@@ -6,7 +6,7 @@
 //   サブパス公開でも独自ドメインのルート公開でも同じく動く。
 //   オフライン起動に必要な資源をキャッシュし、取得できないときはキャッシュで応答する。
 // =============================================================================
-const CACHE = 'webm7-20261008135559';
+const CACHE = 'webm7-20261103172757';
 
 // 同じオリジンに複数の WebM7 が置かれても衝突しないよう、配置先ごとにキャッシュを管理する。
 const CACHE_PREFIX = 'webm7-';
@@ -23,6 +23,7 @@ const SHELL = [
   // エンジン (core/)
   './core/index.js',
   './core/fm7.js',
+  './core/exseries.js',
   './core/cpu6809.js',
   './core/scheduler.js',
   './core/fdc.js',
@@ -33,6 +34,7 @@ const SHELL = [
   './core/psg.js',
   './core/audio-worklet-processor.js',
   './core/keyboard.js',
+  './core/inputports.js',
   './core/cgrom_glyph.js',
   './core/display.js',
   './core/softkbd.js',
@@ -84,8 +86,9 @@ const SHELL = [
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME)
-      // 取得できた資源だけをキャッシュする
-      .then((c) => Promise.allSettled(SHELL.map((u) => c.add(u))))
+      // 取得できた資源だけをキャッシュする。HTTP キャッシュに残った前の配備の
+      // ファイルを取り込まないよう、サーバーから取り直す
+      .then((c) => Promise.allSettled(SHELL.map((u) => c.add(new Request(u, { cache: 'reload' })))))
       .then(() => self.skipWaiting())
   );
 });
@@ -138,6 +141,18 @@ function baseUrl(req) {
   return u.href;
 }
 
+// ネットから取るときは、HTTP キャッシュの有効期間内でもサーバーに更新を確かめる。
+// 配備の直後に、HTTP キャッシュに残った前の配備のページやエンジンを使い続けない
+// ようにするため (更新が無ければ 304 で済む)。
+function fetchFresh(req) {
+  if (req.mode === 'navigate') {
+    // ページ遷移の要求は RequestInit を付けて作り直せないので URL から取る。
+    // リダイレクトはブラウザに任せる (遷移の要求は redirect: 'manual')。
+    return fetch(req.url, { cache: 'no-cache', credentials: 'same-origin', redirect: 'manual' });
+  }
+  return fetch(req, { cache: 'no-cache' });
+}
+
 // オフライン時の取りこぼしを防ぐためのキャッシュ検索。
 function cacheLookup(req) {
   return caches.match(req).then((hit) => hit || caches.match(req, { ignoreSearch: true }));
@@ -149,14 +164,14 @@ self.addEventListener('fetch', (e) => {
 
   // ローカル環境: ネット優先 (取れなければキャッシュ)。
   if (DEV) {
-    e.respondWith(fetch(req).catch(() => cacheLookup(req)));
+    e.respondWith(fetchFresh(req).catch(() => cacheLookup(req)));
     return;
   }
 
   // ページ遷移はキャッシュした index.html にフォールバック (オフライン起動)
   if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(req).catch(() => caches.match('./index.html'))
+      fetchFresh(req).catch(() => caches.match('./index.html'))
     );
     return;
   }
@@ -164,7 +179,7 @@ self.addEventListener('fetch', (e) => {
   // エンジンと同梱 ROM: ネット優先 → 失敗時はキャッシュ (オフライン起動を維持)。
   if (isFreshTarget(req)) {
     e.respondWith(
-      fetch(req).then((res) => {
+      fetchFresh(req).then((res) => {
         if (res && res.ok) {
           if (res.type === 'basic') {
             const copy = res.clone();

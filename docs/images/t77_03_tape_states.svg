@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 400" width="840" height="400">
-  <title>テープの状態遷移図。未セット・セット済停止・再生録音中・テープ終端の 4 状態と REW / Eject の関係</title>
+  <title>テープの状態遷移図。未セット・未セットのまま録音中・セット済停止・再生録音中・テープ終端の 5 状態と REW / Eject / SAVE の関係</title>
   <defs>
     <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
@@ -27,6 +27,18 @@
   <rect x="570" y="250" width="230" height="64" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/>
   <text x="685" y="276" font-family="sans-serif" font-size="15" font-weight="bold" fill="#bc4c00" text-anchor="middle">テープ終端（EOT）</text>
   <text x="685" y="298" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">表示 EOT・それ以上は進まない</text>
+
+  <!-- S0R: recording without a tape set -->
+  <rect x="40" y="230" width="170" height="64" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="125" y="256" font-family="sans-serif" font-size="15" font-weight="bold" fill="#1a7f37" text-anchor="middle">録音中（未セット）</text>
+  <text x="125" y="278" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="middle">モーター ON・録音バッファへ記録</text>
+
+  <!-- S0 -> S0R (SAVE starts recording without a tape) -->
+  <line x1="75" y1="154" x2="75" y2="228" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="83" y="186" font-family="sans-serif" font-size="11" fill="#57606a">SAVE で ON</text>
+  <!-- S0R -> S0 (motor off: still not set) -->
+  <line x1="175" y1="230" x2="175" y2="156" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="167" y="210" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="end">モーター OFF</text>
 
   <!-- S0 -> S1 -->
   <line x1="210" y1="122" x2="288" y2="122" stroke="#57606a" stroke-width="1.5" marker-end="url(#ah)"/>

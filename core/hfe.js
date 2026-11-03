@@ -3,7 +3,7 @@
 // =============================================================================
 // HFE floppy-image support (HFE v1 bit-stream floppy image format)
 //
-// HFE v1 のトラック情報を読み込み、トラック長を検査する。
+// Reads the track table of an HFE v1 image and checks the track lengths.
 //
 // This module:
 //   * parses HFE v1 (format signature "HXCPICFE"),
@@ -22,7 +22,7 @@ const SYNC_A1 = 0x4489;
 // ---------------------------------------------------------------------------
 // Sector CRC.
 // ---------------------------------------------------------------------------
-function crc16(bytes) {
+export function crc16(bytes) {
     let crc = 0xFFFF;
     for (const b of bytes) {
         crc ^= (b & 0xFF) << 8;
@@ -80,12 +80,16 @@ export function encodeMFMTrack(sectors, opts = {}) {
     const gapByte = (n) => { for (let i = 0; i < n; i++) encodeByte(bw, 0x4E, state); };
     const sync00 = (n) => { for (let i = 0; i < n; i++) encodeByte(bw, 0x00, state); };
 
-    gapByte(opts.gap0 ?? 80);            // post-index gap (Gap 4a)
+    // Gap 4a, the sync fields and Gap 2 follow the double density (IBM
+    // System 34) track format of the FD179X-01 data sheet, "Formatting the
+    // Disk"; Gap 1 / Gap 3 and Gap 4b are shorter defaults that opts can
+    // override.
+    gapByte(opts.indexGap ?? 80);        // Gap 4a, after the index
     sync00(12);                          // sync
     // (IAM omitted)
 
     for (const s of sectors) {
-        gapByte(opts.gap1 ?? 22);        // Gap 1 / Gap 3
+        gapByte(opts.sectorGap ?? 22);   // Gap 1 / Gap 3
         sync00(12);
         // --- ID field ---
         bw.sync16(SYNC_A1); state.prev = 1;
@@ -117,7 +121,7 @@ export function encodeMFMTrack(sectors, opts = {}) {
         encodeByte(bw, dataCrc & 0xFF, state);
     }
 
-    gapByte(opts.gap4 ?? 40);            // trailing gap
+    gapByte(opts.trackEndGap ?? 40);     // Gap 4b, up to the index
 
     let bytes = bw.toBytes();
     if (opts.padTo && bytes.length < opts.padTo) {
@@ -134,7 +138,7 @@ export function encodeMFMTrack(sectors, opts = {}) {
 //   trackSides[track] = [side0Bytes, side1Bytes]
 // ---------------------------------------------------------------------------
 export function buildHFE(trackSides, opts = {}) {
-    const numTracks = trackSides.length;
+    const trackTotal = trackSides.length;
     const numSides = 2;
     const bitRate = opts.bitRate ?? 250;
     const rpm = opts.rpm ?? 300;
@@ -166,7 +170,7 @@ export function buildHFE(trackSides, opts = {}) {
 
     for (let i = 0; i < HFE_SIGNATURE.length; i++) bytes[i] = HFE_SIGNATURE.charCodeAt(i);
     bytes[8] = 0;            // format revision
-    bytes[9] = numTracks;
+    bytes[9] = trackTotal;
     bytes[10] = numSides;
     bytes[11] = 0x00;        // MFM encoding
     view.setUint16(12, bitRate, true);
@@ -205,7 +209,7 @@ export function parseHFE(buffer) {
 
     const header = {
         revision: bytes[8],
-        numTracks: bytes[9],
+        trackTotal: bytes[9],
         numSides: bytes[10],
         encoding: bytes[11],
         bitRate: view.getUint16(12, true),
@@ -218,7 +222,7 @@ export function parseHFE(buffer) {
 
     const tracks = [];
     let p = header.lutOffset * 512;
-    for (let t = 0; t < header.numTracks; t++) {
+    for (let t = 0; t < header.trackTotal; t++) {
         const offset = view.getUint16(p, true);
         const len = view.getUint16(p + 2, true); // bytes for both sides
         p += 4;
@@ -242,7 +246,8 @@ export function parseHFE(buffer) {
 }
 
 // ---------------------------------------------------------------------------
-// Nominal MFM bytes per side for the given bit rate / RPM.
+// Nominal data bytes per side for the given bit rate / RPM (one MFM cell
+// pair per data bit, so this is half the MFM cell bytes).
 // ---------------------------------------------------------------------------
 export function nominalBytesPerSide(bitRate, rpm) {
     return Math.round((bitRate * 1000) * (60 / rpm) / 8);
@@ -260,12 +265,14 @@ export function validateHFETrackLengths(parsed, opts = {}) {
     const overSlack = opts.overSlack ?? 16;   // bytes of jitter tolerated
     const underSlack = opts.underSlack ?? 64;
     for (let t = 0; t < parsed.tracks.length; t++) {
-        // Compare the track length against the nominal capacity.
+        // lenPerSide counts stored MFM cell bytes (two cells per data bit),
+        // so halve it to get data bytes before comparing with the nominal
+        // data capacity.
         const len = Math.round(parsed.tracks[t].lenPerSide / 2);
         if (len > nominal + overSlack) {
             warnings.push({
                 track: t, length: len, nominal, kind: 'over',
-                message: `track ${t}: MFM length ${len} bytes/side exceeds nominal ${nominal} (+${len - nominal}); real hardware may reject this medium`,
+                message: `track ${t}: MFM length ${len} bytes/side exceeds nominal ${nominal} (+${len - nominal})`,
             });
         } else if (len > 0 && len < nominal - underSlack) {
             warnings.push({
@@ -367,8 +374,8 @@ export function decodeMFMTrack(bytes) {
 
 // ---------------------------------------------------------------------------
 // Decode a whole HFE into the structure FDC.loadDisk needs:
-//   { numTracks, numSides, sectors, warnings, header }
-// `sectors` matches D77Disk.sectors: sectors[track][side][r] = {c,h,r,n,...}
+//   { trackTotal, numSides, sectors, warnings, header }
+// `sectors` matches FloppyImage.sectors: sectors[track][side][r] = {c,h,r,n,...}
 // ---------------------------------------------------------------------------
 export function decodeHFE(buffer) {
     const parsed = parseHFE(buffer);
@@ -391,7 +398,7 @@ export function decodeHFE(buffer) {
     }
     if (parsed.header.numSides > 1) numSides = 2;
     return {
-        numTracks: parsed.header.numTracks,
+        trackTotal: parsed.header.trackTotal,
         numSides,
         sectors,
         warnings,

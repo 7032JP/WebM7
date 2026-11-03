@@ -1,356 +1,238 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 7032 / Naomitsu Tsugiiwa
 /**
- * FM-7 Event Scheduler
+ * Emulated time keeping.
  *
- * デュアル CPU と周期イベントの実行を管理する。サブ CPU はクロック比に応じて実行する。
+ * Time is counted in periods of the 8 MHz master clock (125 ns, "ticks").
+ * Every main CPU bus cycle length in the hardware manual is a whole number
+ * of these periods (4, 5, 6 or 7 ticks), so the main CPU
+ * adds the exact length of each instruction and no fractional main clock is
+ * needed. The sub CPU runs from its own 2.016 MHz clock: elapsed ticks
+ * earn it sub cycles, which it then spends on instructions.
  */
-
-// Main and sub CPU clocks are managed separately; the scheduler advances the
-// sub CPU by the clock ratio each step.
-let CPU_CLOCK_HZ = 1794000;         // Main CPU effective clock (default 1.794 MHz)
-let SUB_CLOCK_HZ = 2000000;         // Sub CPU clock (independent)
-let CYCLES_PER_MICROSECOND = CPU_CLOCK_HZ / 1000000;
-let SUB_CYCLE_RATIO = SUB_CLOCK_HZ / CPU_CLOCK_HZ;
 
 /**
- * Set main CPU clock speed. Called when the machine type changes and when
- * the MMR/TWR state changes the effective rate.
- * Sub CPU keeps its own rate (see setSubCPUClock).
+ * Master clock that all main CPU bus cycle lengths are multiples of
+ * (FM-7 User's Manual, system specification 1.1.1: clock 8 MHz).
  */
-function setCPUClock(hz) {
-    CPU_CLOCK_HZ = hz;
-    CYCLES_PER_MICROSECOND = hz / 1000000;
-    SUB_CYCLE_RATIO = SUB_CLOCK_HZ / CPU_CLOCK_HZ;
+export const MASTER_CLOCK_HZ = 8000000;
+export const TICKS_PER_US = MASTER_CLOCK_HZ / 1000000;
+
+/** Sub CPU clock: 16.128 MHz / 8 (FM77AV Hardware Manual 7.1 (1)). */
+export const SUB_CPU_CLOCK_HZ = 2016000;
+/** Sub CPU cycles that elapse per master tick. */
+export const SUB_CYCLES_PER_TICK = SUB_CPU_CLOCK_HZ / MASTER_CLOCK_HZ;
+
+/** Microseconds to master ticks (rounded). */
+export function usToTicks(us) {
+    return Math.round(us * TICKS_PER_US);
+}
+
+/** Master ticks to microseconds. */
+export function ticksToUs(ticks) {
+    return ticks / TICKS_PER_US;
 }
 
 /**
- * Set sub CPU clock speed. Kept separate from setCPUClock so a main CPU
- * clock change does not affect it.
+ * A repeating deadline. The period is held in ticks; `fire()` runs the
+ * handler. `advance()` is called with the ticks that just elapsed.
+ * The scheduler that owns the event is told before and after its wait
+ * changes, so that it can apply the ticks it is holding back first and
+ * look for the nearest deadline again afterwards.
  */
-function setSubCPUClock(hz) {
-    SUB_CLOCK_HZ = hz;
-    SUB_CYCLE_RATIO = SUB_CLOCK_HZ / CPU_CLOCK_HZ;
-}
-
-/**
- * Convert microseconds to CPU cycles.
- */
-function usToCycles(us) {
-    return Math.round(us * CYCLES_PER_MICROSECOND);
-}
-
-/**
- * Convert CPU cycles to microseconds.
- */
-function cyclesToUs(cycles) {
-    return cycles / CYCLES_PER_MICROSECOND;
-}
-
-/**
- * A single scheduled event that fires periodically.
- *
- * The period is kept in microseconds so the event follows CPU clock changes.
- */
-class SchedulerEvent {
-    /**
-     * @param {string}   id           - unique identifier
-     * @param {number}   intervalUs   - reload interval in microseconds
-     * @param {function} callback     - called when event fires
-     */
-    constructor(id, intervalUs, callback) {
-        this.id = id;
-        this.intervalUs = intervalUs;            // canonical period in µs
-        this.reload = usToCycles(intervalUs);    // derived cycles for current clock
-        this.current = this.reload;              // countdown in cycles (mutable)
-        this.callback = callback;
-        this.enabled = true;
+class PeriodicEvent {
+    constructor(name, periodUs, handler, owner = null) {
+        this.name = name;
+        this.handler = handler;
+        this.owner = owner;
+        this.periodTicks = Math.max(1, usToTicks(periodUs));
+        this.ticksLeft = this.periodTicks;
     }
 
-    /**
-     * Adjust the event's wait for a CPU clock change.
-     */
-    recomputeForClock() {
-        const oldReload = this.reload;
-        const newReload = usToCycles(this.intervalUs);
-        if (oldReload > 0 && newReload > 0) {
-            this.current = Math.max(1, Math.round(this.current * (newReload / oldReload)));
-        } else {
-            this.current = newReload;
-        }
-        this.reload = newReload;
+    /** Change the period; takes effect at the next expiry. */
+    setPeriodUs(us) {
+        this.periodTicks = Math.max(1, usToTicks(us));
     }
 
-    /**
-     * Update the canonical interval (µs) and immediately re-derive cycles.
-     * Used by callbacks that change the period.
-     */
-    setIntervalUs(intervalUs) {
-        this.intervalUs = intervalUs;
-        this.reload = usToCycles(intervalUs);
+    /** Change the period and start a fresh wait of that length now. */
+    restartWithPeriodUs(us) {
+        if (this.owner) this.owner.settleEvents();
+        this.setPeriodUs(us);
+        this.ticksLeft = this.periodTicks;
+        if (this.owner) this.owner.findNextDeadline();
     }
 
-    /**
-     * Subtract elapsed cycles; return true if the event fired.
-     */
-    tick(elapsed) {
-        if (!this.enabled) return false;
-
-        this.current -= elapsed;
-        if (this.current <= 0) {
-            // Reload, carrying over any overshoot so long-term timing stays accurate
-            this.current += this.reload;
-            // Guard against pathological case where elapsed >> reload
-            if (this.current <= 0) {
-                this.current = this.reload;
-            }
-            this.callback();
-            return true;
-        }
-        return false;
+    /** Run the handler once. */
+    fire() {
+        this.handler();
     }
 
-    reset() {
-        this.current = this.reload;
+    advance(ticks) {
+        this.ticksLeft -= ticks;
+        if (this.ticksLeft > 0) return;
+        // Keep the overshoot so that the long-term rate stays exact.
+        this.ticksLeft += this.periodTicks;
+        if (this.ticksLeft <= 0) this.ticksLeft = this.periodTicks;
+        this.handler();
+    }
+
+    restart() {
+        if (this.owner) this.owner.settleEvents();
+        this.ticksLeft = this.periodTicks;
+        if (this.owner) this.owner.findNextDeadline();
     }
 }
 
 export class Scheduler {
     constructor() {
-        /** @type {SchedulerEvent[]} */
+        /** @type {PeriodicEvent[]} */
         this.events = [];
-
-        /** Main 6809 CPU instance (must implement exec() returning cycles used) */
         this.mainCPU = null;
-        /** Sub 6809 CPU instance */
         this.subCPU = null;
-
+        /** Master ticks elapsed since reset. */
+        this.elapsedTicks = 0;
         /**
-         * When true the sub CPU is halted and we skip its execution.
+         * Sub CPU cycles converted from the elapsed master ticks (at the
+         * 2.016 MHz sub clock) and not yet executed. An instruction may end
+         * past them; the excess is taken off the next conversion.
          */
+        this.subCyclesPending = 0;
+        /** True while the sub CPU is held (HALT). */
         this.subHalted = false;
-
-        // Book-keeping for dual-CPU sync
-        this.mainCyclesTotal = 0;
-        this.subCyclesTotal = 0;
-        // Sub CPU cycle budget.
-        this.subCyclesTarget = 0;
-
-        // Timer IRQ alternation state
-        this._timerAlternate = false;
+        /**
+         * Ticks given to advanceEvents() and not yet taken off the events.
+         * While they stay below the nearest deadline no event can expire,
+         * so the events are advanced only when it is reached (or when the
+         * list or a wait changes). Ticks are whole numbers, so one
+         * subtraction of the sum leaves the same wait as many small ones.
+         */
+        this.eventTicksHeld = 0;
+        /** The smallest ticksLeft of the events (Infinity with no events). */
+        this.ticksToNextDeadline = Infinity;
     }
 
-    // ------------------------------------------------------------------
-    // CPU wiring
-    // ------------------------------------------------------------------
+    setMainCPU(cpu) { this.mainCPU = cpu; }
+    setSubCPU(cpu) { this.subCPU = cpu; }
 
     /**
-     * Attach the main 6809 CPU.
-     * The CPU object must expose:
-     *   exec()  - execute one instruction, return cycles consumed
-     */
-    setMainCPU(cpu) {
-        this.mainCPU = cpu;
-    }
-
-    /**
-     * Attach the sub 6809 CPU.
-     * Same interface as main CPU.
-     */
-    setSubCPU(cpu) {
-        this.subCPU = cpu;
-    }
-
-    /**
-     * Control whether the sub CPU is halted.
+     * Hold or release the sub CPU. A held CPU earns nothing, and whatever
+     * it had earned or overspent is dropped at both edges.
      */
     setSubHalted(halted) {
         this.subHalted = halted;
-        // Sync cycle counters on HALT and RUN transitions.
-        this.subCyclesTotal = this.subCyclesTarget;
+        this.subCyclesPending = 0;
     }
 
-    // ------------------------------------------------------------------
-    // Event management
-    // ------------------------------------------------------------------
+    /** Credit the sub CPU with cycles (nothing while it is held). */
+    grantSubCycles(cycles) {
+        if (!this.subHalted) this.subCyclesPending += cycles;
+    }
 
-    /**
-     * Register a repeating event.
-     *
-     * @param {string}   id            - unique name (e.g. "timer", "vsync")
-     * @param {number}   microseconds  - interval in microseconds
-     * @param {function} callback      - fired each time the event expires
-     * @returns {SchedulerEvent}
-     */
-    addEvent(id, microseconds, callback) {
-        // Remove any existing event with same id
-        this.removeEvent(id);
-
-        const evt = new SchedulerEvent(id, microseconds, callback);
+    /** Register (or replace) a repeating event. */
+    addEvent(name, periodUs, handler) {
+        this.removeEvent(name);
+        const evt = new PeriodicEvent(name, periodUs, handler, this);
         this.events.push(evt);
+        this.findNextDeadline();
         return evt;
     }
 
-    /**
-     * Re-derive every event's reload-in-cycles from its canonical µs period.
-     * Call this immediately after `setCPUClock(hz)` so that real-time event
-     * periods stay constant across MMR/TWR clock transitions.
-     */
-    onClockChange() {
-        for (const evt of this.events) {
-            evt.recomputeForClock();
-        }
+    removeEvent(name) {
+        this.settleEvents();
+        const i = this.events.findIndex(e => e.name === name);
+        if (i >= 0) this.events.splice(i, 1);
+        this.findNextDeadline();
+    }
+
+    /** The event of that name, with every tick given so far taken off its wait. */
+    findEvent(name) {
+        this.settleEvents();
+        return this.events.find(e => e.name === name) || null;
     }
 
     /**
-     * Remove event by id.
-     */
-    removeEvent(id) {
-        const idx = this.events.findIndex(e => e.id === id);
-        if (idx !== -1) {
-            this.events.splice(idx, 1);
-        }
-    }
-
-    /**
-     * Return event by id or null.
-     */
-    getEvent(id) {
-        return this.events.find(e => e.id === id) || null;
-    }
-
-    // ------------------------------------------------------------------
-    // Timer helpers (convenience for the most common FM-7 events)
-    // ------------------------------------------------------------------
-
-    /**
-     * Install the periodic timer IRQ event.
+     * Advance every event by the given ticks. The events expire on the
+     * same call as when each call advanced them all.
      *
-     * @param {function} callback - called on each timer tick
+     * When the nearest deadline is reached, the ticks held from the earlier
+     * calls are taken off every wait first. They are below every wait, so
+     * no event expires on them. Then the events are advanced by this call's
+     * ticks alone, in list order, as if every call advanced them all: a
+     * handler that restarts, adds or removes another event leaves the same
+     * waits as it would there.
      */
-    addTimerEvent(callback) {
-        const self = this;
-        self._timerAlternate = false;
+    advanceEvents(ticks) {
+        const earlier = this.eventTicksHeld;
+        if (earlier + ticks < this.ticksToNextDeadline) {
+            this.eventTicksHeld = earlier + ticks;
+            return;
+        }
+        this.eventTicksHeld = 0;
+        const list = this.events;
+        if (earlier !== 0) {
+            for (let i = 0; i < list.length; i++) list[i].ticksLeft -= earlier;
+        }
+        for (let i = 0; i < list.length; i++) list[i].advance(ticks);
+        this.findNextDeadline();
+    }
 
-        const wrapper = () => {
-            callback();
-            const evt = self.getEvent('timer');
-            if (evt) {
-                self._timerAlternate = !self._timerAlternate;
-                evt.setIntervalUs(self._timerAlternate ? 2035 : 2034);
-            }
-        };
+    /** Take the held ticks off every event now. */
+    settleEvents() {
+        const held = this.eventTicksHeld;
+        if (held === 0) return;
+        this.eventTicksHeld = 0;
+        const list = this.events;
+        for (let i = 0; i < list.length; i++) list[i].advance(held);
+        this.findNextDeadline();
+    }
 
-        return this.addEvent('timer', 2034, wrapper);
+    /** Look for the nearest deadline again after the events or a wait changed. */
+    findNextDeadline() {
+        let next = Infinity;
+        const list = this.events;
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].ticksLeft < next) next = list[i].ticksLeft;
+        }
+        this.ticksToNextDeadline = next;
+    }
+
+    /** Let the sub CPU spend its earned cycles. */
+    spendSubCycles() {
+        if (!this.subCPU) return;
+        while (!this.subHalted && this.subCyclesPending > 0) {
+            this.subCyclesPending -= this.subCPU.exec();
+        }
     }
 
     /**
-     * Install a fixed-period 'vsync' event (helper; the machine registers its
-     * own vsync event with the period of the display mode).
+     * Generic run loop for a stand-alone pair of CPUs: every main CPU
+     * instruction counts its CPU cycles as fast bus cycles. The machine
+     * class installs its own loop with the real bus cycle lengths.
      *
-     * @param {function} callback - called on each VSync
+     * @param {number} microseconds  time to run for
+     * @returns {number} master ticks actually run (the last instruction may end past the goal)
      */
-    addVSyncEvent(callback) {
-        return this.addEvent('vsync', 16667, callback);
+    runFor(microseconds) {
+        if (!this.mainCPU) throw new Error('Scheduler: main CPU not attached');
+        const goal = this.elapsedTicks + usToTicks(microseconds);
+        const start = this.elapsedTicks;
+        while (this.elapsedTicks < goal) {
+            const ticks = this.mainCPU.exec() * 4;
+            this.elapsedTicks += ticks;
+            this.grantSubCycles(ticks * SUB_CYCLES_PER_TICK);
+            this.spendSubCycles();
+            this.advanceEvents(ticks);
+        }
+        return this.elapsedTicks - start;
     }
 
-    // ------------------------------------------------------------------
-    // Execution
-    // ------------------------------------------------------------------
-
-    /**
-     * Run both CPUs and the periodic events for approximately the given
-     * number of microseconds.
-     *
-     * @param {number} microseconds - target wall-time to simulate
-     * @returns {number} actual microseconds executed
-     */
-    exec(microseconds) {
-        if (!this.mainCPU) {
-            throw new Error('Scheduler: main CPU not attached');
-        }
-
-        const targetCycles = usToCycles(microseconds);
-        const startMain = this.mainCyclesTotal;
-
-        while (this.mainCyclesTotal - startMain < targetCycles) {
-            // --- Main CPU: execute one instruction ---
-            const mainElapsed = this.mainCPU.exec();
-            this.mainCyclesTotal += mainElapsed;
-            this.subCyclesTarget += mainElapsed * SUB_CYCLE_RATIO;
-
-            // --- Sub CPU: catch up to its own cycle budget ---
-            // サブ CPU の実行量はクロック比 (SUB_CYCLE_RATIO) で決める。
-            if (!this.subHalted && this.subCPU) {
-                while (this.subCyclesTotal < this.subCyclesTarget) {
-                    const subElapsed = this.subCPU.exec();
-                    this.subCyclesTotal += subElapsed;
-                }
-            }
-
-            // --- Tick all scheduler events ---
-            for (let i = 0; i < this.events.length; i++) {
-                this.events[i].tick(mainElapsed);
-            }
-        }
-
-        const actualCycles = this.mainCyclesTotal - startMain;
-        return cyclesToUs(actualCycles);
-    }
-
-    /**
-     * Execute a single main CPU instruction, sync sub CPU, tick events.
-     * Returns the number of main CPU cycles consumed.
-     * Useful for step-by-step debugging.
-     */
-    step() {
-        if (!this.mainCPU) {
-            throw new Error('Scheduler: main CPU not attached');
-        }
-
-        const mainElapsed = this.mainCPU.exec();
-        this.mainCyclesTotal += mainElapsed;
-        this.subCyclesTarget += mainElapsed * SUB_CYCLE_RATIO;
-
-        if (!this.subHalted && this.subCPU) {
-            while (this.subCyclesTotal < this.subCyclesTarget) {
-                const subElapsed = this.subCPU.exec();
-                this.subCyclesTotal += subElapsed;
-            }
-        }
-
-        for (let i = 0; i < this.events.length; i++) {
-            this.events[i].tick(mainElapsed);
-        }
-
-        return mainElapsed;
-    }
-
-    // ------------------------------------------------------------------
-    // Reset
-    // ------------------------------------------------------------------
-
-    /**
-     * Reset all scheduler state.  Does NOT reset the CPU instances
-     * themselves - call their own reset() for that.
-     */
-    reset() {
-        this.mainCyclesTotal = 0;
-        this.subCyclesTotal = 0;
-        this.subCyclesTarget = 0;
+    /** Clear the time counters and restart every event's wait. */
+    restartClock() {
+        this.elapsedTicks = 0;
+        this.subCyclesPending = 0;
         this.subHalted = false;
-        this._timerAlternate = false;
-
-        for (const evt of this.events) {
-            evt.reset();
-        }
+        this.eventTicksHeld = 0;
+        for (const evt of this.events) evt.restart();
+        this.findNextDeadline();
     }
 }
-
-/** Current sub/main clock ratio (recomputed on setCPUClock/setSubCPUClock). */
-function getSubCycleRatio() {
-    return SUB_CYCLE_RATIO;
-}
-
-// Clock values and helpers
-export { CPU_CLOCK_HZ, CYCLES_PER_MICROSECOND, usToCycles, cyclesToUs, setCPUClock, setSubCPUClock, getSubCycleRatio };

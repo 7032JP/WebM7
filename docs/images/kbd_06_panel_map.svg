@@ -110,8 +110,8 @@
   <rect x="52" y="235" width="17.5" height="12" rx="2" fill="#fbefff" stroke="#8250df" stroke-width="0.7"/>
   <rect x="71" y="235" width="17.5" height="12" rx="2" fill="#fbefff" stroke="#8250df" stroke-width="0.7"/>
   <rect x="90" y="235" width="17.5" height="12" rx="2" fill="#fff8c5" stroke="#9a6700" stroke-width="0.7"/>
-  <rect x="109" y="235" width="112.5" height="12" rx="2" fill="#ffffff" stroke="#8c959f" stroke-width="0.7"/>
-  <rect x="223" y="235" width="17.5" height="12" rx="2" fill="#fff8c5" stroke="#9a6700" stroke-width="0.7"/>
+  <rect x="109" y="235" width="17.5" height="12" rx="2" fill="#fff8c5" stroke="#9a6700" stroke-width="0.7"/>
+  <rect x="128" y="235" width="112.5" height="12" rx="2" fill="#ffffff" stroke="#8c959f" stroke-width="0.7"/>
   <rect x="242" y="235" width="17.5" height="12" rx="2" fill="#fbefff" stroke="#8250df" stroke-width="0.7"/>
   <text x="46" y="266" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="start" font-weight="bold">キーカスタマイズ</text>
   <rect x="46" y="274" width="190" height="26" rx="4" fill="#ffffff" stroke="#8c959f" stroke-width="1"/>

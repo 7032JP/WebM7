@@ -13,9 +13,9 @@
 //   The emulation itself (memory map, I/O, scheduler, sound generation)
 //   lives in the core FM7 class.
 // =============================================================================
-import { FM7 } from './fm7.js';
+import { FM7, BUZZER_TONE_HZ } from './fm7.js';
 import { WebPSG, WebOPN } from './audio_output.js';
-import { FddSound } from './fdd_sound.js';
+import { DriveNoiseSynth } from './fdd_sound.js';
 import { renderToCanvas } from './display_canvas.js';
 
 export {
@@ -26,19 +26,18 @@ export {
 export class FM7Browser extends FM7 {
     /**
      * @param {object} [parts] - see FM7. Defaults to WebPSG / WebOPN
-     *   (Web Audio output) and a FddSound synthesiser.
+     *   (Web Audio output) and a DriveNoiseSynth.
      */
     constructor(parts = {}) {
         super({
             psg:      parts.psg || new WebPSG(),
             opn:      parts.opn || new WebOPN(),
-            fddSound: (parts.fddSound !== undefined) ? parts.fddSound : new FddSound(),
+            fddSound: (parts.fddSound !== undefined) ? parts.fddSound : new DriveNoiseSynth(),
         });
 
-        // BEEP (Web Audio nodes on the PSG's context)
-        this._beepOsc = null;
-        this._beepGain = null;
-        this._beepTimer = null;
+        // Buzzer tone (Web Audio nodes on the PSG's context)
+        this._toneOsc = null;
+        this._toneGain = null;
 
         // Frame loop state
         this._animFrameId = null;
@@ -161,8 +160,10 @@ export class FM7Browser extends FM7 {
             this._animFrameId = null;
         }
 
-        // Stop any active BEEP sound
-        this._beepStop();
+        // Silence the buzzer while stopped; the next change of the buzzer
+        // state starts it again.
+        this._toneOff();
+        this._buzzerSounding = false;
 
         // Final UI update
         if (this._frameCallback) this._frameCallback();
@@ -189,13 +190,13 @@ export class FM7Browser extends FM7 {
         this._lastFrameTime = now;
 
         // Poll gamepads for joystick input
-        this._pollGamepads();
+        this._readPads();
 
         // Run scheduler for the clamped interval, accelerated while a tape
         // is loaded and its motor is on.
         const cmtTurbo = (this.cmt.motor && this.cmt.loaded) ? 50 : 1;
         try {
-            this.scheduler.exec(Math.round(simMs * 1000) * cmtTurbo);
+            this.scheduler.runFor(Math.round(simMs * 1000) * cmtTurbo);
         } catch (e) {
             console.error('Emulation error:', e);
             this.stop();
@@ -250,96 +251,62 @@ export class FM7Browser extends FM7 {
         return state;
     }
 
-    /** Poll Gamepad API and update joystick state based on per-port assignments. */
-    _pollGamepads() {
+    /** Poll the Gamepad API into the joystick on each connector. */
+    _readPads() {
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-        this._gamepadState[0] = 0xFF;
-        this._gamepadState[1] = 0xFF;
-
         for (let fmPort = 0; fmPort < 2; fmPort++) {
-            const idx = this._joystickAssign[fmPort];
-            if (idx == null) continue;
-            const gp = gamepads[idx];
-            if (!gp || !gp.connected) continue;
-            this._gamepadState[fmPort] = this._readGamepadState(gp);
+            const idx = this.joystickHostIndex[fmPort];
+            const gp = idx == null ? null : gamepads[idx];
+            this.setJoystickState(fmPort, (gp && gp.connected) ? this._readGamepadState(gp) : 0xFF);
         }
     }
 
     // =========================================================================
-    // BEEP Sound (Web Audio)
+    // Buzzer tone (Web Audio)
     // =========================================================================
 
-    /**
-     * Start BEEP tone.
-     * @param {number} durationMs - Duration in ms, or -1 for continuous
-     */
-    _beepStart(durationMs) {
-        // Use PSG's AudioContext if available
+    /** The core switches the buzzer on and off; make or stop the tone. */
+    buzzerOutput(on) {
+        if (on) this._toneOn();
+        else this._toneOff();
+    }
+
+    _toneOn() {
         const ctx = this.psg._audioCtx;
-        if (!ctx) return;
-
-        this._beepStop(); // Stop any existing beep
-
+        if (!ctx || this._toneOsc) return;
         const now = ctx.currentTime;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'square';
-        osc.frequency.value = 1200; // BEEP tone frequency
-
-        // Smooth gain ramp to avoid click noise
+        osc.frequency.value = BUZZER_TONE_HZ;
+        // Short ramps keep the edges from clicking.
         gain.gain.setValueAtTime(0, now);
         gain.gain.linearRampToValueAtTime(0.15, now + 0.003);
-
         osc.connect(gain);
-        // Route through PSG volume control so BEEP respects the volume slider
+        // Through the PSG volume so the volume slider applies.
         gain.connect(this.psg._gainNode || ctx.destination);
         osc.start(now);
-
-        this._beepOsc = osc;
-        this._beepGain = gain;
-        this._beepContinuous = (durationMs < 0);
-
-        if (durationMs > 0) {
-            // Schedule BEEP stop
-            const endTime = now + durationMs / 1000;
-            gain.gain.setValueAtTime(0.15, endTime - 0.003);
-            gain.gain.linearRampToValueAtTime(0, endTime);
-            osc.stop(endTime + 0.001);
-            // Clean up references after oscillator ends
-            osc.onended = () => {
-                if (this._beepOsc === osc) {
-                    this._beepOsc = null;
-                    this._beepGain = null;
-                    this._beepContinuous = false;
-                }
-            };
-        }
+        this._toneOsc = osc;
+        this._toneGain = gain;
     }
 
-    /** Stop BEEP tone. */
-    _beepStop() {
-        if (this._beepOsc) {
-            const ctx = this.psg._audioCtx;
-            if (ctx && this._beepGain) {
-                // Smooth fade-out to avoid click
-                const now = ctx.currentTime;
-                this._beepGain.gain.cancelScheduledValues(now);
-                this._beepGain.gain.setValueAtTime(this._beepGain.gain.value, now);
-                this._beepGain.gain.linearRampToValueAtTime(0, now + 0.003);
-                try { this._beepOsc.stop(now + 0.005); } catch (e) { /* ignore */ }
-            } else {
-                try { this._beepOsc.stop(); } catch (e) { /* ignore */ }
-                this._beepOsc.disconnect();
-            }
-            this._beepOsc = null;
+    _toneOff() {
+        const osc = this._toneOsc, gain = this._toneGain;
+        this._toneOsc = null;
+        this._toneGain = null;
+        if (!osc) return;
+        const ctx = this.psg._audioCtx;
+        if (ctx && gain) {
+            const now = ctx.currentTime;
+            gain.gain.cancelScheduledValues(now);
+            gain.gain.setValueAtTime(gain.gain.value, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.003);
+            try { osc.stop(now + 0.005); } catch (e) { /* already stopped */ }
+            setTimeout(() => { try { gain.disconnect(); } catch (e) { /* gone */ } }, 10);
+        } else {
+            try { osc.stop(); } catch (e) { /* already stopped */ }
+            osc.disconnect();
         }
-        if (this._beepGain) {
-            // Don't disconnect immediately - let fade-out complete
-            const g = this._beepGain;
-            this._beepGain = null;
-            setTimeout(() => { try { g.disconnect(); } catch (e) {} }, 10);
-        }
-        this._beepContinuous = false;
     }
 
     // =========================================================================
@@ -348,7 +315,7 @@ export class FM7Browser extends FM7 {
 
     /** Trigger browser download of the FDC log as a text file. */
     downloadFdcLog(filename = 'webm7_fdc.log') {
-        const text = this.fdc.dumpLogText();
+        const text = this.fdc.traceText();
         const blob = new Blob([text], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -358,7 +325,7 @@ export class FM7Browser extends FM7 {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        console.log(`FDC log saved: ${filename} (${this.fdc.log.length} events)`);
+        console.log(`FDC log saved: ${filename} (${this.fdc.trace.length} records)`);
     }
 
     /**

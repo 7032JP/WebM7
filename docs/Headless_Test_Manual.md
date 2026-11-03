@@ -105,7 +105,7 @@ cd test && node your_test.mjs
 
 ## 4. ROM の用意
 
-シミュレータの起動には ROM イメージが必要です。WebM7 には独立実装の互換 ROM セット（本体は MIT License。第三者素材由来の漢字字形は対象外）を `assets/altroms/` に同梱しており、漢字系 ROM（漢字 ROM `kanji.rom` / `kanji2.rom`・辞書 ROM `dicrom.rom`）を含む基本 ROM はそのまま使えます。純正 ROM は同梱・配信しません。**互換 ROM セットに含まれない ROM を使う場合は、ご自身で適法に用意し、任意のフォルダに置いてください。**テストスクリプトでは、そのフォルダを定数にして読み込みます。漢字系 ROM の字形の条件は `LICENSE-Shinonome.md` を参照してください。
+シミュレータの起動には ROM イメージが必要です。WebM7 には独立実装の互換 ROM セット（本体は MIT License。第三者素材由来の漢字字形は対象外）を `assets/altroms/` に同梱しており、漢字 ROM（`kanji.rom` / `kanji2.rom`）と辞書 ROM（`dicrom.rom`）を含む基本 ROM はそのまま使えます。純正 ROM は同梱・配信しません。**互換 ROM セットに含まれない ROM を使う場合は、ご自身で適法に用意し、任意のフォルダに置いてください。**テストスクリプトでは、そのフォルダを定数にして読み込みます。漢字 ROM（`kanji.rom` / `kanji2.rom`）の字形の条件は `LICENSE-Shinonome.md` を参照してください。
 
 必要な ROM は機種により異なります。読み込みメソッドと、本書のサンプルコードで使う**ファイル名の例**は次のとおりです（ファイル名は各自の ROM に合わせてください。同梱互換 ROM の BASIC は `7tbasic3.rom` です）。
 
@@ -114,17 +114,17 @@ cd test && node your_test.mjs
 | BASIC ROM | `loadFBasicROM()` | `7tbasic3.rom`（同梱の 7T-BASIC） | 約 31KB | 全機種（常に必須。本体搭載 BASIC ROM に対応） |
 | DOS ブート ROM | `loadBootROM()` | `boot_dos.rom` | 512 バイト | FM-7 系（Boot Mode: DOS で必須） |
 | BASIC ブート ROM | `loadBootBasROM()` | `boot_bas.rom` | 512 バイト | FM-7 系（Boot Mode: BASIC で必須） |
-| サブシステム ROM (Type-C) | `loadSubROM()` | `subsys_c.rom` | 約 10KB | 全機種（常に必須。サブ CPU 用） |
+| サブシステム ROM（旧サブモニタ） | `loadSubROM()` | `subsys_c.rom` | 約 10KB | 全機種（常に必須。サブ CPU 用） |
 | イニシエータ ROM | `loadInitiateROM()` | `initiate.rom` | 8KB | FM77AV 系（必須） |
-| サブシステム ROM (Type-A) | `loadSubROM_A()` | `subsys_a.rom` | 8KB | FM77AV 系（必須） |
-| サブシステム ROM (Type-B) | `loadSubROM_B()` | `subsys_b.rom` | 8KB | FM77AV 系（必須） |
+| サブシステム ROM（新サブモニタ 640×200） | `loadSubROM_A()` | `subsys_a.rom` | 8KB | FM77AV 系（必須） |
+| サブシステム ROM（新サブモニタ 320×200） | `loadSubROM_B()` | `subsys_b.rom` | 8KB | FM77AV 系（必須） |
 | CG ROM | `loadCGROM()` | `subsyscg.rom` | 最大 8KB | FM77AV 系（必須） |
 | 漢字 ROM（第1水準） | `loadKanjiROM()` | `kanji.rom` | 128KB | FM-7 系では任意（漢字表示用）、FM77AV 系では必須 |
-| 漢字 ROM（第2水準） | `loadKanji2ROM()` | `kanji2.rom` | 128KB | FM77AV40EX/SX（必須） |
+| 漢字 ROM（第2水準） | `loadKanji2ROM()` | `kanji2.rom` | 128KB | FM77AV20EX・FM77AV40・FM77AV40EX/SX（必須） |
 | 辞書 ROM | `loadDicromROM()` | `dicrom.rom` | 256KB | FM77AV40EX/SX（必須） |
 | 拡張サブ ROM | `loadExtSubROM()` | `extsub.rom` | 48KB | FM77AV40EX/SX（必須） |
 
-表の「必須」は、その機種の ROM 構成に含まれるという意味です（ブラウザの WebM7 の ROM Files パネルのバッジと同じ区分です）。
+表の「必須」は、その機種の ROM 構成に含まれるという意味です。ブラウザの WebM7 の ROM Files パネルのバッジは、これとは別に、電源を入れるのに必要な ROM かどうか（無い ROM を同梱互換で補えるか）で区分しています。
 
 ![図: 機種と ROM のマトリクス](images/headless_03_rom_matrix.svg)
 
@@ -132,7 +132,7 @@ cd test && node your_test.mjs
 
 > ヘッドレス実行でも、選択した機種と起動モードに対応する ROM 一式を読み込んでください。
 
-> ROM 読み込みメソッドはいずれも `ArrayBuffer`（または `Uint8Array.buffer`）を引数に取ります。`readFileSync()` で読んだバッファをそのまま渡せます。
+> ROM 読み込みメソッドは `ArrayBuffer` と `Uint8Array` のどちらでも受け取ります。`readFileSync()` で読んだバッファをそのまま渡せます。
 
 ### 4.1 素材の置き場所
 
@@ -180,9 +180,9 @@ fm7.setMachineType('fm7');                // 'fm7' | 'fm77' | 'fm77av' | 'fm77av
 // --- 5) リセットして起動 ---
 fm7.reset();
 
-// --- 6) exec 1 回 = 16667 マイクロ秒（約 1/60 秒）を 1 フレームと数え、600 フレーム実行して起動を待つ ---
+// --- 6) runFor 1 回 = 16667 マイクロ秒（約 1/60 秒）を 1 フレームと数え、600 フレーム実行して起動を待つ ---
 const FRAME_US = 16667;
-const runFrames = (n) => { for (let i = 0; i < n; i++) fm7.scheduler.exec(FRAME_US); };
+const runFrames = (n) => { for (let i = 0; i < n; i++) fm7.scheduler.runFor(FRAME_US); };
 runFrames(600);
 
 // --- 7) キー入力を流し込む（BASIC のプロンプト到達後） ---
@@ -221,11 +221,10 @@ fm7.reset();                    // 全システムリセット。起動経路は
 
 #### 7.1.1 起動経路の指定（ブートモード）
 
-`reset()` が選ぶ起動経路は、機種と **ブートモード**（`'basic'` / `'dos'`）で決まります。ブラウザで機種別ハードウェアパネルから選ぶ起動モードに相当する設定は、ヘッドレスでは次のフィールドで行います（`reset()` の**前**に設定）。
+`reset()` が選ぶ起動経路は、機種と **ブートモード**（`'basic'` / `'dos'`）で決まります。ブラウザで機種別ハードウェアパネルから選ぶ起動モードに相当する設定は、ヘッドレスでは `setStartupSystem()` で行います（`reset()` の**前**に呼ぶ）。
 
 ```javascript
-fm7._bootModeOverride = 'basic';   // 'basic' または 'dos'
-fm7._bootModeExplicit = true;      // 明示選択（FM77AV 系でもこの値を優先させる）
+fm7.setStartupSystem('basic');   // 'basic' または 'dos'（FM77AV 系でもこの指定を優先させる）
 fm7.reset();
 ```
 
@@ -233,39 +232,38 @@ fm7.reset();
 |---|---|---|
 | FM-7 系 | `'basic'` | BASIC ブート ROM（`loadBootBasROM()`）を実行します。 |
 | FM-7 系 | `'dos'` | DOS ブート ROM（`loadBootROM()`）を実行します。 |
-| FM77AV 系 | どちらでも | イニシエータ ROM（`loadInitiateROM()`）を実行します。`_bootModeExplicit` を `true` にしない場合は、ドライブ 0 にディスクがあれば `'dos'`、無ければ `'basic'` として扱われます。 |
+| FM77AV 系 | どちらでも | イニシエータ ROM（`loadInitiateROM()`）を実行します。`setStartupSystem()` を呼ばない場合は、ドライブ 0 にディスクがあれば `'dos'`、無ければ `'basic'` として扱われます。 |
 
 ### 7.2 実行（時間を進める）
 
-スケジューラにマイクロ秒を渡して、その分だけエミュレーションを進めます。
+スケジューラに進めたい時間をマイクロ秒で渡します。命令の区切りで止まるため、実際に進んだ時間は渡した値と少し異なることがあります。実際に進んだ時間は戻り値で確かめてください。長い時間を進めるときは、下の例のように短い呼び出しを繰り返すと、途中で画面やキーの状態を確かめられます。
 
 ```javascript
-fm7.scheduler.exec(16667);   // およそ 16,667 マイクロ秒（約 1/60 秒）進める
-fm7.scheduler.step();        // メイン CPU を 1 命令だけ実行（戻り値 = 消費サイクル数）
+fm7.scheduler.runFor(16667);   // およそ 16,667 マイクロ秒（約 1/60 秒）進める（戻り値 = 実際に進んだマスタクロック〈8MHz〉の周期の数）
 ```
 
-FM-7 系・FM77AV 系のいずれも、メイン CPU とサブ CPU の 2 つの MC6809 を持つデュアル CPU 構成です。スケジューラが両者の同期を保ちながら進めるため、テスト側は `exec()` を呼ぶだけでかまいません。
+FM-7 系・FM77AV 系のいずれも、メイン CPU とサブ CPU の 2 つの MC6809 を持つデュアル CPU 構成です。スケジューラが両者の同期を保ちながら進めるため、テスト側は `runFor()` を呼ぶだけでかまいません。
 
 ![図: 2 つの CPU とスケジューラの関係](images/headless_05_dual_cpu_scheduler.svg)
 
-`exec(16667)` を 1 回呼ぶと、シミュレータ内の時間がおよそ 16,667 マイクロ秒（約 1/60 秒）ぶん進みます（命令の区切りで止まるため、ちょうどにはなりません）。本書ではこの 1 回ぶんを便宜上「1 フレーム」と呼びます。画面の更新周期は表示モードで異なるため、この単位と画面の更新は 1 対 1 に対応しません。
+`runFor(16667)` を 1 回呼ぶと、シミュレータ内の時間がおよそ 16,667 マイクロ秒（約 1/60 秒）ぶん進みます（命令の区切りで止まるため、少し超えることがあります。戻り値は実際に進んだ時間を 8MHz の周期の数で表します）。本書ではこの 1 回ぶんを便宜上「1 フレーム」と呼びます。これは時間を数えるための単位で、画面の更新とは 1 対 1 に対応しません。
 
 複数フレームを回すヘルパー例:
 
 ```javascript
-const runFrames = (n) => { for (let i = 0; i < n; i++) fm7.scheduler.exec(16667); };
+const runFrames = (n) => { for (let i = 0; i < n; i++) fm7.scheduler.runFor(16667); };
 runFrames(300);
 ```
 
 ![図: フレーム実行ループのタイミングチャート](images/headless_06_frame_loop_timing.svg)
 
-`exec(16667)` を繰り返すほど実機時間が進みます。60 フレームで実機の約 1 秒、300 フレームで約 5 秒ぶんです。
+`runFor(16667)` を繰り返すほど実機時間が進みます。60 フレームで実機の約 1 秒、300 フレームで約 5 秒ぶんです。
 
 ### 7.3 ディスク
 
 ```javascript
 fm7.fdc.loadDisk(driveNum, arrayBuffer);   // driveNum: 0〜3、D77/2D/2DD/HFE を自動判別
-fm7.fdc.selectDisk(driveNum, diskIdx);     // 連結された複数ディスクから選択
+fm7.fdc.selectDisk(driveNum, slotIndex);     // 連結された複数ディスクから選択
 ```
 
 `loadDisk` には `ArrayBuffer` を渡します（`new Uint8Array(buf).buffer`）。
@@ -286,7 +284,7 @@ fm7.keyboard.queueText('LOAD"PROG"\n', { charGap: 2, lineGap: 12 });
 - `charGap` … 通常キー間の間隔（フレーム数。既定 2）
 - `lineGap` … RETURN 後の間隔（フレーム数。既定 12。BASIC が前の行を処理する時間を確保します）
 
-`queueText` はキューに文字を積みます。送出はスケジューラが自動で行うため、**テスト側は `scheduler.exec(16667)` を繰り返し呼ぶだけ**でキーが順に送られます。
+`queueText` はキューに文字を積みます。送出はスケジューラが自動で行うため、**テスト側は `scheduler.runFor(16667)` を繰り返し呼ぶだけ**でキーが順に送られます。
 
 前のキーが読み取られ、指定の間隔（`charGap` / `lineGap`）が経つまでは、次のキーを送りません。
 
@@ -298,23 +296,25 @@ fm7.keyboard.queueText('LOAD"PROG"\n', { charGap: 2, lineGap: 12 });
 
 ```javascript
 fm7.keyboard.queueText('FILES\n');
-while (fm7.keyboard.autoTypePending) fm7.scheduler.exec(16667);
+while (fm7.keyboard.autoTypePending) fm7.scheduler.runFor(16667);
 runFrames(60);   // 最後のキーが BASIC に処理されるまで少し余分に回す
 ```
 
-- `autoTypePending` … 送出待ちのキーが残っていれば真
+- `autoTypePending` … 送出待ちのキーの数（0 になれば送出済み）
 - `clearAutoType()` … 送出待ちのキューを破棄する
-- `autoTypeTick(elapsedUs, canRelease = true)` … オートタイプを手動で進める低レベルメソッド。スケジューラが自動で呼ぶため通常は不要です（追加で呼ぶと送出ペースがその分速まります）。第 2 引数を偽にすると、その回は送出しません
+- `advanceAutoType(elapsedUs, canRelease = true)` … オートタイプを手動で進める低レベルメソッド。スケジューラが自動で呼ぶため通常は不要です（追加で呼ぶと送出ペースがその分速まります）。第 2 引数を偽にすると、その回は送出しません
 
 なお、起動直後など**入力受付前に送ると取りこぼす**ことがあるため、BASIC の `Ready` プロンプト到達を待ってから送ってください（先にフレームを十分回しておきます）。
 
-**(b) 単発キーコード送出 `_pushKey`（低レベル API・上級者向け）**
+**(b) キーを押す・離す `pressKey` / `releaseKey`**
 
 ```javascript
-fm7.keyboard._pushKey(0x0D);   // RETURN（カーソルキーやファンクションキー等の単発送出に）
+fm7.keyboard.pressKey('Enter');     // RETURN を押す（引数はブラウザの KeyboardEvent.code の名前）
+runFrames(3);
+fm7.keyboard.releaseKey('Enter');   // 離す
 ```
 
-`_pushKey` はハードウェアのキーバッファへ **FM-7 のキーコード** を 1 つ直接積みます。コードの解釈は現在のキーボードモード（FM-7 の ASCII モード / FM77AV 系のスキャンコードモード）に依存し、スキャンコードモードではビット 7 を立てるとブレイク（離す）コードになります。送出ペースの調整や BASIC 側の受付待ちは一切行われないため、**文字列やコマンドの入力には向きません**。通常のテキスト入力には `queueText` を使ってください。
+`pressKey(code, shifted = false)` は、ブラウザでキーを押したときと同じ対応表で FM-7 のキーコードに直して送ります。第 2 引数を真にすると SHIFT を押しながらの扱いになります。ASCII モードでリピートの対象のキーを押したままにすると（キーリピートが有効なとき）オートリピートが働きます。`releaseKey(code)` で離します（スキャンコードモードではオートリピートは働かず、離したときのコードも送られます）。送出ペースの調整や BASIC 側の受付待ちは行わないため、**文字列やコマンドの入力には向きません**。通常のテキスト入力には `queueText` を使ってください。
 
 ### 7.5 ジョイスティック入力
 
@@ -342,7 +342,7 @@ fm7.setJoystickState(0, 0xF7);   // bit3(右)だけ 0 ＝右
 | `trigger1` | bit4 | `0xEF` |
 | `trigger2` | bit5 | `0xDF` |
 
-押している状態は、次に変更するまで保持されます。`reset()` では全解放に戻ります。FM-7 / FM-77 では FM 音源カードが既定で無効のため、先に `fm7.setFMCard(true)` で有効にしてください（FM77AV 系では常に有効です）。
+押している状態は、次に変更するか `clearJoystickState` で解放するまで保持されます（`reset()` では解放されません）。FM-7 / FM-77 では FM 音源カードが既定で無効のため、先に `fm7.setFMCard(true)` で有効にしてください（FM77AV 系では常に有効です）。
 
 **(b) 解放 `clearJoystickState`**
 
@@ -351,7 +351,7 @@ fm7.clearJoystickState(0);   // ポート1を全解放（0xFF）へ
 fm7.clearJoystickState();    // 引数省略で両ポートを解放
 ```
 
-入力を与えたら、対象プログラムが読み取れるよう `scheduler.exec(16667)` でフレームを進めてください。押しっぱなし・離しの表現は、設定→数フレーム実行→解放、の順で書けます。
+入力を与えたら、対象プログラムが読み取れるよう `scheduler.runFor(16667)` でフレームを進めてください。押しっぱなし・離しの表現は、設定→数フレーム実行→解放、の順で書けます。
 
 ```javascript
 fm7.setJoystickState(0, { trigger1: true });   // 押す
@@ -367,10 +367,10 @@ runFrames(3);
 | `fm7.mainCPU.pc` | メイン CPU プログラムカウンタ |
 | `fm7.subCPU.pc` | サブ CPU プログラムカウンタ |
 | `fm7.mainRAM` | メイン RAM（`Uint8Array`） |
-| `fm7.display.vram` | VRAM（`Uint8Array`） |
+| `fm7.display.vramBanks` | VRAM（バンクごとの `Uint8Array` の配列） |
 | `fm7.display.displayMode` | 表示モード |
 | `fm7.display.crtOn` | CRT 出力の有効フラグ |
-| `fm7.scheduler.mainCyclesTotal` | 実行済みメイン CPU サイクル総数 |
+| `fm7.scheduler.elapsedTicks` | リセットからの経過時間（8 MHz の周期の数。8,000,000 で 1 秒） |
 
 ![図: 状態検査の見取り図](images/headless_09_state_inspection.svg)
 
@@ -428,8 +428,8 @@ savePPM(fm7, './frame_180.ppm');
 ## 9. テープ（参考）
 
 ```javascript
-fm7.cmt.loadT77(new Uint8Array(readFileSync('./tape.t77')).buffer);   // T77 形式
-fm7.cmt.loadWAV(new Uint8Array(readFileSync('./tape.wav')).buffer);   // WAV 形式
+fm7.cmt.mountT77(new Uint8Array(readFileSync('./tape.t77')).buffer);   // T77 形式
+fm7.cmt.mountWave(new Uint8Array(readFileSync('./tape.wav')).buffer);   // WAV 形式
 ```
 
 その後 BASIC 側で `RUN"CAS:"` / `LOAD"CAS:"` / `LOADM"CAS:",,R` 等を `queueText` で送り、フレームを進めて読み込ませます。
@@ -467,7 +467,7 @@ fm7.cmt.loadWAV(new Uint8Array(readFileSync('./tape.wav')).buffer);   // WAV 形
 
 1. `core/index.js` から `FM7` を読み込む（スタブは不要）
 2. `FM7` を生成し、ROM 読み込み → `setMachineType` → `reset`
-3. `scheduler.exec(16667)` でフレームを進める
+3. `scheduler.runFor(16667)` でフレームを進める
 4. メモリ・レジスタ・VRAM を読んで検査、または `display.frame` から PPM 画像を書き出す
 5. キー入力は `queueText` で積み、フレームを回して自動送出させる
 

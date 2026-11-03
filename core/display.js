@@ -2,34 +2,38 @@
 // Copyright (c) 2026 7032 / Naomitsu Tsugiiwa
 // FM-7 / FM77AV / FM77AV40 Display System for Web Simulator
 // Handles VRAM, TTL/analog palette, sub CPU memory, and RGBA frame rendering (output goes to a frame sink).
-// Includes the FM77AV ALU, the line drawing engine, and the 262,144-color mode.
+// Includes the FM77AV logic unit ($D410-$D41E), the line engine ($D420-$D42B),
+// the VRAM offset registers, and the 400-line / 262,144-color formats.
 // Shared RAM is handled in fm7.js.
 
-const VRAM_SIZE       = 0xC000;  // 48KB per page, 3 planes
-const PLANE_SIZE      = 0x4000;  // 16KB per plane
-const BLUE_BASE       = 0x0000;
-const RED_BASE        = 0x4000;
-const GREEN_BASE      = 0x8000;
+// ---------------------------------------------------------------------------
+//  Memory layout
+// ---------------------------------------------------------------------------
+const BANK_SIZE       = 0xC000;  // one VRAM bank: 48KB as seen at sub $0000-$BFFF
+const MAX_BANKS       = 4;       // AV40 family carries 192KB = 4 banks
 const WORK_RAM_BASE   = 0xC000;
 const WORK_RAM_END    = 0xD37F;
-const WORK_RAM_SIZE   = WORK_RAM_END - WORK_RAM_BASE + 1;  // 0x1380
 const IO_BASE         = 0xD400;
-const IO_END_FM7      = 0xD40F;
-const IO_END_AV       = 0xD42B;  // FM77AV extended I/O (ALU registers)
+const IO_LAST         = 0xD43F;
 
 const SCREEN_WIDTH    = 640;
 const SCREEN_HEIGHT   = 200;
-const BYTES_PER_LINE  = 80;  // 640 / 8
-const BYTES_PER_LINE_320 = 40;  // 320 / 8 (analog 320x200 mode)
-
-// FM77AV display modes
-const DISPLAY_MODE_640  = 0;  // 640x200, 8 colors (FM-7 compatible)
-const DISPLAY_MODE_320  = 1;  // 320x200, 4096 colors (FM77AV)
-const DISPLAY_MODE_262K = 2;  // 320x200, 262,144 colors (FM77AV40)
-const DISPLAY_MODE_400  = 3;  // 640x400, 8 colors (FM77AV40)
-
 const SCREEN_HEIGHT_400 = 400;
-const PLANE_SIZE_400    = 0x8000;  // 32KB per plane in 400-line mode
+const ROW_BYTES      = 80;  // 640 dots / 8
+const ROW_BYTES_320  = 40;  // 320 dots / 8
+
+// Display formats
+const DISPLAY_MODE_640  = 0;  // 640x200, 8 colors
+const DISPLAY_MODE_320  = 1;  // 320x200, 4096 colors
+const DISPLAY_MODE_262K = 2;  // 320x200, 262,144 colors
+const DISPLAY_MODE_400  = 3;  // 640x400, 8 colors
+
+// VRAM offset register: OA13-OA0, of which OA4-OA0 are gated by OA.
+const OFFSET_COARSE    = 0x3FE0;
+
+// One VRAM cycle: 8 periods of the 16.128 MHz reference clock (FM77AV
+// Hardware Manual 8.4.2 (1), the VRAM access timing figure; about 0.5 us).
+const VRAM_CYCLE_US = 8 / 16.128;
 
 // Physical RGB colors for TTL 8-color mode (GRB bit order)
 // Index = (G << 2) | (R << 1) | B
@@ -44,15 +48,17 @@ const PHYSICAL_COLORS = [
     0xFFFFFFFF, // 7: White
 ];
 
-// ALU command modes (bits 2-0 of ALU command register $D410)
-const ALU_PSET     = 0;
-const ALU_PROHIBIT = 1;  // Reserved/disabled - preserves masked bits only
-const ALU_OR       = 2;
-const ALU_AND      = 3;
-const ALU_XOR      = 4;
-const ALU_NOT      = 5;
-const ALU_TILE     = 6;
-const ALU_COMPARE  = 7;
+// Logic unit commands, $D410 bits 2-0
+const LOGIC_PSET    = 0;
+// Command 1 is marked prohibited in FM77AV Hardware Manual 8.4.1; here it
+// writes 0 to the unmasked bits.
+const LOGIC_COMMAND_1 = 1;
+const LOGIC_OR      = 2;
+const LOGIC_AND     = 3;
+const LOGIC_XOR     = 4;
+const LOGIC_NOT     = 5;
+const LOGIC_TILE    = 6;
+const LOGIC_COMPARE = 7;
 
 /**
  * Default frame sink: keeps one RGBA frame in memory. Used when no host
@@ -76,35 +82,15 @@ export {
 
 export class Display {
     constructor() {
-        // VRAM page 0: 3 bitplanes, 48KB total (FM-7 + FM77AV)
-        this._vramBuf = new ArrayBuffer(VRAM_SIZE);
-        this.vram = new Uint8Array(this._vramBuf);
+        // VRAM: up to four 48KB banks. How many the machine has is
+        // set by setMachineFeatures(); the arrays always exist.
+        this.vramBanks = [];
+        for (let i = 0; i < MAX_BANKS; i++) this.vramBanks.push(new Uint8Array(BANK_SIZE));
 
-        // VRAM page 1: 3 bitplanes, 48KB total (FM77AV only)
-        this._vramBuf1 = new ArrayBuffer(VRAM_SIZE);
-        this.vramPage1 = new Uint8Array(this._vramBuf1);
-
-        // VRAM page 2: 3 bitplanes, 48KB total (FM77AV40 only)
-        this._vramBuf2 = new ArrayBuffer(VRAM_SIZE);
-        this.vramPage2 = new Uint8Array(this._vramBuf2);
-
-        // VRAM pages 3-5: back block planes for AV40EX/SX 2-page 400-line and
-        // 2-page 262K/4096-color modes. Same layout as vram/vramPage1/vramPage2.
-        // blockDisplay selects the block to render; blockActive selects the write
-        // target in the 400-line and 262K-color modes.
-        this._vramBuf3 = new ArrayBuffer(VRAM_SIZE);
-        this.vramPage3 = new Uint8Array(this._vramBuf3);
-        this._vramBuf4 = new ArrayBuffer(VRAM_SIZE);
-        this.vramPage4 = new Uint8Array(this._vramBuf4);
-        this._vramBuf5 = new ArrayBuffer(VRAM_SIZE);
-        this.vramPage5 = new Uint8Array(this._vramBuf5);
-
-        // Temporary buffer for VRAM scroll rotation (32KB for 400-line planes)
-        this._scrollBuf = new Uint8Array(PLANE_SIZE_400);
-
-        // Sub CPU work RAM: $C000-$D37F (4992 bytes) + $D500-$D7FF (768 bytes, FM77AV only)
-        this._workBuf = new ArrayBuffer(0x1680);  // 0x1380 + 0x0300
-        this.workRam = new Uint8Array(this._workBuf);
+        // Sub CPU work RAM $C000-$D37F (4992 bytes), and the separate block
+        // at $D500-$D7FF (768 bytes) that only the FM77AV series has.
+        this.workRam     = new Uint8Array(WORK_RAM_END - WORK_RAM_BASE + 1);
+        this.workRamD500 = new Uint8Array(0x0300);
 
         // TTL Palette: 8 entries, each maps logical color -> physical color
         this.palette = new Uint8Array(8);
@@ -117,111 +103,79 @@ export class Display {
         this._rebuildResolvedPalette();
 
         // FM77AV analog palette: 4096 entries, stored externally in fm7.js
-        this.analogPalette = null;       // Uint16Array(4096), set by fm7.js
+        this.palette4096 = null;       // Uint16Array(4096), set by fm7.js
         this._resolvedAnalogPalette = new Uint32Array(4096);
         this._analogDirty = true;        // Rebuild _resolvedAnalogPalette only when palette changed
 
-        // VRAM offset register (scroll offset within each plane)
-        // FM77AV: separate offset per page
-        this.vramOffset = [0, 0];       // [page0, page1] - register value
-        this.appliedScrollOffset = [0, 0]; // [page0, page1] - scroll offset already applied to VRAM
-        this._scrollWriteCount = [0, 0];   // $D40E/$D40F write counter: scroll executes on even count
-        this.vramOffsetFlag = false;    // Extended VRAM offset (bit 2 of $D430)
+        // ---- Machine features (setMachineFeatures) ----
+        this.hasLogicUnit = false;   // $D410-$D42B present (FM77AV and later)
+        this.bankCount    = 1;       // VRAM banks fitted
+        this.has262kColor = false;   // AV40 family
+        this.has400Line   = false;   // AV40 family
+        this.hasExRegisters = false; // $D433, $D438-$D43F
 
-        // FM77AV VRAM page control
-        this.activeVramPage = 0;    // Sub CPU writes to this page (0 or 1)
-        this.displayVramPage = 0;   // Renderer reads from this page (0 or 1)
-        this.displayMode = DISPLAY_MODE_640;  // current display mode (DISPLAY_MODE_*)
-        this._mode320Flag = false;  // Tracks $FD12 bit6 independently from displayMode
+        // ---- $D430 write side, display part ----
+        this.pageControl      = 0;     // last value written to $D430
+        this.shownPage        = 0;     // DB: page shown in 640x200
+        this.cpuPage          = 0;     // AB: bank the CPU reads/writes; offset register target
+        this.fineOffsetEnable = false; // OA: OA4-OA0 take effect
 
-        // FM77AV40EX/SX VRAM block select ($D433 bits 0/4)
-        // Front/back block for 2-page 400-line / 262K-color / 4096-color modes.
-        // Orthogonal to activeVramPage/displayVramPage ($D430 bits 5/6, used for
-        // 200-line 2-page). In 400/262K modes the renderer and VRAM writes
-        // consult these instead.
-        this.blockActive = 0;
-        this.blockDisplay = 0;
+        // ---- VRAM offset registers, one per bank 0/1 ----
+        this.offsetRegister = new Uint16Array(2);
 
-        // FM77AV40EX hardware window ($D438-$D43F). Pixel rectangle [x1,x2) × [y1,y2)
-        // — in 640x400 mode, inside the window the renderer reads from the *other* block
-        // (back if blockDisplay=0, front if blockDisplay=1). X aligned on 8 px.
-        this.windowX1 = 0;
-        this.windowX2 = 0;
-        this.windowY1 = 0;
-        this.windowY2 = 0;
-        this.windowOpen = false;
+        // ---- $D42F VRAM bank ----
+        this.planeBank = 0;
 
-        // Optional diagnostic trace of scroll / display state events
-        // (off by default; see dumpScrollTrace()).
-        this.enableScrollTrace = false;
-        this._scrollTraceSize = 65536;
-        this._scrollTrace = new Array(this._scrollTraceSize);
-        this._scrollTraceIdx = 0;
-        this._scrollTraceCount = 0;
+        // ---- Display format inputs ----
+        this.columns320  = false;   // $FD12 bit 6
+        this.formatByte  = 0x08;    // last $FD04 write seen by the display (bit 3 = 1: 200 lines)
+        this.displayMode = DISPLAY_MODE_640;
 
-        // FM77AV mode flag - set by fm7.js when machine type is FM77AV
-        this.isAV = false;
+        // ---- $D433: while bit 0 is 1, drawing is kept off the screen ----
+        this.holdPicture = false;
+        // ---- hardware window $D438-$D43F: stored only ----
+        this.windowRegisters = new Uint8Array(8);
 
-        // FM77AV40 mode flag
-        this.isAV40 = false;
+        // Multi-page register ($FD37, written by fm7.js).
+        // bits 2-0: CPU access to B/R/G disabled; bits 6-4: B/R/G hidden on screen.
+        this.planeMaskBits = 0;
 
-        // FM77AV40: VRAM bank select ($D42F) for 262,144-color / 400-line mode
-        this.vramBankSelect = 0;  // 0-2 (bank 3 does not exist)
+        // ---- Logic unit $D410-$D41E ----
+        this.logicCommand  = 0;                    // $D410
+        this.logicColor    = 0;                    // $D411
+        this.logicMask     = 0;                    // $D412
+        this.colorMatchBits = 0;                   // $D413 (read)
+        this.compareRegisters = new Uint8Array(8); // $D413-$D41A (write)
+        this.bankDisable   = 0;                    // $D41B
+        this.tilePattern   = new Uint8Array(3);    // $D41C-$D41E (B, R, G)
+        // scratch: the three plane positions of one logic operation
+        this._opBank  = new Int32Array(3);
+        this._opIndex = new Int32Array(3);
 
-        // Multi-page register: bit mask controlling which planes are active
-        // bit 0 = blue (plane 0), bit 1 = red (plane 1), bit 2 = green (plane 2)
-        // 1 = plane DISABLED (masked), 0 = plane ENABLED
-        this.multiPage = 0;
-
-        // ---------------------------------------------------------------
-        //  ALU registers ($D410-$D42B) - FM77AV hardware ALU (MB61VH010)
-        // ---------------------------------------------------------------
-        this.aluCommand   = 0;       // $D410: ALU command register
-                                      //   bit 7: ALU enable (1=active)
-                                      //   bit 6: compare-write mode
-                                      //   bit 5: NOT-equal write (with bit 6)
-                                      //   bits 2-0: operation mode
-        this.aluColor     = 0;       // $D411: ALU color (bit 0 = B, bit 1 = R, bit 2 = G)
-        this.aluMask      = 0;       // $D412: ALU mask (1=preserve original bit)
-        this.aluCompareStatus   = 0;       // $D413: compare result status (read)
-        this.aluCompareData    = new Uint8Array(8);  // $D413-$D41A: compare data (write)
-        this.aluDisable   = 0x00;    // $D41B: plane disable (bit=1 disables ALU on that plane)
-        this.aluTileData   = new Uint8Array(3);  // $D41C-$D41E: tile patterns per plane
-
-        // ---------------------------------------------------------------
-        //  Line drawing engine registers ($D420-$D42B)
-        // ---------------------------------------------------------------
-        this.lineBusy     = false;   // Line drawing busy flag
-        this.lineOffset   = 0;       // $D420-$D421: VRAM address offset
-        this.lineStyle    = 0;       // $D422-$D423: line style pattern (16-bit)
-        this.lineX0       = 0;       // $D424-$D425: X0 coordinate (10-bit)
-        this.lineY0       = 0;       // $D426-$D427: Y0 coordinate (9-bit)
-        this.lineX1       = 0;       // $D428-$D429: X1 coordinate (10-bit)
-        this.lineY1       = 0;       // $D42A-$D42B: Y1 coordinate (9-bit)
-
-        // Internal line drawing state
-        this._linePrevAddr = 0xFFFF;  // Previous VRAM address during line draw
-        this._lineMask    = 0xFF;    // Current line drawing mask byte
-        this._lineCount   = 0;       // Bytes processed during line draw
-        this._lineBusyRemainder = 0;  // Busy-time remainder carried over to the next line
-        this._lineBusyMicros = 0;    // BUSY timer countdown (microseconds); cleared by fm7.js
-
-        // MISC register ($D430) last written value (maintained by fm7.js)
-        this.miscReg = 0;
+        // ---- Line engine $D420-$D42B ----
+        this.lineAddressOffset = 0;   // byte offset (register value x 2)
+        this.lineStylePattern  = 0;
+        this.lineStartX = 0;
+        this.lineStartY = 0;
+        this.lineEndX   = 0;
+        this.lineEndY   = 0;
+        this.lineRemainingUs = 0;     // BUSY time left
 
         // CRT and VRAM access flags (sub CPU I/O side effects)
-        // CRT 表示は $D408 の読みで点灯、書き込みで消灯する。
-        // リセットとサブ CPU のリセット ($FD13) でも消灯する。
-        // vramAccessEnabled: サブ CPU 側の VRAM アクセス許可 ($D409 読みで許可・書きで
-        // 禁止)。表示の点灯・消灯とは独立で、描画には関与しない。
+        // The CRT display turns on when $D408 is read and off when it is
+        // written; a reset and a sub CPU reset ($FD13) also turn it off.
+        // vramAccessEnabled: VRAM access from the sub CPU ($D409 read enables,
+        // write disables).  It is separate from the CRT on/off and does not
+        // affect drawing.
         this.crtOn = false;
         this.vramAccessEnabled = false;
-        // insLedOn: キーボードの INS LED ($D40D 読みで点灯・書きで消灯、
-        // リセットとサブ CPU のリセットで消灯)。
+        // insLedOn: the keyboard INS LED ($D40D read turns it on, write turns
+        // it off; a reset and a sub CPU reset turn it off).
         this.insLedOn = false;
-        // $D405 bit 0: cycle-steal mode. Only machines where
-        // hasCycleStealControl is true expose this register (see fm7.js).
-        this.cycleStealMode = false;
+        // $D405 bit 0: the sub CPU's VRAM access uses the
+        // second half of each CPU cycle instead of waiting for blanking.
+        // Only machines with hasSubVramModeSelect have the register.
+        this.subVramFastAccess = false;
 
         // Dirty tracking (50 bands = 400 lines / 8; 200-line modes use first 25)
         this._dirtyBands = new Uint8Array(50);
@@ -278,643 +232,476 @@ export class Display {
     }
 
     // ---------------------------------------------------------------
-    //  VRAM array accessors
+    //  Machine features
     // ---------------------------------------------------------------
 
-    /** Get the VRAM array for the active (write) page */
-    _getActiveVram() {
-        // In 262K / 400-line mode, vramBankSelect selects plane bank (0-2),
-        // blockActive ($D433 bit0, AV40EX/SX 2-page mode) selects front/back block.
-        if (this.displayMode === DISPLAY_MODE_262K || this.displayMode === DISPLAY_MODE_400) {
-            if (this.blockActive === 1) {
-                if (this.vramBankSelect === 2) return this.vramPage5;
-                if (this.vramBankSelect === 1) return this.vramPage4;
-                return this.vramPage3;
-            }
-            if (this.vramBankSelect === 2) return this.vramPage2;
-            if (this.vramBankSelect === 1) return this.vramPage1;
-            return this.vram;
-        }
-        return this.activeVramPage === 0 ? this.vram : this.vramPage1;
-    }
-
-    /** Get the VRAM array for the display (read) page */
-    _getDisplayVram() {
-        return this.displayVramPage === 0 ? this.vram : this.vramPage1;
-    }
-
     /**
-     * Mark the affected display region for redraw.
-     * @param {number} rawOffset - byte offset within a 0x4000 plane region
+     * Declare what the machine carries.
+     * @param {object} f
+     * @param {boolean} f.logicUnit  - logic unit and line engine ($D410-$D42B)
+     * @param {number}  f.banks      - VRAM banks of 48KB (1..4)
+     * @param {boolean} f.color262k  - 320x200 262,144-color format
+     * @param {boolean} f.line400    - 640x400 format and $D433/$D438-$D43F
      */
-    _markVramLineDirty(rawOffset) {
-        let screenLine;
-        if (this.displayMode === DISPLAY_MODE_320) {
-            screenLine = ((rawOffset & 0x1FFF) / BYTES_PER_LINE_320) | 0;
-        } else if (this.displayMode === DISPLAY_MODE_262K) {
-            const sub = rawOffset & 0x1FFF;
-            // Bank 1 scrolls by vramOffset[1]; banks 0/2 share vramOffset[0]
-            // (matches _render320x200_262k's ofsB0/ofsB1/ofsB2).
-            const ofs = (this.vramBankSelect === 1) ? this.vramOffset[1] : this.vramOffset[0];
-            screenLine = (((sub - ofs + 0x2000) & 0x1FFF) / BYTES_PER_LINE_320) | 0;
+    setMachineFeatures({ logicUnit = false, banks = 1, color262k = false, line400 = false } = {}) {
+        this.hasLogicUnit = !!logicUnit;
+        this.bankCount = Math.max(1, Math.min(MAX_BANKS, banks | 0));
+        this.has262kColor = !!color262k && this.bankCount >= 3;
+        this.has400Line = !!line400 && this.bankCount >= 3;
+        this.hasExRegisters = !!line400;
+        this._updateDisplayMode();
+    }
+
+    // ---------------------------------------------------------------
+    //  Display format
+    // ---------------------------------------------------------------
+
+    /** $FD12 bit 6: 1 = 320x200 4096 colors, 0 = 640x200. */
+    setColumns320(on) {
+        this.columns320 = !!on;
+        this._updateDisplayMode();
+    }
+
+    /** $FD04 write on machines with the extended formats. */
+    writeFormatByte(value) {
+        this.formatByte = value & 0xFF;
+        this._updateDisplayMode();
+    }
+
+    _updateDisplayMode() {
+        const lines200 = (this.formatByte & 0x08) !== 0;
+        let mode;
+        if (this.has262kColor && lines200 && (this.formatByte & 0x10)) {
+            mode = DISPLAY_MODE_262K;
+        } else if (this.has400Line && !lines200) {
+            mode = DISPLAY_MODE_400;
         } else {
-            screenLine = (rawOffset / BYTES_PER_LINE) | 0;
+            mode = this.columns320 ? DISPLAY_MODE_320 : DISPLAY_MODE_640;
         }
-        if (screenLine < SCREEN_HEIGHT) {
-            this._dirtyBands[screenLine >> 3] = 1;
+        if (mode !== this.displayMode) {
+            this.displayMode = mode;
+            this._fullDirty = true;
+            this._frame = null;   // frame size may change
         }
     }
 
     // ---------------------------------------------------------------
-    //  Internal VRAM access helpers for ALU operations
+    //  $D430 write side, display bits
+    // ---------------------------------------------------------------
+
+    /** Take DB (bit 6), AB (bit 5) and OA (bit 2) from a $D430 write. */
+    writePageControl(value) {
+        this.pageControl = value & 0xFF;
+        this.selectPages((value >> 5) & 1, (value >> 6) & 1);
+        this.fineOffsetEnable = (value & 0x04) !== 0;
+    }
+
+    /** Set AB and DB directly (AB on a single-bank machine stays 0). */
+    selectPages(cpu, shown) {
+        this.cpuPage = (this.bankCount > 1) ? (cpu & 1) : 0;
+        shown &= 1;
+        if (shown !== this.shownPage) {
+            this.shownPage = shown;
+            this._fullDirty = true;
+        }
+    }
+
+    // ---------------------------------------------------------------
+    //  VRAM offset
+    // ---------------------------------------------------------------
+
+    /** Stored offset of `bank`; changing OA does not rewrite either register. */
+    _effectiveOffset(bank) {
+        return this.offsetRegister[bank];
+    }
+
+    /** $D40E: OA13-OA8 into the register of the bank chosen by AB. */
+    _writeOffsetUpper(value) {
+        const b = this.cpuPage;
+        this.offsetRegister[b] = ((value & 0x3F) << 8) | (this.offsetRegister[b] & 0xFF);
+        this._fullDirty = true;
+    }
+
+    /** $D40F: OA7-OA0 into the register of the bank chosen by AB. */
+    _writeOffsetLower(value) {
+        const b = this.cpuPage;
+        // FM77AV Hardware Manual 8.4.2 (2): OA controls OA4-OA0 in $D40F (W).
+        const low = value & (this.fineOffsetEnable ? 0xFF : OFFSET_COARSE);
+        this.offsetRegister[b] = (this.offsetRegister[b] & 0x3F00) | (low & 0xFF);
+        this._fullDirty = true;
+    }
+
+    // ---------------------------------------------------------------
+    //  CPU view of VRAM
     // ---------------------------------------------------------------
 
     /**
-     * Read a byte from VRAM for ALU operations on a specific plane (bank).
-     * Respects the multi-page access mask. Returns 0xFF if the plane is masked.
-     * @param {number} offset - byte offset within a plane (masked to the plane size of the current mode)
-     * @param {number} plane - plane number (0=blue, 1=red, 2=green)
-     * @returns {number} byte value
+     * Bank and index that a sub CPU address $0000-$BFFF reaches. The index
+     * is returned; the bank is left in this._hitBank.
      */
-    _aluReadPlane(offset, plane) {
-        if (this.multiPage & (1 << plane)) {
-            return 0xFF;
+    _locate(a) {
+        switch (this.displayMode) {
+            case DISPLAY_MODE_400:
+                // $D42F picks the plane; offset counts 2 bytes per unit
+                this._hitBank = this.planeBank;
+                if (a >= 0x8000) return a;
+                return (a + this._effectiveOffset(0) * 2) & 0x7FFF;
+            case DISPLAY_MODE_262K:
+                // $D42F picks the bank; 8KB planes wrap like 320 mode
+                this._hitBank = this.planeBank;
+                return (a & 0xE000) | ((a + this._effectiveOffset(0)) & 0x1FFF);
+            case DISPLAY_MODE_320: {
+                // 8KB planes, OA13 unused
+                const b = this.cpuPage;
+                this._hitBank = b;
+                return (a & 0xE000) | ((a + this._effectiveOffset(b)) & 0x1FFF);
+            }
+            default: {
+                // 16KB planes
+                const b = this.cpuPage;
+                this._hitBank = b;
+                return (a & 0xC000) | ((a + this._effectiveOffset(b)) & 0x3FFF);
+            }
         }
-        if (this.displayMode === DISPLAY_MODE_400) {
-            const pages = this.blockActive === 1
-                ? [this.vramPage3, this.vramPage4, this.vramPage5]
-                : [this.vram, this.vramPage1, this.vramPage2];
-            return pages[plane][offset & (PLANE_SIZE_400 - 1)];
-        }
-        const vram = this._getActiveVram();
-        // ALU accesses use raw offset (no scroll offset applied)
-        return vram[plane * PLANE_SIZE + (offset & (PLANE_SIZE - 1))];
     }
 
-    /**
-     * Write a byte to VRAM for ALU operations on a specific plane (bank).
-     * Respects the multi-page access mask. Skips write if plane is masked.
-     * @param {number} offset - byte offset within a plane (masked to the plane size of the current mode)
-     * @param {number} plane - plane number (0=blue, 1=red, 2=green)
-     * @param {number} dat - byte value to write
-     */
-    _aluWritePlane(offset, plane, dat) {
-        if (this.multiPage & (1 << plane)) {
+    /** Color plane (0 = B, 1 = R, 2 = G) addressed by a CPU access, for the $FD37 access mask. */
+    _accessPlane(a) {
+        if (this.displayMode === DISPLAY_MODE_400) return this.planeBank;
+        return a >> 14;
+    }
+
+    /** Sub CPU read of VRAM $0000-$BFFF. */
+    cpuReadVram(a) {
+        a &= 0xFFFF;
+        if (a >= BANK_SIZE) return 0xFF;
+        const i = this._locate(a);
+        const before = this.vramBanks[this._hitBank][i];
+        // with EST = 1 a read is the dummy read that runs the operation
+        if ((this.logicCommand & 0x80) && this.hasLogicUnit) {
+            this._operateAt(a, ~this.logicMask & 0xFF);
+        }
+        if (this._planeClosed(this._accessPlane(a))) return 0xFF;
+        return before;
+    }
+
+    /** Sub CPU write of VRAM $0000-$BFFF; EST selects an operation instead of CPU data. */
+    cpuWriteVram(a, value) {
+        a &= 0xFFFF;
+        if (a >= BANK_SIZE) return;
+        if ((this.logicCommand & 0x80) && this.hasLogicUnit && this.displayMode !== DISPLAY_MODE_262K) {
+            this._operateAt(a, ~this.logicMask & 0xFF);
             return;
         }
-        if (this.displayMode === DISPLAY_MODE_400) {
-            const pages = this.blockActive === 1
-                ? [this.vramPage3, this.vramPage4, this.vramPage5]
-                : [this.vram, this.vramPage1, this.vramPage2];
-            const vram = pages[plane];
-            const rawOffset = offset & (PLANE_SIZE_400 - 1);
-            if (vram[rawOffset] !== dat) {
-                vram[rawOffset] = dat;
-                if (this.blockActive === this.blockDisplay) {
-                    const line = (rawOffset / BYTES_PER_LINE) | 0;
-                    if (line < SCREEN_HEIGHT_400) {
-                        this._dirtyBands[(line >> 3)] = 1;
-                    }
+        if (this._planeClosed(this._accessPlane(a))) return;
+        const i = this._locate(a);
+        const bank = this._hitBank;
+        const mem = this.vramBanks[bank];
+        if (mem[i] !== value) {
+            mem[i] = value;
+            this._touch(bank, i);
+        }
+    }
+
+    /**
+     * $FD37 bits 2-0 close plane B, R, G to the CPU side (FM-7 system spec
+     * 1.7): a closed plane reads "FF" and its data cannot be changed.
+     */
+    _planeClosed(plane) {
+        return ((this.planeMaskBits >> plane) & 1) !== 0;
+    }
+
+    /** CPU-side read of one plane byte: "FF" while the plane is closed (FM-7 system spec 1.7). */
+    _planeRead(plane, bank, i) {
+        return this._planeClosed(plane) ? 0xFF : this.vramBanks[bank][i];
+    }
+
+    /** CPU-side write of one plane byte: dropped while the plane is closed (FM-7 system spec 1.7). */
+    _planeWrite(plane, bank, i, value) {
+        if (this._planeClosed(plane)) return;
+        const mem = this.vramBanks[bank];
+        if (mem[i] === value) return;
+        mem[i] = value;
+        this._touch(bank, i);
+    }
+
+    /** Mark the screen band that shows bank/index for redraw. */
+    _touch(bank, i) {
+        let line;
+        switch (this.displayMode) {
+            case DISPLAY_MODE_400:
+                if (bank > 2 || i >= 0x8000) return;
+                line = ((i - this._effectiveOffset(0) * 2) & 0x7FFF) / ROW_BYTES;
+                if (line >= SCREEN_HEIGHT_400) return;
+                break;
+            case DISPLAY_MODE_262K:
+                if (bank > 2) return;
+                line = ((i - this._effectiveOffset(0)) & 0x1FFF) / ROW_BYTES_320;
+                break;
+            case DISPLAY_MODE_320:
+                if (bank > 1) return;
+                line = ((i - this._effectiveOffset(bank)) & 0x1FFF) / ROW_BYTES_320;
+                break;
+            default:
+                if (bank !== this._shownBank()) return;
+                line = ((i - this._effectiveOffset(bank)) & 0x3FFF) / ROW_BYTES;
+                break;
+        }
+        line |= 0;
+        if (line < SCREEN_HEIGHT || (this.displayMode === DISPLAY_MODE_400 && line < SCREEN_HEIGHT_400)) {
+            this._dirtyBands[line >> 3] = 1;
+        }
+    }
+
+    /** Bank shown in 640x200 (DB; single-bank machines always show bank 0). */
+    _shownBank() {
+        return this.bankCount > 1 ? this.shownPage : 0;
+    }
+
+    // ---------------------------------------------------------------
+    //  Logic unit
+    // ---------------------------------------------------------------
+
+    /**
+     * Run the current $D410 command on the three color planes behind
+     * address `a`. `writeMask` has 1 for each dot that may change:
+     * the inverse of $D412 for a CPU access, a single dot for the line engine.
+     */
+    _operateAt(a, writeMask) {
+        const cmd = this.logicCommand & 7;
+        const banks = this._opBank, idx = this._opIndex;
+        switch (this.displayMode) {
+            case DISPLAY_MODE_262K:
+                return;                                // no logic operation
+            case DISPLAY_MODE_400: {
+                const i = ((a & 0x7FFF) + this._effectiveOffset(0) * 2) & 0x7FFF;
+                for (let p = 0; p < 3; p++) { banks[p] = p; idx[p] = i; }
+                break;
+            }
+            case DISPLAY_MODE_320: {
+                const b = this.cpuPage;
+                const i = (a & 0x2000) | ((a + this._effectiveOffset(b)) & 0x1FFF);
+                for (let p = 0; p < 3; p++) { banks[p] = b; idx[p] = p * 0x4000 + i; }
+                break;
+            }
+            default: {
+                const b = this.cpuPage;
+                const i = (a + this._effectiveOffset(b)) & 0x3FFF;
+                for (let p = 0; p < 3; p++) { banks[p] = b; idx[p] = p * 0x4000 + i; }
+                break;
+            }
+        }
+        const vb = this.vramBanks;
+        // The unit works through CPU accesses to the three planes, so it
+        // reads and writes them with _planeRead / _planeWrite, which apply the
+        // $FD37 access flags of any CPU access.
+        const planeByte = [0, 1, 2].map((p) => this._planeRead(p, banks[p], idx[p]));
+        let mask = writeMask & 0xFF;
+
+        // compare for command 111, or before any command when M1 = 1
+        const m1 = (this.logicCommand & 0x40) !== 0;
+        if (cmd === LOGIC_COMPARE || m1) {
+            const eq = this._matchColors(planeByte[0], planeByte[1], planeByte[2]);
+            this.colorMatchBits = eq;
+            if (cmd === LOGIC_COMPARE) return;
+            mask &= (this.logicCommand & 0x20) ? ~eq : eq;
+        }
+        if (mask === 0) return;
+
+        for (let p = 0; p < 3; p++) {
+            // $D41B leaves a plane out of the operation.
+            if ((this.bankDisable >> p) & 1) continue;
+            const i = idx[p];
+            const v = vb[banks[p]][i];
+            const c = (this.logicColor & (1 << p)) ? 0xFF : 0x00;
+            let n;
+            switch (cmd) {
+                case LOGIC_PSET: n = c; break;
+                case LOGIC_COMMAND_1: n = 0; break;
+                case LOGIC_OR:   n = v | c; break;
+                case LOGIC_AND:  n = v & c; break;
+                case LOGIC_XOR:  n = v ^ c; break;
+                case LOGIC_NOT:  n = ~v; break;
+                case LOGIC_TILE: n = this.tilePattern[p]; break;
+                default: return;
+            }
+            this._planeWrite(p, banks[p], i, ((v & ~mask) | (n & mask)) & 0xFF);
+        }
+    }
+
+    /**
+     * One bit per dot, 1 when the dot's color
+     * (G, R, B taken from all three planes) equals the color of any compare
+     * register whose MSK bit is 0.
+     */
+    _matchColors(b, r, g) {
+        let hits = 0;
+        for (let k = 0; k < 8; k++) {
+            const reg = this.compareRegisters[k];
+            if (reg & 0x80) continue;
+            const blue  = (reg & 1) ? b : ~b;
+            const red   = (reg & 2) ? r : ~r;
+            const green = (reg & 4) ? g : ~g;
+            hits |= blue & red & green;
+        }
+        return hits & 0xFF;
+    }
+
+    // ---------------------------------------------------------------
+    //  Line engine
+    // ---------------------------------------------------------------
+
+    /** LINE bit of $D430 (1 = READY). */
+    get lineReady() {
+        return this.lineRemainingUs <= 0;
+    }
+
+    /** Let `us` microseconds of BUSY time pass. */
+    advanceLineEngine(us) {
+        if (this.lineRemainingUs > 0) {
+            this.lineRemainingUs -= us;
+            if (this.lineRemainingUs < 0) this.lineRemainingUs = 0;
+        }
+    }
+
+    /** Draw from (X0,Y0) to (X1,Y1) inclusive, started by the $D42B write. */
+    _drawLine() {
+        const wide = this.displayMode === DISPLAY_MODE_640 || this.displayMode === DISPLAY_MODE_400;
+        const width  = wide ? SCREEN_WIDTH : 320;
+        const height = this.displayMode === DISPLAY_MODE_400 ? SCREEN_HEIGHT_400 : SCREEN_HEIGHT;
+        const stride = wide ? ROW_BYTES : ROW_BYTES_320;
+        const base = this.lineAddressOffset;
+        const style = this.lineStylePattern;
+
+        let x = this.lineStartX, y = this.lineStartY;
+        const tx = this.lineEndX, ty = this.lineEndY;
+        const dx = Math.abs(tx - x), dy = Math.abs(ty - y);
+        const sx = tx >= x ? 1 : -1, sy = ty >= y ? 1 : -1;
+        let err = dx - dy;
+        // The line engine steps through every position of the line and runs
+        // the logic unit there; the line style only decides whether the dot
+        // is written (Hardware Manual 8.4.1 (2)). Each step takes one VRAM
+        // cycle of BUSY time.
+        let busyUs = 0;
+        let dots = 0;
+        for (;;) {
+            busyUs += VRAM_CYCLE_US;
+            // P15 first, one bit per dot
+            if ((style >> (15 - (dots & 15))) & 1) {
+                // dots off the screen are not drawn
+                if (x < width && y < height) {
+                    // address offset + y * line bytes + x / 8, $D412 not used
+                    this._operateAt(base + y * stride + (x >> 3), 0x80 >> (x & 7));
+                }
+            }
+            dots++;
+            if (x === tx && y === ty) break;
+            const e2 = err * 2;
+            if (e2 > -dy) { err -= dy; x += sx; }
+            if (e2 < dx)  { err += dx; y += sy; }
+        }
+        this.lineRemainingUs = busyUs;
+    }
+
+    // ---------------------------------------------------------------
+    //  Logic unit / line engine / extension registers: $D410-$D43F
+    // ---------------------------------------------------------------
+
+    /** Reads of $D410-$D43F that belong to the display. */
+    _readExtension(addr) {
+        if (this.hasLogicUnit) {
+            switch (addr) {
+                case 0xD410: return this.logicCommand;
+                case 0xD411: return this.logicColor;
+                case 0xD412: return this.logicMask;
+                case 0xD413: return this.colorMatchBits;
+                case 0xD41B: return this.bankDisable;
+            }
+        }
+        // write-only registers, $D42F, $D433 and the window read as $FF
+        return 0xFF;
+    }
+
+    /** Writes of $D410-$D43F that belong to the display. */
+    _writeExtension(addr, value) {
+        if (addr <= 0xD42B) {
+            if (this.hasLogicUnit) this._writeLogicOrLine(addr, value);
+            return;
+        }
+        if (addr === 0xD42F) {
+            // bits 1-0 pick a 48KB bank; a bank the machine lacks is ignored
+            if (this.bankCount >= 3) {
+                const b = value & 3;
+                if (b < this.bankCount && b !== this.planeBank) {
+                    this.planeBank = b;
                 }
             }
             return;
         }
-        const vram = this._getActiveVram();
-        // ALU accesses use raw offset (no scroll offset applied)
-        const rawOffset = offset & (PLANE_SIZE - 1);
-        const addr = plane * PLANE_SIZE + rawOffset;
-        if (vram[addr] !== dat) {
-            vram[addr] = dat;
-            this._markVramLineDirty(rawOffset);
-        }
-    }
-
-    /**
-     * ALU write with compare-write mode support.
-     * If compare-write mode (bit 6 of aluCommand) is active, the write
-     * is masked by the compare status register (aluCompareStatus).
-     * @param {number} offset - byte offset within a plane
-     * @param {number} plane - plane number
-     * @param {number} dat - data to write
-     */
-    _aluWriteWithCompare(offset, plane, dat) {
-        // Check if compare-write mode is active
-        if ((this.aluCommand & 0x40) === 0) {
-            // Normal write
-            this._aluWritePlane(offset, plane, dat);
+        if (!this.hasExRegisters) return;
+        if (addr === 0xD433) {
+            // bit 0 = 1 holds the picture; going back to 0 shows
+            // everything drawn meanwhile (the dirty bands are kept)
+            this.holdPicture = (value & 0x01) !== 0;
             return;
         }
-
-        // Compare-write mode
-        const existing = this._aluReadPlane(offset, plane);
-        let temp, result;
-
-        if (this.aluCommand & 0x20) {
-            // NOT-equal write: write where compare did NOT match
-            temp = existing & this.aluCompareStatus;
-            dat = dat & (~this.aluCompareStatus & 0xFF);
-        } else {
-            // Equal write: write where compare DID match
-            temp = existing & (~this.aluCompareStatus & 0xFF);
-            dat = dat & this.aluCompareStatus;
-        }
-
-        this._aluWritePlane(offset, plane, (temp | dat) & 0xFF);
-    }
-
-    // ---------------------------------------------------------------
-    //  ALU operation implementations
-    // ---------------------------------------------------------------
-
-    /**
-     * ALU PSET operation: write color to all enabled planes.
-     * For each plane: if color bit set, write 0xFF; else write 0x00.
-     * Masked bits are preserved from original VRAM data.
-     */
-    _aluPset(addr) {
-        // If compare-write mode, run compare first
-        if (this.aluCommand & 0x40) {
-            this._aluCompare(addr);
-        }
-
-        let bit = 0x01;
-        for (let plane = 0; plane < 3; plane++) {
-            if (!(this.aluDisable & bit)) {
-                // Color data: all 1s or all 0s based on color bit
-                let dat = (this.aluColor & bit) ? 0xFF : 0x00;
-
-                // Read existing for mask
-                const mask = this._aluReadPlane(addr, plane);
-
-                // Apply mask: preserve bits where aluMask=1
-                dat = (dat & (~this.aluMask & 0xFF)) | (mask & this.aluMask);
-
-                // Write with compare-write support
-                this._aluWriteWithCompare(addr, plane, dat);
-            }
-            bit <<= 1;
+        if (addr >= 0xD438) {
+            this.windowRegisters[addr - 0xD438] = value;   // stored only
         }
     }
 
-    /**
-     * ALU prohibit operation (command 1): preserves masked bits only.
-     * Effectively clears unmasked bits while keeping masked bits.
-     */
-    _aluProhibit(addr) {
-        if (this.aluCommand & 0x40) {
-            this._aluCompare(addr);
-        }
-
-        let bit = 0x01;
-        for (let plane = 0; plane < 3; plane++) {
-            if (!(this.aluDisable & bit)) {
-                const mask = this._aluReadPlane(addr, plane);
-                const dat = mask & this.aluMask;
-                this._aluWriteWithCompare(addr, plane, dat);
-            }
-            bit <<= 1;
-        }
-    }
-
-    /**
-     * ALU OR operation: OR color with existing VRAM data.
-     */
-    _aluOr(addr) {
-        if (this.aluCommand & 0x40) {
-            this._aluCompare(addr);
-        }
-
-        let bit = 0x01;
-        for (let plane = 0; plane < 3; plane++) {
-            if (!(this.aluDisable & bit)) {
-                let dat = (this.aluColor & bit) ? 0xFF : 0x00;
-                const mask = this._aluReadPlane(addr, plane);
-                dat |= mask;
-                // Apply mask bits
-                dat = (dat & (~this.aluMask & 0xFF)) | (mask & this.aluMask);
-                this._aluWriteWithCompare(addr, plane, dat);
-            }
-            bit <<= 1;
-        }
-    }
-
-    /**
-     * ALU AND operation: AND color with existing VRAM data.
-     */
-    _aluAnd(addr) {
-        if (this.aluCommand & 0x40) {
-            this._aluCompare(addr);
-        }
-
-        let bit = 0x01;
-        for (let plane = 0; plane < 3; plane++) {
-            if (!(this.aluDisable & bit)) {
-                let dat = (this.aluColor & bit) ? 0xFF : 0x00;
-                const mask = this._aluReadPlane(addr, plane);
-                dat &= mask;
-                dat = (dat & (~this.aluMask & 0xFF)) | (mask & this.aluMask);
-                this._aluWriteWithCompare(addr, plane, dat);
-            }
-            bit <<= 1;
-        }
-    }
-
-    /**
-     * ALU XOR operation: XOR color with existing VRAM data.
-     */
-    _aluXor(addr) {
-        if (this.aluCommand & 0x40) {
-            this._aluCompare(addr);
-        }
-
-        let bit = 0x01;
-        for (let plane = 0; plane < 3; plane++) {
-            if (!(this.aluDisable & bit)) {
-                let dat = (this.aluColor & bit) ? 0xFF : 0x00;
-                const mask = this._aluReadPlane(addr, plane);
-                dat ^= mask;
-                dat = (dat & (~this.aluMask & 0xFF)) | (mask & this.aluMask);
-                this._aluWriteWithCompare(addr, plane, dat);
-            }
-            bit <<= 1;
-        }
-    }
-
-    /**
-     * ALU NOT operation: invert existing VRAM data.
-     */
-    _aluNot(addr) {
-        if (this.aluCommand & 0x40) {
-            this._aluCompare(addr);
-        }
-
-        let bit = 0x01;
-        for (let plane = 0; plane < 3; plane++) {
-            if (!(this.aluDisable & bit)) {
-                const mask = this._aluReadPlane(addr, plane);
-                let dat = (~mask) & 0xFF;
-                dat = (dat & (~this.aluMask & 0xFF)) | (mask & this.aluMask);
-                this._aluWriteWithCompare(addr, plane, dat);
-            }
-            bit <<= 1;
-        }
-    }
-
-    /**
-     * ALU TILE operation: write tile pattern data to planes.
-     * Each plane gets its own tile byte from aluTileData[plane].
-     */
-    _aluTile(addr) {
-        if (this.aluCommand & 0x40) {
-            this._aluCompare(addr);
-        }
-
-        let bit = 0x01;
-        for (let plane = 0; plane < 3; plane++) {
-            if (!(this.aluDisable & bit)) {
-                let dat = this.aluTileData[plane];
-                // Apply mask
-                const mask = this._aluReadPlane(addr, plane);
-                dat = (dat & (~this.aluMask & 0xFF)) | (mask & this.aluMask);
-                this._aluWriteWithCompare(addr, plane, dat);
-            }
-            bit <<= 1;
-        }
-    }
-
-    /**
-     * ALU compare operation: compare VRAM colors against compare registers.
-     * For each of the 8 pixel positions in the byte, extract the 3-bit color
-     * from the 3 planes, then check if that color matches any of the 8
-     * compare data registers (that are enabled with bit 7 = 0).
-     * Result bits are set in aluCompareStatus.
-     */
-    _aluCompare(addr) {
-        // Read all three planes
-        const b = this._aluReadPlane(addr, 0);
-        const r = this._aluReadPlane(addr, 1);
-        const g = this._aluReadPlane(addr, 2);
-
-        // Bank disable mask (inverted: bits that are NOT disabled)
-        const disMask = (~this.aluDisable) & 0x07;
-
-        let result = 0;
-        let bitPos = 0x80;
-
-        for (let i = 0; i < 8; i++) {
-            // Extract color at this bit position
-            let color = 0;
-            if (b & bitPos) color |= 0x01;
-            if (r & bitPos) color |= 0x02;
-            if (g & bitPos) color |= 0x04;
-
-            // Check against all 8 compare slots
-            let matched = false;
-            for (let j = 0; j < 8; j++) {
-                // bit 7 = 0 means this slot is active
-                if ((this.aluCompareData[j] & 0x80) === 0) {
-                    if ((this.aluCompareData[j] & disMask) === (color & disMask)) {
-                        matched = true;
-                        break;
-                    }
-                }
-            }
-
-            if (matched) {
-                result |= bitPos;
-            }
-
-            bitPos >>= 1;
-        }
-
-        this.aluCompareStatus = result;
-    }
-
-    /**
-     * Execute ALU operation on the given VRAM address.
-     * Called from the line drawing engine.
-     * Uses the line drawing mask (_lineMask) instead of aluMask.
-     */
-    _aluExecLineByte(addr) {
-        if (addr >= 0x8000) {
-            this._lineMask = 0xFF;
+    _writeLogicOrLine(addr, value) {
+        if (addr >= 0xD413 && addr <= 0xD41A) {
+            this.compareRegisters[addr - 0xD413] = value;
             return;
         }
-
-        // Save and set mask from line engine
-        const savedMask = this.aluMask;
-        this.aluMask = this._lineMask;
-        this._lineMask = 0xFF;
-
-        // Dispatch ALU operation
-        this._dispatchAluOp(addr);
-
-        // Restore mask
-        this.aluMask = savedMask;
-
-        // Count bytes processed
-        this._lineCount++;
-    }
-
-    /**
-     * Dispatch to the correct ALU operation based on command bits 2-0.
-     */
-    _dispatchAluOp(addr) {
-        addr &= (this.displayMode === DISPLAY_MODE_400) ? (PLANE_SIZE_400 - 1) : (PLANE_SIZE - 1);
-        switch (this.aluCommand & 0x07) {
-            case ALU_PSET:     this._aluPset(addr);     break;
-            case ALU_PROHIBIT: this._aluProhibit(addr); break;
-            case ALU_OR:       this._aluOr(addr);       break;
-            case ALU_AND:      this._aluAnd(addr);      break;
-            case ALU_XOR:      this._aluXor(addr);      break;
-            case ALU_NOT:      this._aluNot(addr);      break;
-            case ALU_TILE:     this._aluTile(addr);     break;
-            case ALU_COMPARE:  this._aluCompare(addr);  break;
-        }
-    }
-
-    // ---------------------------------------------------------------
-    //  Hardware line drawing engine (Bresenham's algorithm)
-    // ---------------------------------------------------------------
-
-    /**
-     * Plot a single pixel during line drawing.
-     * Accumulates a mask byte and triggers ALU execution when
-     * the address changes to the next byte.
-     */
-    _linePlotPixel(x, y) {
-        // ALU must be enabled for line drawing
-        if (!(this.aluCommand & 0x80)) {
-            return;
-        }
-
-        // Calculate VRAM byte address from (x, y) coordinates
-        let addr;
-        if (this.displayMode === DISPLAY_MODE_320 ||
-            this.displayMode === DISPLAY_MODE_262K) {
-            // 320x200 analog / 262K-color mode: 40 bytes per line
-            addr = (y * BYTES_PER_LINE_320 + (x >> 3)) & 0xFFFF;
-        } else {
-            // 640x200 / 640x400 digital mode: 80 bytes per line
-            addr = (y * BYTES_PER_LINE + (x >> 3)) & 0xFFFF;
-        }
-
-        // Add line offset
-        const planeMask = (this.displayMode === DISPLAY_MODE_400) ? (PLANE_SIZE_400 - 1) : (PLANE_SIZE - 1);
-        addr = (addr + this.lineOffset) & planeMask;
-
-        // If address changed from previous pixel, flush the ALU for the old address
-        if (this._linePrevAddr !== addr) {
-            this._aluExecLineByte(this._linePrevAddr);
-            this._linePrevAddr = addr;
-        }
-
-        // Apply line style: only set pixel if current style bit is 1
-        if (this.lineStyle & 0x8000) {
-            // Pixel mask table: clears the bit for this pixel's position
-            const pixMask = [0x7F, 0xBF, 0xDF, 0xEF, 0xF7, 0xFB, 0xFD, 0xFE];
-            this._lineMask &= pixMask[x & 0x07];
-        }
-
-        // Rotate line style pattern (16-bit left rotate)
-        this.lineStyle = ((this.lineStyle << 1) | (this.lineStyle >>> 15)) & 0xFFFF;
-    }
-
-    /**
-     * Execute hardware line drawing using Bresenham's algorithm.
-     * Triggered by writing to $D42B (Y1 low byte).
-     */
-    _lineDrawExec() {
-        let x1 = this.lineX0;
-        let x2 = this.lineX1;
-        let y1 = this.lineY0;
-        let y2 = this.lineY1;
-
-        // Initialize line drawing state
-        this._lineCount = 0;
-        this._linePrevAddr = 0xFFFF;
-        this._lineMask = 0xFF;
-
-        // Calculate deltas and step directions
-        let dx = x2 - x1;
-        let dy = y2 - y1;
-        let ux, uy;
-
-        if (dx < 0) {
-            ux = -1;
-            dx = -dx;
-        } else {
-            ux = 1;
-        }
-
-        if (dy < 0) {
-            uy = -1;
-            dy = -dy;
-        } else {
-            uy = 1;
-        }
-
-        if (dx === 0 && dy === 0) {
-            // Single point
-            this._linePlotPixel(x1, y1);
-        } else if (dx === 0) {
-            // Vertical line
-            for (;;) {
-                this._linePlotPixel(x1, y1);
-                if (y1 === y2) break;
-                y1 += uy;
-            }
-        } else if (dy === 0) {
-            // Horizontal line
-            for (;;) {
-                this._linePlotPixel(x1, y1);
-                if (x1 === x2) break;
-                x1 += ux;
-            }
-        } else if (dx >= dy) {
-            // Shallow line (DX >= DY)
-            let r = dx >> 1;
-            for (;;) {
-                this._linePlotPixel(x1, y1);
-                if (x1 === x2) break;
-                x1 += ux;
-                r -= dy;
-                if (r < 0) {
-                    r += dx;
-                    y1 += uy;
-                }
-            }
-        } else {
-            // Steep line (DX < DY)
-            let r = dy >> 1;
-            for (;;) {
-                this._linePlotPixel(x1, y1);
-                if (y1 === y2) break;
-                y1 += uy;
-                r -= dx;
-                if (r < 0) {
-                    r += dy;
-                    x1 += ux;
-                }
-            }
-        }
-
-        // Flush the last byte's ALU operation
-        this._aluExecLineByte(this._linePrevAddr);
-
-        // Update the line drawing busy state.
-        let busyTime = this._lineCount >> 4;
-        this._lineBusyRemainder += (this._lineCount & 0x0F);
-        if (this._lineBusyRemainder >= 0x10) {
-            busyTime++;
-            this._lineBusyRemainder &= 0x0F;
-        }
-
-        if (busyTime > 0) {
-            this.lineBusy = true;
-            this._lineBusyMicros = busyTime;  // fm7.js scheduler clears this after timeout
-        }
-    }
-
-    // ---------------------------------------------------------------
-    //  VRAM read/write with ALU interception
-    // ---------------------------------------------------------------
-
-    readVRAM(addr) {
-        addr &= 0xFFFF;
-        if (addr >= VRAM_SIZE) return 0xFF;
-
-        // 400-line mode: $0000-$7FFF maps to one bank-selected plane
-        if (this.displayMode === DISPLAY_MODE_400) {
-            if (addr >= PLANE_SIZE_400) return 0xFF; // $8000-$BFFF invalid
-            if (this.isAV && (this.aluCommand & 0x80)) {
-                this._dispatchAluOp(addr);
-            }
-            if (this.isAV && (this.multiPage & (1 << this.vramBankSelect))) {
-                return 0xFF;
-            }
-            return this._getActiveVram()[addr];
-        }
-
-        const plane = (addr / PLANE_SIZE) | 0;
-        const rawOffset = addr % PLANE_SIZE;
-
-        // FM77AV: ALU intercept on read
-        if (this.isAV && (this.aluCommand & 0x80)) {
-            this._dispatchAluOp(rawOffset);
-        }
-        if (this.isAV && (this.multiPage & (1 << plane))) {
-            return 0xFF;
-        }
-
-        // No scroll offset applied here: scrolling rotates the VRAM contents
-        // (see _vramScroll); only 262K mode applies the offset in the renderer.
-        const vram = this._getActiveVram();
-        return vram[addr];
-    }
-
-    writeVRAM(addr, value) {
-        addr &= 0xFFFF;
-        if (addr >= VRAM_SIZE) return;
-
-        // 400-line mode: $0000-$7FFF maps to one bank-selected plane
-        if (this.displayMode === DISPLAY_MODE_400) {
-            if (addr >= PLANE_SIZE_400) return; // $8000-$BFFF invalid
-            if (this.isAV && (this.aluCommand & 0x80)) {
-                this._dispatchAluOp(addr);
+        switch (addr) {
+            case 0xD410: this.logicCommand = value; return;
+            case 0xD411: this.logicColor = value; return;
+            case 0xD412: this.logicMask = value; return;
+            case 0xD41B: this.bankDisable = value; return;
+            case 0xD41C: this.tilePattern[0] = value; return;
+            case 0xD41D: this.tilePattern[1] = value; return;
+            case 0xD41E: this.tilePattern[2] = value; return;
+            // Line address offset: $D420 bits 4-0 = A13-A9, $D421 = A8-A1,
+            // kept as a byte offset. Source: FM77AV Hardware Manual, chapter 4
+            // (sub system I/O address map) and chapter 8 (line interpolation
+            // registers; the write to $D42B starts the line).
+            case 0xD420:
+                this.lineAddressOffset = ((value & 0x1F) << 9) | (this.lineAddressOffset & 0x01FE);
                 return;
-            }
-            if (this.multiPage & (1 << this.vramBankSelect)) return;
-            const vram = this._getActiveVram();
-            if (vram[addr] !== value) {
-                vram[addr] = value;
-                // Only mark display dirty when writing to the currently-displayed block
-                if (this.blockActive === this.blockDisplay) {
-                    const line = (addr / BYTES_PER_LINE) | 0;
-                    if (line < SCREEN_HEIGHT_400) {
-                        this._dirtyBands[(line >> 3)] = 1;
-                    }
-                }
-            }
-            return;
-        }
-
-        const plane = (addr / PLANE_SIZE) | 0;
-        const rawOffset = addr % PLANE_SIZE;
-
-        // FM77AV: when ALU is enabled, writes trigger ALU operation (uses raw offset)
-        // The write data from the CPU is ignored; the ALU determines what gets written.
-        if (this.isAV && (this.aluCommand & 0x80)) {
-            this._dispatchAluOp(rawOffset);
-            return;
-        }
-
-        // Normal write - no scroll offset applied here (see readVRAM)
-        if (this.multiPage & (1 << plane)) {
-            return;
-        }
-
-        const vram = this._getActiveVram();
-
-        if (vram[addr] !== value) {
-            vram[addr] = value;
-            this._markVramLineDirty(rawOffset);
+            case 0xD421:
+                this.lineAddressOffset = (this.lineAddressOffset & 0x3E00) | (value << 1);
+                return;
+            case 0xD422: this.lineStylePattern = (value << 8) | (this.lineStylePattern & 0xFF); return;
+            case 0xD423: this.lineStylePattern = (this.lineStylePattern & 0xFF00) | value; return;
+            case 0xD424: this.lineStartX = ((value & 0x03) << 8) | (this.lineStartX & 0xFF); return;
+            case 0xD425: this.lineStartX = (this.lineStartX & 0x300) | value; return;
+            case 0xD426: this.lineStartY = ((value & 0x01) << 8) | (this.lineStartY & 0xFF); return;
+            case 0xD427: this.lineStartY = (this.lineStartY & 0x100) | value; return;
+            case 0xD428: this.lineEndX = ((value & 0x03) << 8) | (this.lineEndX & 0xFF); return;
+            case 0xD429: this.lineEndX = (this.lineEndX & 0x300) | value; return;
+            case 0xD42A: this.lineEndY = ((value & 0x01) << 8) | (this.lineEndY & 0xFF); return;
+            case 0xD42B:
+                this.lineEndY = (this.lineEndY & 0x100) | value;
+                this._drawLine();                       // starts on this write
+                return;
         }
     }
 
     // ---------------------------------------------------------------
-    //  Sub CPU memory read/write  ($0000 - $D42B)
+    //  Sub CPU memory read/write  ($0000 - $D43F)
     // ---------------------------------------------------------------
 
     read(addr) {
         addr &= 0xFFFF;
-        if (addr < VRAM_SIZE) {
-            return this.readVRAM(addr);
+        if (addr < BANK_SIZE) {
+            return this.cpuReadVram(addr);
         }
         if (addr >= WORK_RAM_BASE && addr <= WORK_RAM_END) {
             return this.workRam[addr - WORK_RAM_BASE];
         }
-        if (addr >= IO_BASE && addr <= IO_END_AV) {
+        if (addr >= IO_BASE && addr <= IO_LAST) {
             const result = this.readIO(addr);
             return result.value;
         }
@@ -924,36 +711,32 @@ export class Display {
     write(addr, value) {
         addr &= 0xFFFF;
         value &= 0xFF;
-        if (addr < VRAM_SIZE) {
-            this.writeVRAM(addr, value);
+        if (addr < BANK_SIZE) {
+            this.cpuWriteVram(addr, value);
             return;
         }
         if (addr >= WORK_RAM_BASE && addr <= WORK_RAM_END) {
             this.workRam[addr - WORK_RAM_BASE] = value;
             return;
         }
-        if (addr >= IO_BASE && addr <= IO_END_AV) {
+        if (addr >= IO_BASE && addr <= IO_LAST) {
             this.writeIO(addr, value);
             return;
         }
     }
 
     // ---------------------------------------------------------------
-    //  I/O register read ($D400 - $D42F)
+    //  I/O register read ($D400 - $D43F)
     // ---------------------------------------------------------------
 
     readIO(addr) {
         addr &= 0xFFFF;
 
         switch (addr) {
-            case 0xD402:
-                return { value: 0xFF, sideEffect: 'cancelAck' };
             case 0xD403:
                 return { value: 0xFF, sideEffect: 'beep' };
-            case 0xD404:
-                return { value: 0xFF, sideEffect: 'attention' };
             case 0xD408:
-                // CRT 表示 ON ($D408 の読みで点灯)。
+                // CRT display on (read of $D408).
                 if (!this.crtOn) {
                     this.crtOn = true;
                     this._lastBlank = false;
@@ -961,54 +744,23 @@ export class Display {
                 }
                 return { value: 0xFF };
             case 0xD409:
-                // VRAM アクセス許可 (読みで許可)。表示の点灯・消灯 (crtOn) とは
-                // 独立で、画面に描くかどうかには関与しない。
+                // VRAM access enabled (read).  Separate from crtOn; it does not
+                // decide whether the screen is drawn.
                 this.vramAccessEnabled = true;
                 return { value: 0xFF };
-            case 0xD40A:
-                return { value: 0xFF, sideEffect: 'busyOff' };
             case 0xD40D:
                 this.insLedOn = true;
                 return { value: 0xFF };
-            case 0xD40E:
-            case 0xD40F:
-                // 読みは $FF を返す。
-                return { value: 0xFF };
         }
-
-        // FM77AV ALU registers ($D410-$D42B)
-        if (this.isAV && addr >= 0xD410 && addr <= 0xD42B) {
-            switch (addr) {
-                case 0xD410: return { value: this.aluCommand };
-                case 0xD411: return { value: this.aluColor };
-                case 0xD412: return { value: this.aluMask };
-                case 0xD413: return { value: this.aluCompareStatus };
-                case 0xD41B: return { value: this.aluDisable };
-            }
-            // $D414-$D41A: compare data (write-only, read returns 0xFF)
-            if (addr >= 0xD413 && addr <= 0xD41A) {
-                return { value: 0xFF };
-            }
-            // $D41C-$D41E: tile patterns (write-only, read returns 0xFF)
-            if (addr >= 0xD41C && addr <= 0xD41E) {
-                return { value: 0xFF };
-            }
-            // $D420-$D42B: line drawing registers (write-only, read returns 0xFF)
-            if (addr >= 0xD420 && addr <= 0xD42B) {
-                return { value: 0xFF };
-            }
+        if (addr >= 0xD410 && addr <= IO_LAST) {
+            return { value: this._readExtension(addr) };
         }
-
-        // FM77AV40: $D42F — VRAM bank select (read)
-        if (addr === 0xD42F && this.isAV40) {
-            return { value: 0xFC | (this.vramBankSelect & 3) };
-        }
-
+        // $D40E / $D40F and the rest read as $FF
         return { value: 0xFF };
     }
 
     // ---------------------------------------------------------------
-    //  I/O register write ($D400 - $D42F)
+    //  I/O register write ($D400 - $D43F)
     // ---------------------------------------------------------------
 
     writeIO(addr, value) {
@@ -1017,127 +769,27 @@ export class Display {
 
         switch (addr) {
             case 0xD408:
-                // CRT 表示 OFF (書きで消灯)
+                // CRT display off (write)
                 this.crtOn = false;
                 this._lastBlank = false;
                 return {};
             case 0xD409:
-                // VRAM アクセス禁止 (書きで禁止)。crtOn には触れない。
+                // VRAM access disabled (write).  crtOn is left alone.
                 this.vramAccessEnabled = false;
                 return {};
-            case 0xD40A:
-                return { sideEffect: 'busyOn' };
             case 0xD40D:
                 this.insLedOn = false;
                 return {};
-
             case 0xD40E:
-                this._updateVramOffsetHigh(value);
+                this._writeOffsetUpper(value);
                 return {};
             case 0xD40F:
-                this._updateVramOffsetLow(value);
+                this._writeOffsetLower(value);
                 return {};
         }
-
-        // FM77AV ALU registers ($D410-$D42B)
-        if (this.isAV && addr >= 0xD410 && addr <= 0xD42B) {
-            switch (addr) {
-                // ALU command register
-                case 0xD410:
-                    this.aluCommand = value;
-                    return {};
-                // ALU color
-                case 0xD411:
-                    this.aluColor = value;
-                    return {};
-                // ALU mask
-                case 0xD412:
-                    this.aluMask = value;
-                    return {};
-                // ALU plane disable
-                case 0xD41B:
-                    this.aluDisable = value;
-                    return {};
-
-                // Line drawing: address offset (A1 and up; stored as even addresses)
-                case 0xD420:
-                    // High byte: bits map to offset bits 13-9
-                    this.lineOffset = (this.lineOffset & 0x01FE) | ((value * 512) & 0x3E00);
-                    return {};
-                case 0xD421:
-                    // Low byte: bits map to offset bits 8-1
-                    this.lineOffset = (this.lineOffset & 0x3E00) | (value * 2);
-                    return {};
-
-                // Line style
-                case 0xD422:
-                    this.lineStyle = (this.lineStyle & 0x00FF) | (value << 8);
-                    return {};
-                case 0xD423:
-                    this.lineStyle = (this.lineStyle & 0xFF00) | value;
-                    return {};
-
-                // X0 coordinate (10-bit)
-                case 0xD424:
-                    this.lineX0 = ((this.lineX0 & 0x00FF) | (value << 8)) & 0x03FF;
-                    return {};
-                case 0xD425:
-                    this.lineX0 = (this.lineX0 & 0xFF00) | value;
-                    return {};
-
-                // Y0 coordinate (9-bit)
-                case 0xD426:
-                    this.lineY0 = ((this.lineY0 & 0x00FF) | (value << 8)) & 0x01FF;
-                    return {};
-                case 0xD427:
-                    this.lineY0 = (this.lineY0 & 0xFF00) | value;
-                    return {};
-
-                // X1 coordinate (10-bit)
-                case 0xD428:
-                    this.lineX1 = ((this.lineX1 & 0x00FF) | (value << 8)) & 0x03FF;
-                    return {};
-                case 0xD429:
-                    this.lineX1 = (this.lineX1 & 0xFF00) | value;
-                    return {};
-
-                // Y1 coordinate (9-bit)
-                case 0xD42A:
-                    this.lineY1 = ((this.lineY1 & 0x00FF) | (value << 8)) & 0x01FF;
-                    return {};
-
-                // Y1 low byte: writing triggers line drawing!
-                case 0xD42B:
-                    this.lineY1 = (this.lineY1 & 0xFF00) | value;
-                    // Execute line drawing
-                    this._lineDrawExec();
-                    return {};
-            }
-
-            // $D413-$D41A: compare data registers
-            if (addr >= 0xD413 && addr <= 0xD41A) {
-                this.aluCompareData[addr - 0xD413] = value;
-                return {};
-            }
-
-            // $D41C-$D41E: tile pattern registers
-            if (addr >= 0xD41C && addr <= 0xD41E) {
-                this.aluTileData[addr - 0xD41C] = value;
-                return {};
-            }
-
-            return {};
+        if (addr >= 0xD410 && addr <= IO_LAST) {
+            this._writeExtension(addr, value);
         }
-
-        // FM77AV40: $D42F — VRAM bank select (write)
-        if (addr === 0xD42F && this.isAV40) {
-            const bank = value & 0x03;
-            if (bank < 3) {
-                this.vramBankSelect = bank;
-            }
-            return {};
-        }
-
         return {};
     }
 
@@ -1152,8 +804,8 @@ export class Display {
 
     writePalette(index, value) {
         index &= 7;
-        // Keep 4 bits; only the lower 3 are used for R/G/B rendering.
-        value &= 0x0F;
+        // bits 2-0 are G, R, B.
+        value &= 0x07;
         if (this.palette[index] !== value) {
             this.palette[index] = value;
             this._rebuildResolvedPalette();
@@ -1168,195 +820,39 @@ export class Display {
     }
 
     // ---------------------------------------------------------------
-    //  VRAM offset (scroll)
+    //  Border color
     // ---------------------------------------------------------------
 
-    /** Push one event to the scroll trace ring buffer (no-op if disabled). */
-    _pushScrollTrace(tag, extra) {
-        if (!this.enableScrollTrace) return;
-        const e = {
-            tag,
-            mode: this.displayMode,
-            apg: this.activeVramPage,
-            dpg: this.displayVramPage,
-            flag: this.vramOffsetFlag,
-            ofs0: this.vramOffset[0],
-            ofs1: this.vramOffset[1],
-            crt0: this.appliedScrollOffset[0],
-            crt1: this.appliedScrollOffset[1],
-        };
-        if (extra) Object.assign(e, extra);
-        this._scrollTrace[this._scrollTraceIdx] = e;
-        this._scrollTraceIdx = (this._scrollTraceIdx + 1) % this._scrollTraceSize;
-        this._scrollTraceCount++;
-    }
-
-    /** Return scroll trace events in chronological order (oldest first). */
-    dumpScrollTrace() {
-        const out = [];
-        const n = Math.min(this._scrollTraceCount, this._scrollTraceSize);
-        const start = this._scrollTraceCount < this._scrollTraceSize
-            ? 0 : this._scrollTraceIdx;
-        for (let i = 0; i < n; i++) {
-            out.push(this._scrollTrace[(start + i) % this._scrollTraceSize]);
-        }
-        return out;
-    }
-
-    /** Reset the scroll trace ring buffer. */
-    clearScrollTrace() {
-        this._scrollTraceIdx = 0;
-        this._scrollTraceCount = 0;
-    }
-
-    /** Write VRAM offset high byte ($D40E) */
-    _updateVramOffsetHigh(value) {
-        const pg = this.activeVramPage;
-        // High 6 bits of 14-bit offset
-        let offset = (value & 0x3F) << 8;
-        offset |= (this.vramOffset[pg] & 0xFF);  // keep existing low byte
-        this.vramOffset[pg] = offset;
-        this._pushScrollTrace('D40E', { val: value });
-        this._scrollCountUp(pg);
-    }
-
-    /** Write VRAM offset low byte ($D40F) */
-    _updateVramOffsetLow(value) {
-        const pg = this.activeVramPage;
-        // Apply the low byte with the precision allowed by the machine and mode.
-        if (!this.isAV || !this.vramOffsetFlag) {
-            value &= 0xE0;
-        }
-        let offset = (this.vramOffset[pg] & 0x3F00);  // keep existing high byte
-        offset |= value;
-        this.vramOffset[pg] = offset;
-        this._pushScrollTrace('D40F', { val: value });
-        this._scrollCountUp(pg);
-    }
-
     /**
-     * Apply the scroll once per register pair write.
+     * Color of the border area around the VRAM display area, as a CSS
+     * "#rrggbb" string. It is the color of palette number 0 (FM77AV
+     * Hardware Manual 8.3.1), or of analog palette number 0 in the
+     * 320 x 200 4096-color mode (8.3.2).
      */
-    _scrollCountUp(pg) {
-        this._scrollWriteCount[pg]++;
-        if ((this._scrollWriteCount[pg] & 1) === 0) {
-            // Pass raw difference as WORD (16-bit), masking done in _vramScroll
-            const diff = (this.vramOffset[pg] - this.appliedScrollOffset[pg]) & 0xFFFF;
-            this._vramScroll(diff);
-            this.appliedScrollOffset[pg] = this.vramOffset[pg];
-            this._fullDirty = true;
-        }
-    }
-
-    /**
-     * Apply a scroll of 'offset' to the active page according to the display mode.
-     */
-    _vramScroll(offset) {
-        this._pushScrollTrace('SCROLL', { diff: offset & 0xFFFF });
-
-        // 400-line mode.
-        if (this.displayMode === DISPLAY_MODE_400) {
-            const span = (offset & 0x3FFF) * 2;
-            if (span !== 0) {
-                const phase = this.activeVramPage & 1;
-                const planes = this.blockActive === 1
-                    ? [this.vramPage3, this.vramPage4, this.vramPage5]
-                    : [this.vram, this.vramPage1, this.vramPage2];
-                const buf = this._scrollBuf;
-                const SIZE = PLANE_SIZE_400;       // 0x8000
-                const nSave = span >> 1;           // field bytes that wrap around
-                const nShift = (SIZE - span) >> 1; // field bytes shifted down
-                for (let pi = 0; pi < 3; pi++) {
-                    const plane = planes[pi];
-                    for (let j = 0; j < nSave; j++) buf[j] = plane[phase + 2 * j];
-                    for (let j = 0; j < nShift; j++) plane[phase + 2 * j] = plane[phase + span + 2 * j];
-                    for (let j = 0; j < nSave; j++) plane[phase + (SIZE - span) + 2 * j] = buf[j];
-                }
-            }
-            this._fullDirty = true;
-            return;
-        }
-        // 262K: renderer applies per-byte offset transform at read time
-        // (see _render320x200_262k). No physical rotation.
-        if (this.displayMode === DISPLAY_MODE_262K) {
-            this._fullDirty = true;
-            return;
-        }
-
-        const buf = this._scrollBuf;
-        const vram = this._getActiveVram();
-
-        if (this.displayMode === DISPLAY_MODE_320) {
-            // 320x200 analog: 6 sub-planes of 0x2000 each
-            const HALF = 0x2000;
-            offset &= (HALF - 1);
-            if (offset === 0) return;
-            for (let i = 0; i < 6; i++) {
-                const base = i * HALF;
-                buf.set(vram.subarray(base, base + offset));
-                vram.copyWithin(base, base + offset, base + HALF);
-                vram.set(buf.subarray(0, offset), base + HALF - offset);
-            }
+    get borderColor() {
+        let r, g, b;
+        if (this.displayMode === DISPLAY_MODE_320 && this.palette4096) {
+            const entry = this.palette4096[0];      // G, R, B: 4 bits each
+            g = ((entry >> 8) & 0x0F) * 17;
+            r = ((entry >> 4) & 0x0F) * 17;
+            b = (entry & 0x0F) * 17;
         } else {
-            // 640x200 8-color: 3 planes of 0x4000 each
-            offset &= (PLANE_SIZE - 1);
-            if (offset === 0) return;
-            for (let i = 0; i < 3; i++) {
-                const base = i * PLANE_SIZE;
-                buf.set(vram.subarray(base, base + offset));
-                vram.copyWithin(base, base + offset, base + PLANE_SIZE);
-                vram.set(buf.subarray(0, offset), base + PLANE_SIZE - offset);
-            }
+            const abgr = PHYSICAL_COLORS[this.palette[0] & 7];
+            r = abgr & 0xFF;
+            g = (abgr >> 8) & 0xFF;
+            b = (abgr >> 16) & 0xFF;
         }
-        this._fullDirty = true;
-    }
-
-    /** Get the display page's VRAM offset (for rendering) */
-    getDisplayVramOffset() {
-        // 200-line, 4096-color and 400-line modes physically rotate VRAM at
-        // scroll time, so the renderer reads from offset 0. 262K mode applies
-        // its per-bank offset inside _render320x200_262k.
-        return 0;
-    }
-
-    // ---------------------------------------------------------------
-    //  FM77AV: VRAM page and display mode control
-    // ---------------------------------------------------------------
-
-    _setActiveVramPage(page) {
-        page &= 1;
-        if (this.activeVramPage !== page) {
-            this.activeVramPage = page;
-            this._pushScrollTrace('APG');
-        }
-    }
-
-    _setDisplayVramPage(page) {
-        page &= 1;
-        if (this.displayVramPage !== page) {
-            this.displayVramPage = page;
-            this._pushScrollTrace('DPG');
-            this._fullDirty = true;
-        }
-    }
-
-    _setDisplayMode(mode) {
-        if (this.displayMode !== mode) {
-            this.displayMode = mode;
-            this._fullDirty = true;
-            this._frame = null;   // Force frame re-acquire for dimension change
-            this._pushScrollTrace('MODE');
-        }
+        return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
     }
 
     // ---------------------------------------------------------------
     //  FM77AV: Analog palette
     // ---------------------------------------------------------------
 
-    rebuildAnalogPalette(analogPalette) {
+    rebuildAnalogPalette(palette4096) {
         // Convert analog palette entries to rendering colors.
         for (let i = 0; i < 4096; i++) {
-            const entry = analogPalette[i];
+            const entry = palette4096[i];
             const g4 = (entry >> 8) & 0x0F;
             const r4 = (entry >> 4) & 0x0F;
             const b4 = entry & 0x0F;
@@ -1387,16 +883,49 @@ export class Display {
         if (!this.crtOn) {
             return this._renderBlank();
         }
-        if (this.displayMode === DISPLAY_MODE_400) {
-            return this._render640x400(force);
+        // $D433 bit 0 = 1 keeps the last picture on the screen
+        if (this.holdPicture && this._pixelBuf && !this._lastBlank) return;
+        const tall = this.displayMode === DISPLAY_MODE_400;
+        const height = tall ? SCREEN_HEIGHT_400 : SCREEN_HEIGHT;
+        this._acquireFrame(SCREEN_WIDTH, height);
+        if (this.displayMode === DISPLAY_MODE_320 && this.palette4096 && this._analogDirty) {
+            this.rebuildAnalogPalette(this.palette4096);
+            this._analogDirty = false;
         }
-        if (this.displayMode === DISPLAY_MODE_262K) {
-            return this._render320x200_262k(force);
+        const bands = height >> 3;
+        const full = this._fullDirty || force;
+        if (!full) {
+            let any = false;
+            for (let b = 0; b < bands; b++) if (this._dirtyBands[b]) { any = true; break; }
+            if (!any) return;
         }
-        if (this.displayMode === DISPLAY_MODE_320) {
-            return this._render320x200(force);
+        for (let b = 0; b < bands; b++) {
+            if (!full && !this._dirtyBands[b]) continue;
+            const y0 = b << 3;
+            for (let y = y0; y < y0 + 8; y++) {
+                switch (this.displayMode) {
+                    case DISPLAY_MODE_400:  this._drawRow8Color(y, 0x7FFF, this._effectiveOffset(0) * 2,
+                                                this.vramBanks[0], 0, this.vramBanks[1], 0, this.vramBanks[2], 0); break;
+                    case DISPLAY_MODE_320:  this._drawRow4096(y); break;
+                    case DISPLAY_MODE_262K: this._drawRow262k(y); break;
+                    default: {
+                        const bank = this._shownBank();
+                        const m = this.vramBanks[bank];
+                        this._drawRow8Color(y, 0x3FFF, this._effectiveOffset(bank), m, 0x0000, m, 0x4000, m, 0x8000);
+                        break;
+                    }
+                }
+            }
         }
-        return this._render640x200(force);
+        if (full) {
+            this._presentFull();
+        } else {
+            for (let b = 0; b < bands; b++) {
+                if (this._dirtyBands[b]) this._present(0, b << 3, SCREEN_WIDTH, 8);
+            }
+        }
+        this._fullDirty = false;
+        this._dirtyBands.fill(0);
     }
 
     _renderBlank() {
@@ -1409,490 +938,171 @@ export class Display {
         this._fullDirty = true;
     }
 
-    _render640x200(force = false) {
-        this._acquireFrame(SCREEN_WIDTH, SCREEN_HEIGHT);
-
-        const needFull = this._fullDirty || force;
-
-        if (!needFull) {
-            let anyDirty = false;
-            for (let b = 0; b < 25; b++) {
-                if (this._dirtyBands[b]) { anyDirty = true; break; }
-            }
-            if (!anyDirty) return;
-        }
-
-        const pixels = this._pixelBuf;
-        const displayVram = this._getDisplayVram();
-        const blue  = displayVram;
-        const red   = displayVram;
-        const green = displayVram;
-        const pal   = this._resolvedPalette;
-
-        for (let band = 0; band < 25; band++) {
-            if (!needFull && !this._dirtyBands[band]) continue;
-
-            const yStart = band << 3;
-            const yEnd = Math.min(yStart + 8, SCREEN_HEIGHT);
-
-            for (let y = yStart; y < yEnd; y++) {
-                const lineBase = y * BYTES_PER_LINE;
-                const pixelRow = y * SCREEN_WIDTH;
-
-                for (let byteX = 0; byteX < BYTES_PER_LINE; byteX++) {
-                    const byteAddr = lineBase + byteX;
-                    // Apply the display mask.
-                    const bByte = (this.multiPage & 0x10) ? 0 : blue [BLUE_BASE  + byteAddr];
-                    const rByte = (this.multiPage & 0x20) ? 0 : red  [RED_BASE   + byteAddr];
-                    const gByte = (this.multiPage & 0x40) ? 0 : green[GREEN_BASE + byteAddr];
-                    const px = pixelRow + (byteX << 3);
-
-                    pixels[px    ] = pal[((gByte >> 7) & 1) << 2 | ((rByte >> 7) & 1) << 1 | ((bByte >> 7) & 1)];
-                    pixels[px + 1] = pal[((gByte >> 6) & 1) << 2 | ((rByte >> 6) & 1) << 1 | ((bByte >> 6) & 1)];
-                    pixels[px + 2] = pal[((gByte >> 5) & 1) << 2 | ((rByte >> 5) & 1) << 1 | ((bByte >> 5) & 1)];
-                    pixels[px + 3] = pal[((gByte >> 4) & 1) << 2 | ((rByte >> 4) & 1) << 1 | ((bByte >> 4) & 1)];
-                    pixels[px + 4] = pal[((gByte >> 3) & 1) << 2 | ((rByte >> 3) & 1) << 1 | ((bByte >> 3) & 1)];
-                    pixels[px + 5] = pal[((gByte >> 2) & 1) << 2 | ((rByte >> 2) & 1) << 1 | ((bByte >> 2) & 1)];
-                    pixels[px + 6] = pal[((gByte >> 1) & 1) << 2 | ((rByte >> 1) & 1) << 1 | ((bByte >> 1) & 1)];
-                    pixels[px + 7] = pal[( gByte       & 1) << 2 | ( rByte       & 1) << 1 | ( bByte       & 1)];
-                }
+    /**
+     * One 640-dot row of an 8-color format: the B, R and G
+     * planes at the same in-plane address, display address plus offset,
+     * wrapped with `wrap`; colored through the TTL palette.
+     */
+    _drawRow8Color(y, wrap, offset, bMem, bBase, rMem, rBase, gMem, gBase) {
+        const px = this._pixelBuf;
+        const pal = this._resolvedPalette;
+        const hideB = (this.planeMaskBits & 0x10) !== 0;
+        const hideR = (this.planeMaskBits & 0x20) !== 0;
+        const hideG = (this.planeMaskBits & 0x40) !== 0;
+        const rowStart = y * ROW_BYTES;
+        let out = y * SCREEN_WIDTH;
+        for (let col = 0; col < ROW_BYTES; col++) {
+            const i = (rowStart + col + offset) & wrap;
+            const bv = hideB ? 0 : bMem[bBase + i];
+            const rv = hideR ? 0 : rMem[rBase + i];
+            const gv = hideG ? 0 : gMem[gBase + i];
+            for (let s = 7; s >= 0; s--) {
+                px[out++] = pal[(((gv >> s) & 1) << 2) | (((rv >> s) & 1) << 1) | ((bv >> s) & 1)];
             }
         }
-
-        if (needFull) {
-            this._presentFull();
-        } else {
-            for (let band = 0; band < 25; band++) {
-                if (!this._dirtyBands[band]) continue;
-                const yStart = band << 3;
-                const h = Math.min(8, SCREEN_HEIGHT - yStart);
-                this._present(0, yStart, SCREEN_WIDTH, h);
-            }
-        }
-
-        this._fullDirty = false;
-        this._dirtyBands.fill(0);
     }
 
-    _render320x200(force = false) {
-        this._acquireFrame(SCREEN_WIDTH, SCREEN_HEIGHT);
-
-        if (this.analogPalette && this._analogDirty) {
-            this.rebuildAnalogPalette(this.analogPalette);
-            this._analogDirty = false;
-        }
-
-        const needFull = this._fullDirty || force;
-
-        if (!needFull) {
-            let anyDirty = false;
-            for (let b = 0; b < 25; b++) {
-                if (this._dirtyBands[b]) { anyDirty = true; break; }
-            }
-            if (!anyDirty) return;
-        }
-
-        const pixels = this._pixelBuf;
-        // 4096-color 2-page (AV40EX/SX): blockDisplay selects the front/back block.
-        const page0 = this.blockDisplay === 1 ? this.vramPage3 : this.vram;
-        const page1 = this.blockDisplay === 1 ? this.vramPage4 : this.vramPage1;
+    /**
+     * One row of 320x200 4096 colors: bank 0 holds B3/B2/R3/R2/G3/G2,
+     * bank 1 holds B1/B0/R1/R0/G1/G0, each bank with its own offset.
+     * Each dot is drawn 2 pixels wide.
+     */
+    _drawRow4096(y) {
+        const px = this._pixelBuf;
         const pal = this._resolvedAnalogPalette;
-
-        // FM77AV 320x200, 4096-color mode. Both pages are read together to
-        // form the 12-bit colour index (displayVramPage is not used in this mode).
-
-        // Build the display mask.
-        let idxMask = 0xFFF;
-        if (this.multiPage & 0x10) idxMask &= ~0x00F;
-        if (this.multiPage & 0x20) idxMask &= ~0x0F0;
-        if (this.multiPage & 0x40) idxMask &= ~0xF00;
-
-        for (let band = 0; band < 25; band++) {
-            if (!needFull && !this._dirtyBands[band]) continue;
-
-            const yStart = band << 3;
-            const yEnd = Math.min(yStart + 8, SCREEN_HEIGHT);
-
-            for (let y = yStart; y < yEnd; y++) {
-                const lineOfs = y * BYTES_PER_LINE_320;
-                const pixelRow = y * SCREEN_WIDTH;
-
-                for (let byteX = 0; byteX < BYTES_PER_LINE_320; byteX++) {
-                    const ofs0 = lineOfs + byteX;
-                    const ofs1 = lineOfs + byteX;
-
-                    // 12 sub-planes across both pages
-                    const b0 = page0[0x0000 + ofs0];
-                    const b1 = page0[0x2000 + ofs0];
-                    const r0 = page0[0x4000 + ofs0];
-                    const r1 = page0[0x6000 + ofs0];
-                    const g0 = page0[0x8000 + ofs0];
-                    const g1 = page0[0xA000 + ofs0];
-                    const b2 = page1[0x0000 + ofs1];
-                    const b3 = page1[0x2000 + ofs1];
-                    const r2 = page1[0x4000 + ofs1];
-                    const r3 = page1[0x6000 + ofs1];
-                    const g2 = page1[0x8000 + ofs1];
-                    const g3 = page1[0xA000 + ofs1];
-
-                    for (let bit = 7; bit >= 0; bit--) {
-                        const idx = (
-                            (((g0 >> bit) & 1) << 11) |
-                            (((g1 >> bit) & 1) << 10) |
-                            (((g2 >> bit) & 1) <<  9) |
-                            (((g3 >> bit) & 1) <<  8) |
-                            (((r0 >> bit) & 1) <<  7) |
-                            (((r1 >> bit) & 1) <<  6) |
-                            (((r2 >> bit) & 1) <<  5) |
-                            (((r3 >> bit) & 1) <<  4) |
-                            (((b0 >> bit) & 1) <<  3) |
-                            (((b1 >> bit) & 1) <<  2) |
-                            (((b2 >> bit) & 1) <<  1) |
-                            (((b3 >> bit) & 1))
-                        ) & idxMask;
-
-                        const color = pal[idx];
-                        const destX = pixelRow + (byteX * 16) + ((7 - bit) * 2);
-                        pixels[destX]     = color;
-                        pixels[destX + 1] = color;
-                    }
-                }
+        let keep = 0xFFF;
+        if (this.planeMaskBits & 0x10) keep &= ~0x00F;
+        if (this.planeMaskBits & 0x20) keep &= ~0x0F0;
+        if (this.planeMaskBits & 0x40) keep &= ~0xF00;
+        const hi = this.vramBanks[0], lo = this.vramBanks[1];
+        const oHi = this._effectiveOffset(0), oLo = this._effectiveOffset(1);
+        const rowStart = y * ROW_BYTES_320;
+        let out = y * SCREEN_WIDTH;
+        for (let col = 0; col < ROW_BYTES_320; col++) {
+            const a = (rowStart + col + oHi) & 0x1FFF;
+            const c = (rowStart + col + oLo) & 0x1FFF;
+            const b3 = hi[a], b2 = hi[0x2000 + a], r3 = hi[0x4000 + a], r2 = hi[0x6000 + a];
+            const g3 = hi[0x8000 + a], g2 = hi[0xA000 + a];
+            const b1 = lo[c], b0 = lo[0x2000 + c], r1 = lo[0x4000 + c], r0 = lo[0x6000 + c];
+            const g1 = lo[0x8000 + c], g0 = lo[0xA000 + c];
+            for (let s = 7; s >= 0; s--) {
+                const g = (((g3 >> s) & 1) << 3) | (((g2 >> s) & 1) << 2) | (((g1 >> s) & 1) << 1) | ((g0 >> s) & 1);
+                const r = (((r3 >> s) & 1) << 3) | (((r2 >> s) & 1) << 2) | (((r1 >> s) & 1) << 1) | ((r0 >> s) & 1);
+                const b = (((b3 >> s) & 1) << 3) | (((b2 >> s) & 1) << 2) | (((b1 >> s) & 1) << 1) | ((b0 >> s) & 1);
+                const color = pal[((g << 8) | (r << 4) | b) & keep];
+                px[out++] = color;
+                px[out++] = color;
             }
         }
-
-        if (needFull) {
-            this._presentFull();
-        } else {
-            for (let band = 0; band < 25; band++) {
-                if (!this._dirtyBands[band]) continue;
-                const yStart = band << 3;
-                const h = Math.min(8, SCREEN_HEIGHT - yStart);
-                this._present(0, yStart, SCREEN_WIDTH, h);
-            }
-        }
-
-        this._fullDirty = false;
-        this._dirtyBands.fill(0);
     }
 
-    _render320x200_262k(force = false) {
-        this._acquireFrame(SCREEN_WIDTH, SCREEN_HEIGHT);
-
-        const needFull = this._fullDirty || force;
-
-        if (!needFull) {
-            let anyDirty = false;
-            for (let b = 0; b < 25; b++) {
-                if (this._dirtyBands[b]) { anyDirty = true; break; }
-            }
-            if (!anyDirty) return;
-        }
-
-        const pixels = this._pixelBuf;
-        // 262,144-color mode uses 3 banks; on AV40EX/SX blockDisplay selects
-        // the front/back block.
-        const page0 = this.blockDisplay === 1 ? this.vramPage3 : this.vram;
-        const page1 = this.blockDisplay === 1 ? this.vramPage4 : this.vramPage1;
-        const page2 = this.blockDisplay === 1 ? this.vramPage5 : this.vramPage2;
-        // Scroll offset is applied per bank when reading (bank 2 uses the
-        // same offset as bank 0).
-        const ofsB0 = this.vramOffset[0];
-        const ofsB1 = this.vramOffset[1];
-        const ofsB2 = this.vramOffset[0];
-
-        // 262,144-color mode: 320x200, 6 bits per channel.
-
-        for (let band = 0; band < 25; band++) {
-            if (!needFull && !this._dirtyBands[band]) continue;
-
-            const yStart = band << 3;
-            const yEnd = Math.min(yStart + 8, SCREEN_HEIGHT);
-
-            for (let y = yStart; y < yEnd; y++) {
-                const lineOfs = y * BYTES_PER_LINE_320;
-                const pixelRow = y * SCREEN_WIDTH;
-
-                for (let byteX = 0; byteX < BYTES_PER_LINE_320; byteX++) {
-                    const logical = lineOfs + byteX;
-                    const a0 = (logical + ofsB0) & 0x1FFF;
-                    const a1 = (logical + ofsB1) & 0x1FFF;
-                    const a2 = (logical + ofsB2) & 0x1FFF;
-
-                    // Read the sub-plane bytes for this position.
-                    const b5 = page0[0x0000 + a0], b4 = page0[0x2000 + a0];
-                    const b3 = page1[0x0000 + a1], b2 = page1[0x2000 + a1];
-                    const b1 = page2[0x0000 + a2], b0 = page2[0x2000 + a2];
-
-                    const r5 = page0[0x4000 + a0], r4 = page0[0x6000 + a0];
-                    const r3 = page1[0x4000 + a1], r2 = page1[0x6000 + a1];
-                    const r1 = page2[0x4000 + a2], r0 = page2[0x6000 + a2];
-
-                    const g5 = page0[0x8000 + a0], g4 = page0[0xA000 + a0];
-                    const g3 = page1[0x8000 + a1], g2 = page1[0xA000 + a1];
-                    const g1 = page2[0x8000 + a2], g0 = page2[0xA000 + a2];
-
-                    for (let bit = 7; bit >= 0; bit--) {
-                        // Assemble the 6-bit value of each channel.
-                        const rv = (((r5 >> bit) & 1) << 5) | (((r4 >> bit) & 1) << 4) |
-                                   (((r3 >> bit) & 1) << 3) | (((r2 >> bit) & 1) << 2) |
-                                   (((r1 >> bit) & 1) << 1) |  ((r0 >> bit) & 1);
-                        const gv = (((g5 >> bit) & 1) << 5) | (((g4 >> bit) & 1) << 4) |
-                                   (((g3 >> bit) & 1) << 3) | (((g2 >> bit) & 1) << 2) |
-                                   (((g1 >> bit) & 1) << 1) |  ((g0 >> bit) & 1);
-                        const bv = (((b5 >> bit) & 1) << 5) | (((b4 >> bit) & 1) << 4) |
-                                   (((b3 >> bit) & 1) << 3) | (((b2 >> bit) & 1) << 2) |
-                                   (((b1 >> bit) & 1) << 1) |  ((b0 >> bit) & 1);
-
-                        // Convert the color components to the rendering format.
-                        const r8 = (rv << 2) | (rv >> 4);
-                        const g8 = (gv << 2) | (gv >> 4);
-                        const b8 = (bv << 2) | (bv >> 4);
-
-                        // ABGR for little-endian Uint32Array
-                        const color = 0xFF000000 | (b8 << 16) | (g8 << 8) | r8;
-                        const destX = pixelRow + (byteX * 16) + ((7 - bit) * 2);
-                        pixels[destX]     = color;
-                        pixels[destX + 1] = color;
-                    }
-                }
+    /**
+     * One row of 320x200 262,144 colors: bank 0 = blue, 1 = red,
+     * 2 = green; in each bank $0000/$2000/.../$A000 hold bits 5..0 of that
+     * component. Bank 0's offset applies to all banks. No palette.
+     */
+    _drawRow262k(y) {
+        const px = this._pixelBuf;
+        const bm = this.vramBanks[0], rm = this.vramBanks[1], gm = this.vramBanks[2];
+        const ofs = this._effectiveOffset(0);
+        const rowStart = y * ROW_BYTES_320;
+        let out = y * SCREEN_WIDTH;
+        const level = (m, i, s) =>
+            (((m[i] >> s) & 1) << 5) | (((m[0x2000 + i] >> s) & 1) << 4) |
+            (((m[0x4000 + i] >> s) & 1) << 3) | (((m[0x6000 + i] >> s) & 1) << 2) |
+            (((m[0x8000 + i] >> s) & 1) << 1) | ((m[0xA000 + i] >> s) & 1);
+        for (let col = 0; col < ROW_BYTES_320; col++) {
+            const i = (rowStart + col + ofs) & 0x1FFF;
+            for (let s = 7; s >= 0; s--) {
+                const b = level(bm, i, s), r = level(rm, i, s), g = level(gm, i, s);
+                // 0..63 to 0..255
+                const color = 0xFF000000 | (((b << 2) | (b >> 4)) << 16) |
+                              (((g << 2) | (g >> 4)) << 8) | ((r << 2) | (r >> 4));
+                px[out++] = color;
+                px[out++] = color;
             }
         }
-
-        if (needFull) {
-            this._presentFull();
-        } else {
-            for (let band = 0; band < 25; band++) {
-                if (!this._dirtyBands[band]) continue;
-                const yStart = band << 3;
-                const h = Math.min(8, SCREEN_HEIGHT - yStart);
-                this._present(0, yStart, SCREEN_WIDTH, h);
-            }
-        }
-
-        this._fullDirty = false;
-        this._dirtyBands.fill(0);
-    }
-
-    _render640x400(force = false) {
-        this._acquireFrame(SCREEN_WIDTH, SCREEN_HEIGHT_400);
-
-        const needFull = this._fullDirty || force;
-
-        if (!needFull) {
-            let anyDirty = false;
-            for (let b = 0; b < 50; b++) {
-                if (this._dirtyBands[b]) { anyDirty = true; break; }
-            }
-            if (!anyDirty) return;
-        }
-
-        const pixels = this._pixelBuf;
-        // 400-line mode; blockDisplay selects the front/back block on AV40EX/SX.
-        const frontB = this.vram,      frontR = this.vramPage1, frontG = this.vramPage2;
-        const backB  = this.vramPage3, backR  = this.vramPage4, backG  = this.vramPage5;
-        const primB = this.blockDisplay === 1 ? backB : frontB;
-        const primR = this.blockDisplay === 1 ? backR : frontR;
-        const primG = this.blockDisplay === 1 ? backG : frontG;
-        const altB  = this.blockDisplay === 1 ? frontB : backB;
-        const altR  = this.blockDisplay === 1 ? frontR : backR;
-        const altG  = this.blockDisplay === 1 ? frontG : backG;
-        const pal   = this._resolvedPalette;
-        // Hardware window: inside the rectangle, read from the other block.
-        const winOpen = this.windowOpen;
-        const winFx = this.windowX1 >> 3;
-        const winLx = this.windowX2 >> 3;
-        const winY1 = this.windowY1;
-        const winY2 = this.windowY2;
-
-        for (let band = 0; band < 50; band++) {
-            if (!needFull && !this._dirtyBands[band]) continue;
-
-            const yStart = band << 3;
-            const yEnd = Math.min(yStart + 8, SCREEN_HEIGHT_400);
-
-            for (let y = yStart; y < yEnd; y++) {
-                const lineBase = y * BYTES_PER_LINE;
-                const pixelRow = y * SCREEN_WIDTH;
-                const inWinY = winOpen && (y >= winY1) && (y < winY2);
-
-                for (let byteX = 0; byteX < BYTES_PER_LINE; byteX++) {
-                    const byteAddr = lineBase + byteX;
-                    const useAlt = inWinY && (byteX >= winFx) && (byteX < winLx);
-                    const blue  = useAlt ? altB : primB;
-                    const red   = useAlt ? altR : primR;
-                    const green = useAlt ? altG : primG;
-                    const bByte = (this.multiPage & 0x10) ? 0 : blue [byteAddr];
-                    const rByte = (this.multiPage & 0x20) ? 0 : red  [byteAddr];
-                    const gByte = (this.multiPage & 0x40) ? 0 : green[byteAddr];
-                    const px = pixelRow + (byteX << 3);
-
-                    pixels[px    ] = pal[((gByte >> 7) & 1) << 2 | ((rByte >> 7) & 1) << 1 | ((bByte >> 7) & 1)];
-                    pixels[px + 1] = pal[((gByte >> 6) & 1) << 2 | ((rByte >> 6) & 1) << 1 | ((bByte >> 6) & 1)];
-                    pixels[px + 2] = pal[((gByte >> 5) & 1) << 2 | ((rByte >> 5) & 1) << 1 | ((bByte >> 5) & 1)];
-                    pixels[px + 3] = pal[((gByte >> 4) & 1) << 2 | ((rByte >> 4) & 1) << 1 | ((bByte >> 4) & 1)];
-                    pixels[px + 4] = pal[((gByte >> 3) & 1) << 2 | ((rByte >> 3) & 1) << 1 | ((bByte >> 3) & 1)];
-                    pixels[px + 5] = pal[((gByte >> 2) & 1) << 2 | ((rByte >> 2) & 1) << 1 | ((bByte >> 2) & 1)];
-                    pixels[px + 6] = pal[((gByte >> 1) & 1) << 2 | ((rByte >> 1) & 1) << 1 | ((bByte >> 1) & 1)];
-                    pixels[px + 7] = pal[( gByte       & 1) << 2 | ( rByte       & 1) << 1 | ( bByte       & 1)];
-                }
-            }
-        }
-
-        if (needFull) {
-            this._presentFull();
-        } else {
-            for (let band = 0; band < 50; band++) {
-                if (!this._dirtyBands[band]) continue;
-                const yStart = band << 3;
-                const h = Math.min(8, SCREEN_HEIGHT_400 - yStart);
-                this._present(0, yStart, SCREEN_WIDTH, h);
-            }
-        }
-
-        this._fullDirty = false;
-        this._dirtyBands.fill(0);
     }
 
     // ---------------------------------------------------------------
-    //  Bulk operations
+    //  Bulk operations and reset
     // ---------------------------------------------------------------
 
-    loadVRAM(data) {
-        const src = data instanceof Uint8Array ? data : new Uint8Array(data);
-        if (src.length !== VRAM_SIZE) {
-            throw new Error(`VRAM data must be ${VRAM_SIZE} bytes, got ${src.length}`);
+    /** Banks the current format puts on the screen (for inspection tools). */
+    shownBanks() {
+        switch (this.displayMode) {
+            case DISPLAY_MODE_320:  return [this.vramBanks[0], this.vramBanks[1]];
+            case DISPLAY_MODE_262K:
+            case DISPLAY_MODE_400:  return [this.vramBanks[0], this.vramBanks[1], this.vramBanks[2]];
+            default:                return [this.vramBanks[this._shownBank()]];
         }
-        this.vram.set(src);
-        this._fullDirty = true;
-    }
-
-    clearVRAM() {
-        this.vram.fill(0);
-        this.vramPage1.fill(0);
-        this.vramPage2.fill(0);
-        this.vramPage3.fill(0);
-        this.vramPage4.fill(0);
-        this.vramPage5.fill(0);
-        this._fullDirty = true;
     }
 
     clearWorkRam() {
         this.workRam.fill(0);
+        this.workRamD500.fill(0);
+    }
+
+    /** Logic unit and line engine back to their reset values. */
+    resetLogicAndLine() {
+        this.logicCommand = 0;
+        this.logicColor = 0;
+        this.logicMask = 0;
+        this.colorMatchBits = 0;
+        this.compareRegisters.fill(0);
+        this.bankDisable = 0;
+        this.tilePattern.fill(0);
+        this.lineAddressOffset = 0;
+        this.lineStylePattern = 0;
+        this.lineStartX = 0;
+        this.lineStartY = 0;
+        this.lineEndX = 0;
+        this.lineEndY = 0;
+        this.lineRemainingUs = 0;
     }
 
     /**
-     * Reset ALU and line drawing engine to power-on state.
-     * Called when the sub CPU is reset.
+     * Display part of the sub system reset done through the sub bank
+     * register: CRT off, VRAM access off, INS LED off, both offset
+     * registers 0, the $D430 display bits (DB, AB, OA) 0, and the $D42F
+     * VRAM bank 0.
      */
-    resetALU() {
-        this.aluCommand = 0;
-        this.aluColor = 0;
-        this.aluMask = 0;
-        this.aluCompareStatus = 0;
-        this.aluCompareData.fill(0x80);
-        this.aluDisable = 0x00;
-        this.aluTileData.fill(0);
-
-        this.lineBusy = false;
-        this._lineBusyMicros = 0;
-        this.lineOffset = 0;
-        this.lineStyle = 0;
-        this.lineX0 = 0;
-        this.lineY0 = 0;
-        this.lineX1 = 0;
-        this.lineY1 = 0;
-        this._linePrevAddr = 0xFFFF;
-        this._lineMask = 0xFF;
-        this._lineCount = 0;
-        this._lineBusyRemainder = 0;
-    }
-
-    /**
-     * Full reset: clear VRAM, work RAM, reset palette, ALU, line engine.
-     */
-    reset() {
-        this.clearVRAM();
-        this.clearWorkRam();
-        this.resetPalette();
-        this.vramOffset = [0, 0];
-        this.appliedScrollOffset = [0, 0];
-        this._scrollWriteCount = [0, 0];
-        this.vramOffsetFlag = false;
-        // リセット時は表示を消灯する。
+    initForSubReset() {
         this.crtOn = false;
+        this._lastBlank = false;
         this.vramAccessEnabled = false;
         this.insLedOn = false;
-        this.cycleStealMode = false;
+        this.offsetRegister.fill(0);
+        this.pageControl = 0;
+        this.cpuPage = 0;
+        this.shownPage = 0;
+        this.fineOffsetEnable = false;
+        this.planeBank = 0;
+        this._fullDirty = true;
+    }
+
+    /**
+     * Full reset: clear VRAM, work RAM, reset palette, logic unit, line engine.
+     */
+    reset() {
+        for (const m of this.vramBanks) m.fill(0);
+        this.clearWorkRam();
+        this.resetPalette();
+        this.initForSubReset();
+        this.subVramFastAccess = false;
         this.frameCount = 0;
-        this.activeVramPage = 0;
-        this.displayVramPage = 0;
-        this.blockActive = 0;
-        this.blockDisplay = 0;
-        this.windowX1 = 0;
-        this.windowX2 = 0;
-        this.windowY1 = 0;
-        this.windowY2 = 0;
-        this.windowOpen = false;
-        this.displayMode = DISPLAY_MODE_640;
-        this._mode320Flag = false;
-        this.multiPage = 0;
-        this.vramBankSelect = 0;
-
-        // Reset ALU and line drawing engine
-        this.resetALU();
-
-        this.miscReg = 0;
+        this.columns320 = false;
+        this.formatByte = 0x08;      // 200 lines, not 262,144 colors
+        this.holdPicture = false;
+        this.windowRegisters.fill(0);
+        this.planeMaskBits = 0;
+        this.resetLogicAndLine();
+        this._updateDisplayMode();
         this._resolvedAnalogPalette.fill(0xFF000000);
         this._analogDirty = true;
         this._fullDirty = true;
         this._frame = null;
         this._pixelBuf = null;
         this._lastBlank = false;
-    }
-
-    // ---------------------------------------------------------------
-    //  Debug / inspection helpers
-    // ---------------------------------------------------------------
-
-    getPixelColor(x, y) {
-        if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) return 0;
-        const byteOffset = (y * BYTES_PER_LINE + Math.floor(x / 8) + this.getDisplayVramOffset()) % PLANE_SIZE;
-        const bit = 7 - (x & 7);
-        const b = (this.vram[BLUE_BASE  + byteOffset] >> bit) & 1;
-        const r = (this.vram[RED_BASE   + byteOffset] >> bit) & 1;
-        const g = (this.vram[GREEN_BASE + byteOffset] >> bit) & 1;
-        return (g << 2) | (r << 1) | b;
-    }
-
-    setPixel(x, y, colorIndex) {
-        if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) return;
-        const byteOffset = (y * BYTES_PER_LINE + Math.floor(x / 8) + this.getDisplayVramOffset()) % PLANE_SIZE;
-        const bit = 7 - (x & 7);
-        const mask = 1 << bit;
-        const invMask = ~mask & 0xFF;
-
-        const bAddr = BLUE_BASE  + byteOffset;
-        const rAddr = RED_BASE   + byteOffset;
-        const gAddr = GREEN_BASE + byteOffset;
-
-        this.vram[bAddr] = (colorIndex & 1) ? (this.vram[bAddr] | mask) : (this.vram[bAddr] & invMask);
-        this.vram[rAddr] = (colorIndex & 2) ? (this.vram[rAddr] | mask) : (this.vram[rAddr] & invMask);
-        this.vram[gAddr] = (colorIndex & 4) ? (this.vram[gAddr] | mask) : (this.vram[gAddr] & invMask);
-
-        this._dirtyBands[(y >> 3)] = 1;
-    }
-
-    drawHLine(x0, x1, y, colorIndex) {
-        for (let x = x0; x <= x1; x++) {
-            this.setPixel(x, y, colorIndex);
-        }
-    }
-
-    fillRect(x0, y0, w, h, colorIndex) {
-        for (let y = y0; y < y0 + h && y < SCREEN_HEIGHT; y++) {
-            for (let x = x0; x < x0 + w && x < SCREEN_WIDTH; x++) {
-                this.setPixel(x, y, colorIndex);
-            }
-        }
     }
 }

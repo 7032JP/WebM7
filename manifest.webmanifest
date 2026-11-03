@@ -1,7 +1,7 @@
 {
   "name": "WebM7",
   "short_name": "WebM7",
-  "description": "M7 — レトロ8bitパソコン シミュレータ (ブラウザ単体動作)",
+  "description": "WebM7 — FM-7 / FM77AV シリーズ Web シミュレータ (ブラウザ単体で動作)",
   "lang": "ja",
   "start_url": "./",
   "scope": "./",
