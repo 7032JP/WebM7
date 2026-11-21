@@ -31,8 +31,7 @@ const DISPLAY_MODE_400  = 3;  // 640x400, 8 colors
 // VRAM offset register: OA13-OA0, of which OA4-OA0 are gated by OA.
 const OFFSET_COARSE    = 0x3FE0;
 
-// One VRAM cycle: 8 periods of the 16.128 MHz reference clock (FM77AV
-// Hardware Manual 8.4.2 (1), the VRAM access timing figure; about 0.5 us).
+// One VRAM cycle: 8 periods of the 16.128 MHz reference clock (about 0.5 us).
 const VRAM_CYCLE_US = 8 / 16.128;
 
 // Physical RGB colors for TTL 8-color mode (GRB bit order)
@@ -50,15 +49,29 @@ const PHYSICAL_COLORS = [
 
 // Logic unit commands, $D410 bits 2-0
 const LOGIC_PSET    = 0;
-// Command 1 is marked prohibited in FM77AV Hardware Manual 8.4.1; here it
-// writes 0 to the unmasked bits.
+// Command 1 writes 0 to the unmasked bits.
 const LOGIC_COMMAND_1 = 1;
 const LOGIC_OR      = 2;
 const LOGIC_AND     = 3;
 const LOGIC_XOR     = 4;
 const LOGIC_NOT     = 5;
 const LOGIC_TILE    = 6;
+const PALETTE_LINES = 0x07;   // the data lines of a TTL palette register
 const LOGIC_COMPARE = 7;
+
+// What each command makes of one plane byte. `old` is the byte in VRAM,
+// `colorOn` tells whether that plane's bit of $D411 is 1, `tile` is the
+// plane's byte of $D41C-$D41E. Only the bits the write mask lets through
+// are kept from the result.
+const LOGIC_RESULTS = new Map([
+    [LOGIC_PSET,      (old, colorOn) => (colorOn ? 0xFF : 0x00)],
+    [LOGIC_COMMAND_1, () => 0x00],
+    [LOGIC_OR,        (old, colorOn) => (colorOn ? 0xFF : old)],
+    [LOGIC_AND,       (old, colorOn) => (colorOn ? old : 0x00)],
+    [LOGIC_XOR,       (old, colorOn) => (colorOn ? ~old : old)],
+    [LOGIC_NOT,       (old) => ~old],
+    [LOGIC_TILE,      (old, colorOn, tile) => tile],
+]);
 
 /**
  * Default frame sink: keeps one RGBA frame in memory. Used when no host
@@ -325,7 +338,7 @@ export class Display {
     /** $D40F: OA7-OA0 into the register of the bank chosen by AB. */
     _writeOffsetLower(value) {
         const b = this.cpuPage;
-        // FM77AV Hardware Manual 8.4.2 (2): OA controls OA4-OA0 in $D40F (W).
+        // OA controls OA4-OA0 in $D40F (W).
         const low = value & (this.fineOffsetEnable ? 0xFF : OFFSET_COARSE);
         this.offsetRegister[b] = (this.offsetRegister[b] & 0x3F00) | (low & 0xFF);
         this._fullDirty = true;
@@ -385,44 +398,49 @@ export class Display {
         return before;
     }
 
+    /** VRAM byte at sub CPU address `a` ($0000-$BFFF), read with no logic operation and no plane closed (for a debugger). */
+    peekVram(a) {
+        a &= 0xFFFF;
+        if (a >= BANK_SIZE) return 0xFF;
+        const i = this._locate(a);
+        return this.vramBanks[this._hitBank][i];
+    }
+
+    /** Write a VRAM byte at sub CPU address `a` with no logic operation and no plane closed (for a debugger). */
+    pokeVram(a, value) {
+        a &= 0xFFFF;
+        if (a >= BANK_SIZE) return;
+        const i = this._locate(a);
+        this._storeVramByte(this._hitBank, i, value & 0xFF);
+    }
+
     /** Sub CPU write of VRAM $0000-$BFFF; EST selects an operation instead of CPU data. */
     cpuWriteVram(a, value) {
         a &= 0xFFFF;
         if (a >= BANK_SIZE) return;
-        if ((this.logicCommand & 0x80) && this.hasLogicUnit && this.displayMode !== DISPLAY_MODE_262K) {
+        if ((this.logicCommand & 0x80) && this.hasLogicUnit) {
             this._operateAt(a, ~this.logicMask & 0xFF);
             return;
         }
         if (this._planeClosed(this._accessPlane(a))) return;
         const i = this._locate(a);
-        const bank = this._hitBank;
-        const mem = this.vramBanks[bank];
-        if (mem[i] !== value) {
-            mem[i] = value;
-            this._touch(bank, i);
-        }
+        this._storeVramByte(this._hitBank, i, value);
     }
 
     /**
-     * $FD37 bits 2-0 close plane B, R, G to the CPU side (FM-7 system spec
-     * 1.7): a closed plane reads "FF" and its data cannot be changed.
+     * $FD37 bits 2-0 close plane B, R, G to the CPU side: a closed plane reads "FF" and its data cannot be changed.
      */
     _planeClosed(plane) {
         return ((this.planeMaskBits >> plane) & 1) !== 0;
     }
 
-    /** CPU-side read of one plane byte: "FF" while the plane is closed (FM-7 system spec 1.7). */
-    _planeRead(plane, bank, i) {
-        return this._planeClosed(plane) ? 0xFF : this.vramBanks[bank][i];
-    }
-
-    /** CPU-side write of one plane byte: dropped while the plane is closed (FM-7 system spec 1.7). */
-    _planeWrite(plane, bank, i, value) {
-        if (this._planeClosed(plane)) return;
+    /** Put a byte in VRAM; only a change marks the screen for redraw. */
+    _storeVramByte(bank, i, value) {
         const mem = this.vramBanks[bank];
-        if (mem[i] === value) return;
-        mem[i] = value;
-        this._touch(bank, i);
+        if (mem[i] !== value) {
+            mem[i] = value;
+            this._touch(bank, i);
+        }
     }
 
     /** Mark the screen band that shows bank/index for redraw. */
@@ -471,16 +489,17 @@ export class Display {
         const cmd = this.logicCommand & 7;
         const banks = this._opBank, idx = this._opIndex;
         switch (this.displayMode) {
-            case DISPLAY_MODE_262K:
-                return;                                // no logic operation
             case DISPLAY_MODE_400: {
                 const i = ((a & 0x7FFF) + this._effectiveOffset(0) * 2) & 0x7FFF;
                 for (let p = 0; p < 3; p++) { banks[p] = p; idx[p] = i; }
                 break;
             }
+            case DISPLAY_MODE_262K:
             case DISPLAY_MODE_320: {
-                const b = this.cpuPage;
-                const i = (a & 0x2000) | ((a + this._effectiveOffset(b)) & 0x1FFF);
+                // one bank at a time: $D42F picks it in 262,144 colors, AB in 4096 colors
+                const deep = this.displayMode === DISPLAY_MODE_262K;
+                const b = deep ? this.planeBank : this.cpuPage;
+                const i = (a & 0x2000) | ((a + this._effectiveOffset(deep ? 0 : b)) & 0x1FFF);
                 for (let p = 0; p < 3; p++) { banks[p] = b; idx[p] = p * 0x4000 + i; }
                 break;
             }
@@ -492,41 +511,39 @@ export class Display {
             }
         }
         const vb = this.vramBanks;
-        // The unit works through CPU accesses to the three planes, so it
-        // reads and writes them with _planeRead / _planeWrite, which apply the
-        // $FD37 access flags of any CPU access.
-        const planeByte = [0, 1, 2].map((p) => this._planeRead(p, banks[p], idx[p]));
+        // A plane that $FD37 shuts off is read by the unit as all ones
+        // (it goes through the same CPU path), and the unit never changes it.
+        const shut = this.planeMaskBits;
+        const seen = [0, 1, 2].map((p) => (((shut >> p) & 1) ? 0xFF : vb[banks[p]][idx[p]]));
         let mask = writeMask & 0xFF;
 
         // compare for command 111, or before any command when M1 = 1
         const m1 = (this.logicCommand & 0x40) !== 0;
         if (cmd === LOGIC_COMPARE || m1) {
-            const eq = this._matchColors(planeByte[0], planeByte[1], planeByte[2]);
+            const eq = this._matchColors(seen[0], seen[1], seen[2]);
             this.colorMatchBits = eq;
             if (cmd === LOGIC_COMPARE) return;
             mask &= (this.logicCommand & 0x20) ? ~eq : eq;
         }
         if (mask === 0) return;
 
-        for (let p = 0; p < 3; p++) {
-            // $D41B leaves a plane out of the operation.
-            if ((this.bankDisable >> p) & 1) continue;
-            const i = idx[p];
-            const v = vb[banks[p]][i];
-            const c = (this.logicColor & (1 << p)) ? 0xFF : 0x00;
-            let n;
-            switch (cmd) {
-                case LOGIC_PSET: n = c; break;
-                case LOGIC_COMMAND_1: n = 0; break;
-                case LOGIC_OR:   n = v | c; break;
-                case LOGIC_AND:  n = v & c; break;
-                case LOGIC_XOR:  n = v ^ c; break;
-                case LOGIC_NOT:  n = ~v; break;
-                case LOGIC_TILE: n = this.tilePattern[p]; break;
-                default: return;
+        const result = LOGIC_RESULTS.get(cmd);
+        if (result === undefined) return;
+        const keep = ~mask & 0xFF;
+        for (let p = 2; p >= 0; p--) {
+            if (this._logicMayChange(p)) {
+                const old = vb[banks[p]][idx[p]];
+                const made = result(old, ((this.logicColor >> p) & 1) === 1, this.tilePattern[p]);
+                this._storeVramByte(banks[p], idx[p], ((old & keep) | (made & mask)) & 0xFF);
             }
-            this._planeWrite(p, banks[p], i, ((v & ~mask) | (n & mask)) & 0xFF);
         }
+    }
+
+    /** Plane `p` (0 B, 1 R, 2 G) is open to the logic unit unless $D41B or $FD37 stops it. */
+    _logicMayChange(p) {
+        const bit = 1 << p;
+        if (this.bankDisable & bit) return false;
+        return (this.planeMaskBits & bit) === 0;
     }
 
     /**
@@ -580,7 +597,7 @@ export class Display {
         let err = dx - dy;
         // The line engine steps through every position of the line and runs
         // the logic unit there; the line style only decides whether the dot
-        // is written (Hardware Manual 8.4.1 (2)). Each step takes one VRAM
+        // is written. Each step takes one VRAM
         // cycle of BUSY time.
         let busyUs = 0;
         let dots = 0;
@@ -664,9 +681,7 @@ export class Display {
             case 0xD41D: this.tilePattern[1] = value; return;
             case 0xD41E: this.tilePattern[2] = value; return;
             // Line address offset: $D420 bits 4-0 = A13-A9, $D421 = A8-A1,
-            // kept as a byte offset. Source: FM77AV Hardware Manual, chapter 4
-            // (sub system I/O address map) and chapter 8 (line interpolation
-            // registers; the write to $D42B starts the line).
+            // kept as a byte offset. The write to $D42B starts the line.
             case 0xD420:
                 this.lineAddressOffset = ((value & 0x1F) << 9) | (this.lineAddressOffset & 0x01FE);
                 return;
@@ -802,6 +817,11 @@ export class Display {
         return this.palette[index];
     }
 
+    /** A TTL palette register on the data bus: G, R, B are driven, the other lines stay high. */
+    readPaletteBus(index) {
+        return (0xFF & ~PALETTE_LINES) | (this.readPalette(index) & PALETTE_LINES);
+    }
+
     writePalette(index, value) {
         index &= 7;
         // bits 2-0 are G, R, B.
@@ -825,9 +845,8 @@ export class Display {
 
     /**
      * Color of the border area around the VRAM display area, as a CSS
-     * "#rrggbb" string. It is the color of palette number 0 (FM77AV
-     * Hardware Manual 8.3.1), or of analog palette number 0 in the
-     * 320 x 200 4096-color mode (8.3.2).
+     * "#rrggbb" string. It is the color of palette number 0, or of analog palette number 0
+     * in the 320 x 200 4096-color mode.
      */
     get borderColor() {
         let r, g, b;
@@ -997,24 +1016,27 @@ export class Display {
     }
 
     /**
-     * One row of 320x200 262,144 colors: bank 0 = blue, 1 = red,
-     * 2 = green; in each bank $0000/$2000/.../$A000 hold bits 5..0 of that
-     * component. Bank 0's offset applies to all banks. No palette.
+     * One row of 320x200 262,144 colors. Every bank has the 4096-color
+     * layout, B at $0000/$2000, R at $4000/$6000, G at $8000/$A000, upper bit
+     * first; bank 0 gives bits 5-4 of each component, bank 1 bits 3-2, bank 2
+     * bits 1-0. Bank 0's offset applies to all banks. No palette.
      */
     _drawRow262k(y) {
         const px = this._pixelBuf;
-        const bm = this.vramBanks[0], rm = this.vramBanks[1], gm = this.vramBanks[2];
+        const banks = this.vramBanks;
         const ofs = this._effectiveOffset(0);
         const rowStart = y * ROW_BYTES_320;
         let out = y * SCREEN_WIDTH;
-        const level = (m, i, s) =>
-            (((m[i] >> s) & 1) << 5) | (((m[0x2000 + i] >> s) & 1) << 4) |
-            (((m[0x4000 + i] >> s) & 1) << 3) | (((m[0x6000 + i] >> s) & 1) << 2) |
-            (((m[0x8000 + i] >> s) & 1) << 1) | ((m[0xA000 + i] >> s) & 1);
         for (let col = 0; col < ROW_BYTES_320; col++) {
             const i = (rowStart + col + ofs) & 0x1FFF;
             for (let s = 7; s >= 0; s--) {
-                const b = level(bm, i, s), r = level(rm, i, s), g = level(gm, i, s);
+                let b = 0, r = 0, g = 0;
+                for (let k = 0; k < 3; k++) {
+                    const m = banks[k];
+                    b = (b << 2) | (((m[i] >> s) & 1) << 1) | ((m[0x2000 + i] >> s) & 1);
+                    r = (r << 2) | (((m[0x4000 + i] >> s) & 1) << 1) | ((m[0x6000 + i] >> s) & 1);
+                    g = (g << 2) | (((m[0x8000 + i] >> s) & 1) << 1) | ((m[0xA000 + i] >> s) & 1);
+                }
                 // 0..63 to 0..255
                 const color = 0xFF000000 | (((b << 2) | (b >> 4)) << 16) |
                               (((g << 2) | (g >> 4)) << 8) | ((r << 2) | (r >> 4));

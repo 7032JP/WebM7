@@ -41,6 +41,9 @@ const SHARED_MAIN_FIRST  = 0xFC80;
 const SHARED_MAIN_LAST   = 0xFCFF;
 const SHARED_SUB_FIRST   = 0xD380;
 const SHARED_SUB_LAST    = 0xD3FF;
+const SUB_VRAM_END       = 0xC000;   // sub CPU VRAM is $0000-$BFFF
+const SUB_DEBUG_IO_FIRST = 0xD400;   // sub I/O, not touched by peekSub / pokeSub
+const SUB_DEBUG_IO_LAST  = 0xD4FF;
 const SHARED_BYTES       = 0x0080;
 
 // Sub CPU memory map
@@ -50,7 +53,7 @@ const SUB_ROM_SIZE       = 0x2800;   // 10KB
 // FM77AV Sub ROM layout
 const SUB_ROM_AV_BASE    = 0xE000;   // new sub monitor ROM start ($E000-$FFFF, 8KB)
 
-// Sub monitors started by a $FD13 write, named as in HW manual 8.6.5, plus
+// Sub monitors started by a $FD13 write, plus
 // the program in the extended sub RAM of the EX series.
 const MONITOR_OLD_SUB     = 'old sub (640x200)';
 const MONITOR_NEW_SUB_640 = 'new sub (640x200)';
@@ -62,7 +65,7 @@ const MONITOR_BY_SUB_BANK = [MONITOR_OLD_SUB, MONITOR_NEW_SUB_640, MONITOR_NEW_S
 // Status bytes read as [bit, test that makes the bit 1]; the bits outside
 // the table always read 1.
 const inDisplayPeriod = (m) => !m._verticalBlanking && !m._inHorizontalBlank;
-// Sub $D430 (HW manual 4.2, 8.4.1 (2), 8.6.1-8.6.3)
+// Sub $D430
 const D430_READ_BITS = [
     [0x80, inDisplayPeriod],              // DISP TIME
     [0x10, (m) => m.display.lineReady],   // LINE: 1 = READY
@@ -70,14 +73,14 @@ const D430_READ_BITS = [
     [0x01, (m) => m._subResetStatus],     // RESET: 1 = reset by $FD13
 ];
 const D430_UNUSED_BITS = 0x6A;
-// Main $FD12 (HW manual 4.1, 8.6.6)
+// Main $FD12
 const FD12_READ_BITS = [
     [0x40, (m) => m.display.columns320],  // 320/640: 1 = 320x200 4096 colors
     [0x02, inDisplayPeriod],              // display
     [0x01, (m) => m._inVsyncPulse],       // VSYNC
 ];
 const FD12_UNUSED_BITS = 0xBC;
-// Main $FD04 read (HW manual 4.1): BUSY reads 1 while busy, BREAK and
+// Main $FD04 read: BUSY reads 1 while busy, BREAK and
 // ATTENTION read 0 while active, bits 6-2 read 1.
 const FD04_READ_BITS = [
     [0x80, (m) => m._subBusyLine()],      // BUSY (same line as $FD05 bit 7)
@@ -87,7 +90,7 @@ const FD04_READ_BITS = [
 const FD04_UNUSED_BITS = 0x7C;
 // Sub $D430 write: each field taken from the same byte.
 const D430_WRITE_FIELDS = [
-    (m, v) => { m._nmiMaskSub = (v & 0x80) !== 0; },          // NMI mask
+    (m, v) => { m._subNmiBlocked = (v & 0x80) !== 0; },      // NMI mask
     (m, v) => m.display.writePageControl(v),                  // DB, AB, OA
     (m, v) => { m._characterGeneratorBank = v & 0x03; },      // CG / sub monitor ROM bank
 ];
@@ -104,14 +107,22 @@ const DMA_CH_MODE_TSC         = 0x04;   // MCB: 1 = TSC steal
 const DMA_CH_ADDRESS_DOWN     = 0x08;   // 1 = address counts down
 const DMA_CH_BUSY             = 0x40;   // Busy/Ready (read only)
 const DMA_CH_DEND             = 0x80;   // DEND (read only, cleared by reading the register)
-// Bits that software can write, from the register descriptions of the MC6844
-// data sheet: channel control bits 0-3 (bits 6-7 are status), priority control
+// Bits that software can write: channel control bits 0-3 (bits 6-7 are status), priority control
 // bits 0-3 (request enables) and bit 7 (rotate), interrupt control bits 0-3
 // (done interrupt enables), data chain bits 0-3.
 const DMA_WRITABLE_CHANNEL_CTL   = 0x0F;
 const DMA_WRITABLE_PRIORITY_CTL  = 0x8F;
 const DMA_WRITABLE_INTERRUPT_CTL = 0x0F;
 const DMA_WRITABLE_CHAIN_CTL     = 0x0F;
+// What a register number with no register reaches: reads $FF, takes no writes.
+const DMAC_NO_PORT = Object.freeze({ get: () => 0xFF, put: () => {} });
+/** One byte of a channel's 16-bit register as a port; shift 8 is the high byte, 0 the low. */
+function dmacCounterPort(counter, ch, shift) {
+    return {
+        get: () => (counter[ch] >> shift) & 0xFF,
+        put: (val) => { counter[ch] = (counter[ch] & ~(0xFF << shift)) | (val << shift); },
+    };
+}
 // Main CPU cycles lost per DMA byte in the HALT steal mode: the HALT
 // acknowledge, the transfer cycle and the bus hand-back.
 const DMA_STOLEN_CYCLES_PER_BYTE = 3;
@@ -124,12 +135,12 @@ const FD0F_ROM_SELECT    = 0xFD0F;   // ROM bank select
 const FD12_SUB_MONITOR   = 0xFD12;   // Display mode select (write) / blanking and VSYNC status (read)
 const IO_INITIATOR_DISABLE = 0xFD10; // bit 1: initiator ROM 0 = enabled, 1 = disabled
 const IO_SUB_MONITOR_SEL = 0xFD13;   // sub monitor select; every write resets the sub CPU
-const FD30_APAL_ADDR_HI  = 0xFD30;   // analog palette number LC11-LC8 (HW manual 4.1)
+const FD30_APAL_ADDR_HI  = 0xFD30;   // analog palette number LC11-LC8
 const FD31_APAL_ADDR_LO  = 0xFD31;   // analog palette number LC7-LC0
 const FD32_APAL_BLUE     = 0xFD32;   // Blue level register BL3-BL0
 const FD33_APAL_RED      = 0xFD33;   // Red level register RL3-RL0
 
-// Memory management (HW manual 8.1)
+// Memory management
 const MAP_REGISTER_FIRST = 0xFD80;   // MMR: registers 0-15 of the selected segment
 const MAP_REGISTER_LAST  = 0xFD8F;
 const SEGMENT_SELECT     = 0xFD90;   // MSR (MMR segment register)
@@ -145,13 +156,12 @@ const PHYSICAL_RAM_BYTES = 0x70000;  // largest extended RAM (FM77AV40 / AV40EX)
 const FDC_IO_BASE        = 0xFD18;
 const FDC_IO_END         = 0xFD1F;
 
-// Main CPU TIMER interrupt period: 2.03 ms (FM-7 User's Manual, system
-// specification 1.8.3; FM77AV Hardware Manual 8.2.1 (2)).
+// Main CPU TIMER interrupt period: 2.03 ms.
 const MAIN_TIMER_PERIOD_US = 2030;
-// Sub CPU NMI clock: 20 ms (FM77AV Hardware Manual 8.2.2 (1)).
+// Sub CPU NMI clock: 20 ms.
 const SUB_NMI_PERIOD_US    = 20000;
 // Buzzer: single beep length and tone (chosen values).
-const SINGLE_BEEP_US       = 200000;
+const SINGLE_BUZZER_US     = 200000;
 export const BUZZER_TONE_HZ = 300000 / 256;
 
 
@@ -171,10 +181,9 @@ export const MACHINE_FM77AV40EX = 'fm77av40ex';
 // -----------------------------------------------------------------------
 // Main CPU bus cycle lengths
 // -----------------------------------------------------------------------
-// In master clock periods (125 ns). The address ranges and lengths are the
-// table of FM77AV Hardware Manual 7.1 (2): $0000-$FCFF and $FFE0-$FFFD are
-// short, $FD00-$FFDF and $FFFE-$FFFF are long. Internal cycles put $FFFF on
-// the bus (MC6809E data sheet, figure "RESET Timing"), so they count as long.
+// In master clock periods (125 ns). $0000-$FCFF and $FFE0-$FFFD are short,
+// $FD00-$FFDF and $FFFE-$FFFF are long. Internal cycles put $FFFF on the bus,
+// so they count as long.
 const BUS_TICKS_FM7_MODE = { short: 4, long: 6 };   // 500 ns / 750 ns
 const BUS_TICKS_MMR_MODE = { short: 5, long: 7 };   // 625 ns / 875 ns
 
@@ -187,7 +196,7 @@ const LONG_BUS_CYCLE_MAP = (() => {
     return map;
 })();
 
-// Sub direct access (FM77AV Hardware Manual 7.1 (2) (3)): an access of the
+// Sub direct access: an access of the
 // main CPU to the sub CPU space (physical $10000-$1FFFF) waits until it is in
 // step with the sub CPU's E clock. The sub E period is 250/63 master periods
 // (8 MHz / 2.016 MHz); time is counted in 1/63 of a master period so the
@@ -208,24 +217,18 @@ export function subDirectWaitTicks(endTick) {
 }
 
 // --- CRT timing (us) ---------------------------------------------------------
-// Every value below is printed in the timing figures of the FM77AV Hardware
-// Manual (Fujitsu), section 8.6 "Registers":
-//   8.6.1 Display status register, figure "horizontal display period":
-//         1H = 63.5 us, blanking 23.8 us, display 39.7 us.
-//   8.6.1, figure "vertical display period": display 12.70 ms,
-//         vertical blanking 3.94 ms.
-//   8.6.2 VSYNC status register, timing figure: VSYNC goes to 1
-//         1.52 ms after the vertical blanking starts, stays 0.51 ms, and
-//         1.91 ms more pass before the display period.
-// The VSYNC timing uses the three parts of the 8.6.2 figure.
+//   Horizontal: 1H = 63.5 us, blanking 23.8 us, display 39.7 us.
+//   Vertical: display 12.70 ms, vertical blanking 3.94 ms.
+//   VSYNC goes to 1 1.52 ms after the vertical blanking starts, stays
+//   0.51 ms, and 1.91 ms more pass before the display period.
 // Horizontal: each line starts with blanking, then the display part.
-const HSCAN_200 = { periodUs: 63.5,  blankUs: 23.8 };   // Hardware Manual 8.6.1, 15.75 kHz
-// 400 lines: no figure; a line is taken as half the 200-line one.
+const HSCAN_200 = { periodUs: 63.5,  blankUs: 23.8 };   // 15.75 kHz
+// 400 lines: a line is taken as half the 200-line one.
 const HSCAN_400 = { periodUs: 63.5 / 2, blankUs: 23.8 / 2 };
 // Vertical, the same for 200 and 400 lines. One field, in scan order:
 // [length in us, DISP TIME reads blanking, VSYNC reads 1].
-const VERTICAL_DISPLAY_US = 12700;                 // Hardware Manual 8.6.1
-const VSYNC_FIGURE_US = [1520, 510, 1910];         // Hardware Manual 8.6.2: before / during / after VSYNC
+const VERTICAL_DISPLAY_US = 12700;
+const VSYNC_FIGURE_US = [1520, 510, 1910];         // before / during / after VSYNC
 const FIELD_SEGMENTS = [
     { us: VERTICAL_DISPLAY_US, blanking: false, vsync: false },
     ...VSYNC_FIGURE_US.map((us, i) => ({ us, blanking: true, vsync: i === 1 })),
@@ -234,17 +237,21 @@ const FIELD_SEGMENTS = [
 // Key encoder commands, indexed by the command byte: [PARAM bytes after
 // the command byte (for $80 it depends on the first PARAM byte), action
 // run with the PARAM bytes once they are all in].
-// $00-$05: the sub command codes of KEYBOARD CONTROL and their PARAM
-// (FM-Techknow 5-1-7 (4), figure 5-9); the sub CPU passes the code and the
+// $00-$05: the sub command codes of KEYBOARD CONTROL and their PARAM;
+// the sub CPU passes the code and the
 // PARAM bytes it uses to $D431 one byte at a time, so a command takes
 // 1 byte plus its PARAM bytes. The $03 reply has CAPS LED in bit 0 and
-// kana LED in bit 1 (the same figure).
-// $80: the clock, read by the subsystem at power on (FM-Techknow 5-4). Its
-// first PARAM byte selects the direction: $00 asks for the CLOCK_BYTES
-// reply, $01 is followed by CLOCK_BYTES clock bytes, which are taken in
-// and dropped.
+// kana LED in bit 1.
+// $80: the clock. $80 $00 asks for the CLOCK_BYTES reply; $80 $01 is
+// followed by CLOCK_BYTES clock bytes, which are taken in and dropped.
 // A command number with no entry here ends with its own byte.
 const CLOCK_BYTES = 7;    // the 13 READ RTC digits packed two to a byte (_encoderReplyClock)
+// The clock operations, by the first PARAM byte: the bytes that follow it,
+// and what runs once they are in. Any other operation is that byte alone.
+const CLOCK_OPERATIONS = new Map([
+    [0x00, { data: 0, run: (m) => m._encoderReplyClock() }],                  // READ RTC
+    [0x01, { data: CLOCK_BYTES, run: () => {} }],                             // SET RTC
+]);
 const ENCODER_TABLE = new Array(256).fill(null);
 for (const [code, param, act] of [
     [0x00, 1, (m, p) => m._encoderSetCodeMode(p[0])],                         // key code mode set
@@ -254,19 +261,19 @@ for (const [code, param, act] of [
         (m.keyboard.capsLock ? 0x01 : 0) | (m.keyboard.kanaMode ? 0x02 : 0))],
     [0x04, 1, (m, p) => m.keyboard.selectRepeat(p[0])],                       // auto repeat on / off
     [0x05, 2, (m, p) => m.keyboard.setRepeatTiming(p[0], p[1])],              // auto repeat times (x 10 ms)
-    [0x80, (dir) => 1 + (dir === 0x01 ? CLOCK_BYTES : 0),                     // clock: direction byte, then data when setting
-        (m, p) => { if (p[0] === 0x00) m._encoderReplyClock(); }],
+    [0x80, (op) => 1 + (CLOCK_OPERATIONS.get(op)?.data ?? 0),                 // clock: the operation, then its data
+        (m, p) => CLOCK_OPERATIONS.get(p[0])?.run(m)],
 ]) ENCODER_TABLE[code] = { param, act };
 
 export class FM7 {
     /**
      * @param {object} [parts] - optional host-provided component instances.
      *   The browser UI passes sound generators with an audio output stage
-     *   (WebPSG / WebOPN) and the FDD sound synthesiser; headless use takes
-     *   the core defaults (no audio device, no FDD sound).
+     *   (WebPSG / WebOPN) and the drive noise synthesiser; headless use takes
+     *   the core defaults (no audio device, no drive noise).
      * @param {PSG} [parts.psg]
      * @param {OPN} [parts.opn]
-     * @param {object|null} [parts.fddSound] - { seek, headLoad, diskInsert, diskEject, ... }
+     * @param {object|null} [parts.driveNoise] - { seek, headLoad, diskInsert, diskEject, ... }
      */
     constructor(parts = {}) {
         // --- Machine type ---
@@ -281,21 +288,21 @@ export class FM7 {
         this.cmt       = new CMT();
         this.psg       = parts.psg || new PSG();
         this.opn       = parts.opn || new OPN();
-        this.fddSound  = parts.fddSound || null;
+        this.driveNoise = parts.driveNoise || null;
 
-        // Wire FDC sound callbacks to the FDD sound synthesiser (if the host
+        // Wire FDC sound callbacks to the drive noise synthesiser (if the host
         // supplied one); otherwise they are no-ops.
         this.fdc.onSeekSound = (steps) => {
-            if (this.fddSound) this.fddSound.seek(steps, this.isFM77AV);
+            if (this.driveNoise) this.driveNoise.seek(steps, this.isFM77AV);
         };
         this.fdc.onHeadLoadSound = () => {
-            if (this.fddSound) this.fddSound.headLoad(this.isFM77AV);
+            if (this.driveNoise) this.driveNoise.headLoad(this.isFM77AV);
         };
         this.fdc.onDiskInsert = () => {
-            if (this.fddSound) this.fddSound.diskInsert(this.isFM77AV);
+            if (this.driveNoise) this.driveNoise.diskInsert(this.isFM77AV);
         };
         this.fdc.onMediaRemoved = () => {
-            if (this.fddSound) this.fddSound.diskEject(this.isFM77AV);
+            if (this.driveNoise) this.driveNoise.diskEject(this.isFM77AV);
         };
 
         // --- Memory arrays ---
@@ -305,7 +312,7 @@ export class FM7 {
         this.bootBasROM = new Uint8Array(BOOT_LOADER_BYTES);       // $FE00-$FFFF (BASIC boot)
         this.subROM     = new Uint8Array(SUB_ROM_SIZE);         // Sub CPU $D800-$FFFF
         this.cgROM      = new Uint8Array(0x2000);               // CG ROM (8KB, 4 banks x 2KB)
-        this.sharedRam  = new Uint8Array(SHARED_BYTES);   // power-on contents not given in the manuals: $00
+        this.sharedRam  = new Uint8Array(SHARED_BYTES);   // power-on contents: $00
 
         // --- FM77AV additional ROM arrays ---
         this.initiateROM = new Uint8Array(0x2000);    // Initiator ROM (up to 8KB)
@@ -376,13 +383,14 @@ export class FM7 {
         this._standInBootShown = false;  // no initiator ROM: stand-in boot map (see _bootAreaRom)
         this._activeSubMonitor  = MONITOR_OLD_SUB; // monitor started by the last $FD13 write
         this._characterGeneratorBank       = 0;       // CG ROM bank (0-3, bits 0-1 of $D430)
-        this._nmiMaskSub      = false;   // NMI mask for sub CPU (bit 7 of $D430)
+        this._subNmiBlocked  = false;   // sub CPU NMI held back (bit 7 of $D430)
         this._inVsyncPulse       = false;   // TRUE only during the VSYNC pulse — $FD12 bit 0
         this._fieldSegment    = 0;       // index into FIELD_SEGMENTS (0 = display)
-        this._verticalBlanking        = false;   // TRUE for the whole vertical blanking (before, during and after VSYNC, Hardware Manual 8.6.2) — $FD12 bit 1
+        this._verticalBlanking        = false;   // TRUE for the whole vertical blanking (before, during and after VSYNC) — $FD12 bit 1
         this._inHorizontalBlank       = false;   // TRUE=horizontal blanking active
         // Horizontal scan phase, in emulated microseconds since the start of
-        // the current scanline. It also times the FM-7 sub CPU hold.
+        // the current scanline. It also finds the blanking time the sub CPU
+        // gets on the FM-7 VRAM timing.
         this._scanPhaseUs      = 0;          // position within the current line
         this._scanTiming       = HSCAN_200;  // HSCAN_200 or HSCAN_400
         // Main CPU bus cycle lengths for the current mode.
@@ -390,6 +398,29 @@ export class FM7 {
         this.mainCPU.longCycleMap = LONG_BUS_CYCLE_MAP;
         // Master periods of sub direct access wait taken by the current instruction.
         this._subWaitTicks = 0;
+        // Debug session hook (see debug.js): null, or a function called with the
+        // main CPU before each of its passes. Returning true ends the run
+        // there, before the pass, and halts the machine (see `halted`).
+        // Set and cleared only between runs.
+        this.pcHook = null;
+        // While true, scheduler.runFor runs nothing and returns 0: the main
+        // and sub CPUs, the timers and the sound stay where they are. A host
+        // that calls runFor once per frame keeps calling it; only the time
+        // stops. Set by the host, or by a run that pcHook ended.
+        this.halted = false;
+        // Debug session hook for the sub CPU, the same as pcHook: called before
+        // each sub CPU pass. When it stops the run inside a main pass, the
+        // rest of that pass is made at the start of the next run.
+        this.subPcHook = null;
+        // Called with no arguments after a run that a hook ended (halted is
+        // already true then).
+        this.onHalt = null;
+        // Master ticks of the pass the sub CPU hook stopped, whose events
+        // have not advanced yet (0 for none).
+        this._owedPassTicks = 0;
+        // Watches of the main and sub CPU accesses (see setWatch), or null.
+        this._mainWatch = null;
+        this._subWatch = null;
         // Key encoder behind sub $D431 / $D432
         this._encoderReplies = [];        // bytes waiting to be read from $D431
         this._encoderCommand = [];        // bytes of the command being received
@@ -425,6 +456,7 @@ export class FM7 {
         this._dmaPriorityCtl = 0;                    // $14
         this._dmaInterruptCtl = 0;                   // $15 bits 3-0 (DIE0-3); bit 7 is computed
         this._dmaChainCtl    = 0;                    // $16
+        this._dmacPorts      = this._dmacPortMap();  // what $FD99 reaches, by register number
         this.dmaTransferSeen = false;                // UI: a DMA byte moved since the last poll (the UI clears it)
 
         // --- OPN (YM2203) / FM Sound Card ---
@@ -433,6 +465,7 @@ export class FM7 {
         this._opnCommand    = 0;    // command code last written to $FD15
         this._opnDataLatch  = 0;    // value last written to $FD16
         this._opnRegisterNo = 0;    // register number taken by command $03
+        this._soundBusCodes = this._soundBusCodeTable();
         this._ssgRegisters  = new Uint8Array(16); // registers $00-$0F as written
         // OPN I/O ports and the joystick connectors
         this.soundPorts = new SoundChipPorts();
@@ -486,6 +519,50 @@ export class FM7 {
     }
 
     // =========================================================================
+    // Watched memory (for a debugger)
+    // =========================================================================
+    // A watch makes every access of one CPU to the pages it marks go to the
+    // CPU's read / write handler, and the handler tells the watch about the
+    // access before it is made. Without a watch the handlers and the page
+    // tables are the ones above, and an access pays nothing for this.
+
+    /**
+     * Watch the accesses of a CPU, or stop watching them.
+     * @param {number} thread 1 for the main CPU, 2 for the sub CPU
+     * @param {{ pages: Uint8Array, onAccess: (addr: number, isWrite: boolean, value: number) => void }|null} watch
+     *   pages: 256 entries, non-zero for each page ($nn00-$nnFF) to watch.
+     *   onAccess is called for every access through the handler (also to
+     *   pages that are not marked), with the value written (0 for a read).
+     */
+    setWatch(thread, watch) {
+        const main = thread === 1;
+        const cpu = main ? this.mainCPU : this.subCPU;
+        const read = main ? (a) => this._mainRead(a) : (a) => this._subRead(a);
+        const write = main ? (a, v) => this._mainWrite(a, v) : (a, v) => this._subWrite(a, v);
+        if (watch) {
+            cpu.setReadMem((a) => { watch.onAccess(a, false, 0); return read(a); });
+            cpu.setWriteMem((a, v) => { watch.onAccess(a, true, v); write(a, v); });
+        } else {
+            cpu.setReadMem(read);
+            cpu.setWriteMem(write);
+        }
+        if (main) {
+            this._mainWatch = watch || null;
+            this._refreshMainPages();
+        } else {
+            this._subWatch = watch || null;
+            this._refreshSubPages();
+        }
+    }
+
+    _dropWatchedPages(cpu, pages) {
+        const rd = cpu.readPages, wr = cpu.writePages;
+        for (let p = 0; p < 256; p++) {
+            if (pages[p]) { rd[p] = null; wr[p] = null; }
+        }
+    }
+
+    // =========================================================================
     // Main CPU page tables (see CPU6809.readPages)
     // =========================================================================
     // A page goes straight to main RAM or to the BASIC ROM only while what
@@ -508,6 +585,11 @@ export class FM7 {
     /** Work out the main CPU page tables from the current memory map. */
     _refreshMainPages() {
         if (!this._mainPagesReady) return;
+        this._fillMainPages();
+        if (this._mainWatch) this._dropWatchedPages(this.mainCPU, this._mainWatch.pages);
+    }
+
+    _fillMainPages() {
         const rd = this.mainCPU.readPages, wr = this.mainCPU.writePages;
         rd.fill(null);
         wr.fill(null);
@@ -556,6 +638,11 @@ export class FM7 {
     /** Work out the sub CPU page tables from the current state. */
     _refreshSubPages() {
         if (!this._subPagesReady) return;
+        this._fillSubPages();
+        if (this._subWatch) this._dropWatchedPages(this.subCPU, this._subWatch.pages);
+    }
+
+    _fillSubPages() {
         const rd = this.subCPU.readPages, wr = this.subCPU.writePages;
         rd.fill(null);
         wr.fill(null);
@@ -634,8 +721,7 @@ export class FM7 {
             return this.mainRAM[addr];
         }
 
-        // Shared RAM. Software touches it only while the
-        // sub CPU is stopped; outside HALT it is accessible as well.
+        // Shared RAM: accessible at any time.
         if (addr <= SHARED_MAIN_LAST && addr >= SHARED_MAIN_FIRST) {
             return this.sharedRam[addr - SHARED_MAIN_FIRST];
         }
@@ -671,9 +757,107 @@ export class FM7 {
         // ROM enabled but not loaded: warn once and show the RAM underneath.
         if (!this._fbasicWarnShown) {
             this._fbasicWarnShown = true;
-            console.error(`[ROM MISSING] BASIC ROM read at $${addr.toString(16).toUpperCase()} but not loaded! PC=$${(this.mainCPU.pc||0).toString(16).toUpperCase()}`);
+            console.error('[ROM MISSING] BASIC ROM is not loaded');
         }
         return this.mainRAM[addr];
+    }
+
+    // =========================================================================
+    // Main CPU memory for a debugger: no side effects
+    // =========================================================================
+
+    /**
+     * True when the main CPU address `addr` may be read or written for a
+     * debugger without side effects: not the I/O page ($FD00-$FDFF), and
+     * not the sub CPU space seen through the MMR or the window (its VRAM
+     * and I/O act on an access).
+     */
+    _debugAccessible(addr) {
+        return (addr >> 8) !== (IO_BASE >> 8);
+    }
+
+    /** Sub CPU address the main CPU address `addr` reaches through the MMR or the window, or -1. */
+    _debugSubAddress(addr) {
+        if (addr >= RESIDENT_FIRST) return -1;
+        const phys = this._translateMainAddress(addr);
+        return (phys >= 0 && (phys >>> 16) === 1) ? (phys & 0xFFFF) : -1;
+    }
+
+    /**
+     * Read the byte the main CPU sees at `addr` now, without side effects
+     * and without taking time. The I/O page reads $FF. The sub CPU space
+     * seen through the MMR or the window is read with peekSub while the
+     * sub CPU is held by HALT, and reads $FF otherwise.
+     * @param {number} addr
+     * @returns {number}
+     */
+    peekMain(addr) {
+        addr &= 0xFFFF;
+        if (!this._debugAccessible(addr)) return 0xFF;
+        const sub = this._debugSubAddress(addr);
+        if (sub >= 0) return this._subStoppedByHalt ? this.peekSub(sub) : 0xFF;
+        // a missing BASIC ROM is not reported for a debugger's read
+        const shown = this._fbasicWarnShown;
+        this._fbasicWarnShown = true;
+        const v = this._mainRead(addr);
+        this._fbasicWarnShown = shown;
+        return v;
+    }
+
+    /**
+     * Write `val` at main CPU address `addr` as the main CPU would (a ROM
+     * or a write-protected area keeps its bytes), without side effects and
+     * without taking time. Nothing is written to the I/O page, nor to the
+     * sub CPU space unless the sub CPU is held by HALT (then pokeSub).
+     * @param {number} addr
+     * @param {number} val
+     */
+    pokeMain(addr, val) {
+        addr &= 0xFFFF;
+        if (!this._debugAccessible(addr)) return;
+        const sub = this._debugSubAddress(addr);
+        if (sub >= 0) {
+            if (this._subStoppedByHalt) this.pokeSub(sub, val);
+            return;
+        }
+        const warn = this.onHwWarn, bootRamWarned = this._bootRamWarned;
+        this.onHwWarn = null;
+        try {
+            this._mainWrite(addr, val);
+        } finally {
+            this.onHwWarn = warn;
+            this._bootRamWarned = bootRamWarned;
+        }
+    }
+
+    /**
+     * Read the byte the sub CPU sees at `addr` now, without side effects and
+     * without taking time. The sub I/O area ($D400-$D4FF) reads $FF; VRAM is
+     * read without running the logic operation.
+     * @param {number} addr
+     * @returns {number}
+     */
+    peekSub(addr) {
+        addr &= 0xFFFF;
+        if (addr >= SUB_DEBUG_IO_FIRST && addr <= SUB_DEBUG_IO_LAST) return 0xFF;
+        if (addr < SUB_VRAM_END) return this.display.peekVram(addr);
+        if (addr <= SHARED_SUB_LAST && addr >= SHARED_SUB_FIRST) return this.sharedRam[addr - SHARED_SUB_FIRST];
+        return this._subRead(addr);
+    }
+
+    /**
+     * Write `val` at sub CPU address `addr` as the sub CPU would, without
+     * side effects and without taking time. Nothing is written to the sub
+     * I/O area ($D400-$D4FF); VRAM is written without the logic operation.
+     * @param {number} addr
+     * @param {number} val
+     */
+    pokeSub(addr, val) {
+        addr &= 0xFFFF;
+        val &= 0xFF;
+        if (addr >= SUB_DEBUG_IO_FIRST && addr <= SUB_DEBUG_IO_LAST) return;
+        if (addr < SUB_VRAM_END) { this.display.pokeVram(addr, val); return; }
+        this._subWrite(addr, val);
     }
 
     // =========================================================================
@@ -697,7 +881,7 @@ export class FM7 {
             if (this.hwStrict.romWriteProtect &&
                 addr >= 0x8000 && this._upperSpaceIsRom && this.romLoaded.fbasic) {
                 this._hwWarn('rom-overlay-write',
-                    `write $${val.toString(16).padStart(2,'0')} to $${addr.toString(16).toUpperCase()} ignored: BASIC ROM overlay active (set $FD0F to map RAM first)`);
+                    'write ignored: the BASIC ROM is mapped here');
                 return;
             }
             this.mainRAM[addr] = val;
@@ -731,7 +915,7 @@ export class FM7 {
                 if (!this._bootRamWarned) {
                     this._bootRamWarned = true;
                     this._hwWarn('bootram-write-protect',
-                        `write $${val.toString(16).padStart(2,'0')} to $${addr.toString(16).toUpperCase()} ignored: boot RAM is write-protected ($FD93 bit0 = 0) PC=$${(this.mainCPU.pc || 0).toString(16).toUpperCase()}`);
+                        'write ignored: the boot RAM is write-protected');
                 }
                 return;
             }
@@ -770,28 +954,12 @@ export class FM7 {
             return val;
         }
 
-        // IRQ status ($FD03 read) - active low: 0 = pending; reading clears the timer flag only
-        // bit 0: keyboard, bit 1: printer, bit 2: timer, bit 3: extended (OPN/FDC)
-        //
-        // bit 0 reads 0 while the key interrupt is enabled ($FD02 bit 0 = 1)
-        // and a request is pending; 1 while it is disabled (including just
-        // after a reset).
+        // IRQ flags ($FD03 read): 0 = pending. Reading takes back the timer
+        // request and nothing else.
         if (addr === FD03_IRQ_STATUS) {
-            let status = 0xFF;
-            if (this.keyboard.mainInterrupt) status &= ~0x01;
-            if (this._timerIRQ) {
-                status &= ~0x04;
-                this._timerIRQ = false;
-            }
-            // bit 3: extended interrupt (OPN timer A/B overflow).
-            // $FD03 read only reports the flag; it does NOT clear the OPN
-            // IRQ source. The IRQ is acknowledged by writing OPN register
-            // $27 with reset bits ($10/$20), which clears the OPN status —
-            // our auto-clear path then drops the latch.
-            if (this._opnIrqLatch) status &= ~0x08;
-            if (this._fdcIrqActive()) status &= ~0x08;
-            if (this._mouseCardIrq()) status &= ~0x08;
-            return status;
+            const pending = this._pendingIrqFlags();
+            this._timerIRQ = false;
+            return ~pending & 0xFF;
         }
 
         // $FD17 (read): bit 3 OPN interrupt, bit 2 mouse interrupt, 0 = pending
@@ -823,15 +991,15 @@ export class FM7 {
             return 0xFF;
         }
 
-        // $FD10 is write only (HW manual 4.1); it reads $FF.
+        // $FD10 is write only; it reads $FF.
         if (addr === IO_INITIATOR_DISABLE && this.isFM77AV) return 0xFF;
 
-        // $FD12 read (HW manual 4.1, 8.6.6)
+        // $FD12 read
         if (addr === FD12_SUB_MONITOR && this.isFM77AV) {
             return this._composeStatus(FD12_READ_BITS, FD12_UNUSED_BITS);
         }
 
-        // $FD30-$FD34: analog palette, all write only (HW manual 4.1)
+        // $FD30-$FD34: analog palette, all write only
         if (addr >= 0xFD30 && addr <= 0xFD34) return 0xFF;
 
         // FDC registers ($FD18-$FD1F)
@@ -844,20 +1012,18 @@ export class FM7 {
             return 0xFF;
         }
 
-        // $FD38-$FD3F: TTL palette. FM77AV and later read
-        // back bits 2-0 (G, R, B) with bits 7-3 as 1; FM-7 / FM-77 write-only.
+        // $FD38-$FD3F: TTL palette. Write-only on the FM-7 / FM-77.
         if (addr >= 0xFD38 && addr <= 0xFD3F) {
-            if (!this.isFM77AV) return 0xFF;
-            return 0xF8 | (this.display.readPalette(addr - 0xFD38) & 0x07);
+            return this.isFM77AV ? this.display.readPaletteBus(addr & 7) : 0xFF;
         }
 
-        // $FD0D / $FD0E: PSG (HW manual 4.1 "PSG, shared with the FM sound").
+        // $FD0D / $FD0E: PSG.
         // The FM-7 has its own PSG; on the FM77AV family the OPN answers.
         if (addr === 0xFD0D) {
             return this.isFM77AV ? 0xFF : this.psg.readCmd();
         }
         if (addr === 0xFD0E) {
-            return this.isFM77AV ? this._opnDataRead() : this.psg.readData();
+            return this.isFM77AV ? this._soundBusValue() : this.psg.readData();
         }
 
         // $FD15: OPN command register — write-only (BDIR/BC1/status-read mode).
@@ -870,7 +1036,7 @@ export class FM7 {
         // $FD16: OPN data read
         if (addr === 0xFD16) {
             if (!this._fmCardEnabled) return 0xFF;
-            return this._opnDataRead();
+            return this._soundBusValue();
         }
 
         // $FD06/$FD07: RS-232C USART (not installed: return open bus)
@@ -910,7 +1076,7 @@ export class FM7 {
 
         // DMA controller: $FD98 reads $FF
         if (this.hasDmaController && addr === 0xFD98) return 0xFF;
-        if (this.hasDmaController && addr === 0xFD99) return this._readDmaRegister(this._dmaRegisterNumber);
+        if (this.hasDmaController && addr === 0xFD99) return this._dmacSelectedPort().get();
 
         // Memory management registers
         if (this.hasMMR && addr >= MAP_REGISTER_FIRST && addr <= 0xFD9F) {
@@ -939,13 +1105,13 @@ export class FM7 {
         // EX-series registers and absent devices ($FD24-$FD2F, $FD94-$FD9D)
         if (this.ex.claimsMainIO(addr, this.hasDmaController)) {
             this.ex.writeMainIO(addr, val);
+            // $FD95 bit 3 (high-speed MMR) changes the bus cycle lengths.
+            if (addr === 0xFD95) this._selectBusCycleLengths();
             return;
         }
 
         // $FD00 write: cassette motor control + write data
         // bit 0: cassette write data (recording), bit 1: motor (1=ON)
-        // (FM-7 User's Manual, system specification 1.12.5: output port bit 1
-        // drives the motor relay through an inverter; 1 turns the relay ON)
         if (addr === FD00_KEY_STATUS) {
             this.cmt.setControl(val);
             return;
@@ -983,9 +1149,9 @@ export class FM7 {
         // $FD0B / $FD0C writes on the AV40 family: accepted and ignored.
         if ((addr === 0xFD0B || addr === 0xFD0C) && this.isAV40) return;
 
-        // $FD10 write (HW manual 4.1; BIOS manual appendix 1): bit 1 is the
+        // $FD10 write: bit 1 is the
         // initiator ROM disable, 0 = enabled, 1 = disabled. Nothing else
-        // changes here; the ROM sets the sub monitor itself through $FD13.
+        // changes here.
         if (addr === IO_INITIATOR_DISABLE && this.isFM77AV) {
             this._initiatorActive = (val & 0x02) === 0 && this.romLoaded.initiate;
             return;
@@ -1005,7 +1171,7 @@ export class FM7 {
         }
 
         // $FD30-$FD34: analog palette number, then the Blue / Red / Green
-        // level registers of that entry (HW manual 4.1)
+        // level registers of that entry
         if (this.isFM77AV) {
             if (addr === FD30_APAL_ADDR_HI) {
                 this._analogPaletteAddr = (this._analogPaletteAddr & 0x0FF) | ((val & 0x0F) << 8);
@@ -1065,11 +1231,11 @@ export class FM7 {
             return;
         }
 
-        // $FD0D / $FD0E: PSG (HW manual 4.1). $FD0D takes BDIR / BC1 in
+        // $FD0D / $FD0E: PSG. $FD0D takes BDIR / BC1 in
         // bits 1-0; on the FM77AV family they drive the OPN.
         if (addr === 0xFD0D) {
             if (this.isFM77AV) {
-                this._opnCommandWrite(val & 0x03);
+                this._soundBusStrobe(val & 0x03);
             } else {
                 this.psg.writeCmd(val);
             }
@@ -1077,7 +1243,7 @@ export class FM7 {
         }
         if (addr === 0xFD0E) {
             if (this.isFM77AV) {
-                this._opnDataWrite(val);
+                this._opnDataLatch = val & 0xFF;
             } else {
                 this.psg.writeData(val);
             }
@@ -1086,13 +1252,13 @@ export class FM7 {
 
         // $FD15: OPN command register — 4-bit enum decode (FM card / FM77AV).
         if (addr === 0xFD15) {
-            if (this._fmCardEnabled) this._opnCommandWrite(val);
+            if (this._fmCardEnabled) this._soundBusStrobe(val);
             return;
         }
 
         // $FD16: OPN data bus write
         if (addr === 0xFD16) {
-            if (this._fmCardEnabled) this._opnDataWrite(val);
+            if (this._fmCardEnabled) this._opnDataLatch = val & 0xFF;
             return;
         }
 
@@ -1146,7 +1312,7 @@ export class FM7 {
 
         // DMA controller
         if (this.hasDmaController && addr === 0xFD98) { this._dmaRegisterNumber = val; return; }
-        if (this.hasDmaController && addr === 0xFD99) { this._writeDmaRegister(this._dmaRegisterNumber, val); return; }
+        if (this.hasDmaController && addr === 0xFD99) { this._dmacSelectedPort().put(val); return; }
 
         // Memory management registers
         if (this.hasMMR && addr >= MAP_REGISTER_FIRST && addr <= 0xFD9F) {
@@ -1166,7 +1332,7 @@ export class FM7 {
     }
 
     // =========================================================================
-    // Memory management: MMR and window (HW manual 8.1)
+    // Memory management: MMR and window
     // =========================================================================
 
     /** Bits an MMR register holds: 6 (A17-A12), or 8 on machines with the extended MMR. */
@@ -1196,7 +1362,7 @@ export class FM7 {
     }
 
     /**
-     * Sub direct access wait (FM77AV Hardware Manual 7.1 (2) (3)): the bus cycle of this access is
+     * Sub direct access wait: the bus cycle of this access is
      * stretched until it ends on a sub E edge. The access lies in
      * $0000-$FBFF (a short bus cycle); it starts after the bus cycles the
      * instruction has already made, at their own lengths, and after the
@@ -1265,7 +1431,7 @@ export class FM7 {
     /** Read $FD80-$FD9F. $FD94-$FD9D belong to the EX-series unit and the DMA controller. */
     _readMemoryManagement(addr) {
         if (addr <= MAP_REGISTER_LAST) {
-            // the bits a register does not have read 1 (the empty cells of HW manual 4.1)
+            // the bits a register does not have read 1
             return this._mapRegisters[this._mapRegisterIndex(addr - MAP_REGISTER_FIRST)] | (~this._mapRegisterBits() & 0xFF);
         }
         switch (addr) {
@@ -1280,7 +1446,7 @@ export class FM7 {
     /** Write $FD80-$FD9F (see _readMemoryManagement). */
     _writeMemoryManagement(addr, val) {
         if (addr <= MAP_REGISTER_LAST) {
-            // HW manual 4.1: A17-A12 in bits 5-0; the extended MMR keeps all 8 bits.
+            // A17-A12 in bits 5-0; the extended MMR keeps all 8 bits.
             this._mapRegisters[this._mapRegisterIndex(addr - MAP_REGISTER_FIRST)] = val & this._mapRegisterBits();
             return;
         }
@@ -1389,7 +1555,7 @@ export class FM7 {
             return result.value;
         }
 
-        // FM77AV: $D410-$D43F registers (HW manual 4.2). The rest of the I/O
+        // FM77AV: $D410-$D43F registers. The rest of the I/O
         // area up to $D4FF has no register and reads $FF.
         if (this.isFM77AV && addr >= 0xD410 && addr < 0xD500) {
             if (addr >= 0xD440) return 0xFF;
@@ -1526,7 +1692,7 @@ export class FM7 {
             return;
         }
 
-        // FM77AV: $D410-$D43F registers (HW manual 4.2); $D440-$D4FF ignored.
+        // FM77AV: $D410-$D43F registers; $D440-$D4FF ignored.
         if (this.isFM77AV && addr >= 0xD410 && addr < 0xD500) {
             if (addr >= 0xD440) return;
             // $D410-$D42B: ALU + line drawing registers
@@ -1630,7 +1796,7 @@ export class FM7 {
         // Sub CPU NMI timer (50 Hz = 20ms, independent of VSync)
         this.scheduler.addEvent('subnmi', SUB_NMI_PERIOD_US, () => {
             // While the NMI mask ($D430 bit 7) is set, the 20ms NMI is not delivered.
-            if (this.isFM77AV && this._nmiMaskSub) return;
+            if (this.isFM77AV && this._subNmiBlocked) return;
             this._deliverSubNmi();
         });
     }
@@ -1649,7 +1815,15 @@ export class FM7 {
      * @returns {number} master ticks actually run
      */
     _runFor(microseconds) {
+        if (this.halted) return 0;
         const sched = this.scheduler;
+        const subHook = this.subPcHook;
+        if (this._owedPassTicks !== 0) {
+            // A sub CPU hook stopped the last run inside a pass: finish it first.
+            if (this._runSubCPU(subHook)) return this._hookHalted(0);
+            sched.advanceEvents(this._owedPassTicks);
+            this._owedPassTicks = 0;
+        }
         const start = sched.elapsedTicks;
         const goal = start + usToTicks(microseconds);
         // Every pass moves the clock by at least one short bus cycle, so the
@@ -1659,15 +1833,17 @@ export class FM7 {
         const hasDma = this.hasDmaController;
         const cpu = this.mainCPU;
         const display = this.display, fdc = this.fdc, psg = this.psg, opn = this.opn, cmt = this.cmt;
+        const pcHook = this.pcHook;
+        let hookStopped = false;
         while (sched.elapsedTicks < goal && --guard > 0) {
             const bus = this._busTicks;
-            // Who drives the main bus in this pass (MC6844 data sheet, Transfer
-            // Modes, HALT burst): a
+            // Who drives the main bus in this pass: a
             // mode 3 channel that has begun its block keeps the main CPU
             // halted, so the pass is one idle E clock; otherwise the main
             // CPU runs one instruction.
             let cpuCycles = 1, ticks = bus.long;
             if (!(hasDma && this._dmacKeepsCpuHalted())) {
+                if (pcHook !== null && pcHook(cpu)) { hookStopped = true; break; }
                 cpuCycles = cpu.exec();
                 ticks = cpu.instructionTicks(bus.short, bus.long);
                 if (this._subWaitTicks !== 0) { ticks += this._subWaitTicks; this._subWaitTicks = 0; }
@@ -1698,12 +1874,24 @@ export class FM7 {
 
             this._grantSubCycles(passTicks);
             if (this._haltWritten) this._takeHaltRequest();
-            this._runSubCPU();
+            if (this._runSubCPU(subHook)) {
+                this._owedPassTicks = passTicks;
+                hookStopped = true;
+                break;
+            }
             sched.advanceEvents(passTicks);
         }
         // The FM samples of this run are made now (see OPN.step).
         opn.renderPendingSamples();
+        if (hookStopped) return this._hookHalted(sched.elapsedTicks - start);
         return sched.elapsedTicks - start;
+    }
+
+    /** A hook ended the run: halt and tell the host. Returns `ticks`. */
+    _hookHalted(ticks) {
+        this.halted = true;
+        if (this.onHalt) this.onHalt();
+        return ticks;
     }
 
     /** Advance every device that counts time by `ticks` master periods. */
@@ -1747,41 +1935,39 @@ export class FM7 {
     }
 
     /**
-     * Whether the sub CPU runs only in the horizontal blanking now (HW manual
-     * 8.4.2 (1)): in the FM-7 access mode (an FM-7, or an FM-77 with $D405
-     * bit 0 = 0; the FM77AV family always uses the fast mode), during the
-     * display period, while the sub CPU has VRAM access opened ($D409).
+     * The part of the next `us` microseconds the sub CPU can use. All of it,
+     * except on the FM-7 VRAM timing (an FM-7, or an FM-77 with $D405 bit 0 =
+     * 0) while VRAM is open to the sub CPU ($D409) in a displayed line:
+     * then VRAM access is limited to the horizontal blanking.
      */
-    _subLimitedToBlanking() {
-        const fm7AccessMode = !this.isFM77AV && !this.display.subVramFastAccess;
-        const displayPeriod = !this._verticalBlanking;
-        return fm7AccessMode && displayPeriod && this.display.vramAccessEnabled;
+    _subUsableUs(us) {
+        if (this.isFM77AV || this.display.subVramFastAccess) return us;
+        if (!this.display.vramAccessEnabled || this._verticalBlanking) return us;
+        return this._blankingUsAhead(us);
     }
 
-    /**
-     * Give the sub CPU the cycles of `ticks` master periods and move the beam
-     * on. While the CRT holds the sub CPU, only the horizontal blanking at
-     * the start of each line counts (the first 23.8 us of each 63.5 us
-     * line; HW manual 8.6.1).
-     */
+    /** How much of the next `us` microseconds falls in the blanking that opens each line. */
+    _blankingUsAhead(us) {
+        const t = this._scanTiming;
+        let blanking = 0;
+        let phase = this._scanPhaseUs, left = us;
+        while (left > 0) {
+            const edge = phase < t.blankUs ? t.blankUs : t.periodUs;
+            const step = Math.min(left, edge - phase);
+            if (phase < t.blankUs) blanking += step;
+            phase += step;
+            left -= step;
+            if (phase >= t.periodUs) phase -= t.periodUs;
+        }
+        return blanking;
+    }
+
+    /** Give the sub CPU its cycles out of `ticks` master periods and move the beam on. */
     _grantSubCycles(ticks) {
         const us = ticks / TICKS_PER_US;
-        let freeUs = us;
-        if (this._subLimitedToBlanking()) {
-            const t = this._scanTiming;
-            freeUs = 0;
-            let phase = this._scanPhaseUs, left = us;
-            while (left > 0) {
-                const edge = phase < t.blankUs ? t.blankUs : t.periodUs;
-                const step = Math.min(left, edge - phase);
-                if (phase < t.blankUs) freeUs += step;
-                phase += step;
-                left -= step;
-                if (phase >= t.periodUs) phase -= t.periodUs;
-            }
-        }
+        const usable = this._subUsableUs(us);
         this._advanceHorizontalScan(us);
-        this.scheduler.grantSubCycles(freeUs * TICKS_PER_US * SUB_CYCLES_PER_TICK);
+        this.scheduler.grantSubCycles(usable * TICKS_PER_US * SUB_CYCLES_PER_TICK);
     }
 
     /**
@@ -1790,18 +1976,20 @@ export class FM7 {
      * CANCEL request is a level on the sub IRQ input: it is driven before
      * every sub instruction, so a taken IRQ is asked again while it stays.
      */
-    _runSubCPU() {
+    _runSubCPU(hook) {
         const sched = this.scheduler;
         const sub = this.subCPU;
-        if (!sub) return;
+        if (!sub) return false;
         for (let guard = 999; guard > 0 && !sched.subHalted && sched.subCyclesPending > 0; guard--) {
             if (this._cancelLatch) sub.irqRequest = true;
+            if (hook !== null && hook(sub)) return true;
             const cycles = sub.exec();
             sched.subCyclesPending -= cycles > 0 ? cycles : 2;
         }
+        return false;
     }
 
-    /** Clock the mouse card's timer: external clock inputs (C1-C3) 19.2 kHz (FM-Techknow fig. 5-17), E = main CPU cycles. */
+    /** Clock the mouse card's timer: external clock inputs (C1-C3) 19.2 kHz, E = main CPU cycles. */
     _advanceMouseCard(ticks, cpuCycles) {
         if (this.mouseKind === 'bus') this.mouseCard.timer.advance(ticks, cpuCycles, MASTER_CLOCK_HZ);
     }
@@ -1850,47 +2038,56 @@ export class FM7 {
     // ==========================================================================
     // DMA controller HD6844
     // ==========================================================================
-    // $FD98 selects an internal register ($00-$16, numbering of the MC6844
-    // data sheet), $FD99 reads / writes it; the number does not advance.
+    // $FD98 selects an internal register ($00-$16), $FD99 reads / writes it; the number does not advance.
 
-    /** $FD99 read. Unused register numbers read $FF. */
-    _readDmaRegister(num) {
-        if (num < 0x10) {
-            const ch = num >> 2;
-            const word = (num & 0x02) ? this._dmaByteCount[ch] : this._dmaAddress[ch];
-            return (num & 0x01) ? (word & 0xFF) : (word >> 8);
-        }
-        if (num <= 0x13) {
-            // Channel control: reading clears DEND of that channel (and with
-            // it the DEND IRQ flag it caused).
-            const ch = num - 0x10;
-            const v = this._dmaChannelCtl[ch];
-            this._dmaChannelCtl[ch] = v & ~DMA_CH_DEND;
-            return v;
-        }
-        if (num === 0x14) return this._dmaPriorityCtl;
-        if (num === 0x15) return this._dmaInterruptCtl | (this._dmaIrqActive() ? 0x80 : 0);
-        if (num === 0x16) return this._dmaChainCtl;
-        return 0xFF;
+    /** The port $FD99 reaches now; a number without a register reaches DMAC_NO_PORT. */
+    _dmacSelectedPort() {
+        return this._dmacPorts[this._dmaRegisterNumber] ?? DMAC_NO_PORT;
     }
 
-    /** $FD99 write. Read-only bits ignore writes. */
-    _writeDmaRegister(num, val) {
-        if (num < 0x10) {
-            const ch = num >> 2;
-            const regs = (num & 0x02) ? this._dmaByteCount : this._dmaAddress;
-            regs[ch] = (num & 0x01) ? ((regs[ch] & 0xFF00) | val) : ((regs[ch] & 0x00FF) | (val << 8));
-            return;
+    /**
+     * The registers as a table of ports, in register number order: each
+     * channel's address and byte count (high byte first), the four channel
+     * controls, then the priority, interrupt and chain controls. Read-only
+     * bits ignore writes.
+     */
+    _dmacPortMap() {
+        const ports = [];
+        for (let ch = 0; ch < 4; ch++) {
+            for (const counter of [this._dmaAddress, this._dmaByteCount]) {
+                ports.push(dmacCounterPort(counter, ch, 8), dmacCounterPort(counter, ch, 0));
+            }
         }
-        if (num <= 0x13) {
-            const ch = num - 0x10;
-            const keep = this._dmaChannelCtl[ch] & ~DMA_WRITABLE_CHANNEL_CTL;
-            this._dmaChannelCtl[ch] = keep | (val & DMA_WRITABLE_CHANNEL_CTL);
-            return;
+        const controls = this._dmaChannelCtl;
+        for (let ch = 0; ch < 4; ch++) {
+            ports.push({
+                // Reading clears DEND of that channel (and with it the DEND
+                // IRQ flag it caused).
+                get: () => {
+                    const shown = controls[ch];
+                    controls[ch] = shown & ~DMA_CH_DEND;
+                    return shown;
+                },
+                put: (val) => {
+                    controls[ch] = (controls[ch] & ~DMA_WRITABLE_CHANNEL_CTL) | (val & DMA_WRITABLE_CHANNEL_CTL);
+                },
+            });
         }
-        if (num === 0x14) this._dmaPriorityCtl = val & DMA_WRITABLE_PRIORITY_CTL;
-        else if (num === 0x15) this._dmaInterruptCtl = val & DMA_WRITABLE_INTERRUPT_CTL;
-        else if (num === 0x16) this._dmaChainCtl = val & DMA_WRITABLE_CHAIN_CTL;
+        ports.push(
+            {
+                get: () => this._dmaPriorityCtl,
+                put: (val) => { this._dmaPriorityCtl = val & DMA_WRITABLE_PRIORITY_CTL; },
+            },
+            {
+                get: () => this._dmaInterruptCtl | (this._dmaIrqActive() ? 0x80 : 0),
+                put: (val) => { this._dmaInterruptCtl = val & DMA_WRITABLE_INTERRUPT_CTL; },
+            },
+            {
+                get: () => this._dmaChainCtl,
+                put: (val) => { this._dmaChainCtl = val & DMA_WRITABLE_CHAIN_CTL; },
+            },
+        );
+        return ports;
     }
 
     /** DEND IRQ: a channel with DEND whose DIE bit is set. */
@@ -1944,8 +2141,7 @@ export class FM7 {
      * cycle while a mode 3 channel holds the main CPU).
      * Returns the main CPU cycles lost in the HALT steal mode; a mode 3 channel
      * steals nothing here because the main CPU is not running at all.
-     * The TSC modes never transfer: the machine's wiring has no TSC clock
-     * control, so the bus is never granted to the controller that way.
+     * The TSC modes do not transfer here.
      */
     _dmacServeRequests() {
         let stolen = 0;
@@ -1998,20 +2194,31 @@ export class FM7 {
         this._dmaByteCount[ch] = this._dmaByteCount[3];
     }
 
-    /**
-     * DMAC reset by the main reset (MC6844 data sheet, Hardware Initialization):
-     * every register except the address and byte count registers becomes 0.
-     */
-    _resetDmaController() {
-        this._dmaChannelCtl.fill(0);
-        this._dmaPriorityCtl = 0;
-        this._dmaInterruptCtl = 0;
-        this._dmaChainCtl = 0;
+    /** The main reset zeroes everything in the DMAC but the address and byte count registers. */
+    _clearDmacControls() {
         this._dmaRegisterNumber = 0;
+        this._dmaChainCtl = 0;
+        this._dmaInterruptCtl = 0;
+        this._dmaPriorityCtl = 0;
+        this._dmaChannelCtl.fill(0);
     }
 
     _fdcIrqActive() {
         return !!(this.fdc.irqFlag && (this._irqMaskReg & 0x10));
+    }
+
+    /**
+     * The $FD03 flags that are pending, as 1 bits: bit 0 KEY IN, bit 2 TIMER,
+     * bit 3 EXT IRQ (bit 1, LINE PRINTER, is never pending).
+     * KEY IN is on while the key interrupt is enabled ($FD02 bit 0 = 1) and a
+     * request is waiting. The OPN request stays until OPN register $27 resets
+     * it ($10 / $20), so a $FD03 read leaves it alone.
+     */
+    _pendingIrqFlags() {
+        const external = this._opnIrqLatch || this._fdcIrqActive() || this._mouseCardIrq();
+        return (this.keyboard.mainInterrupt ? 0x01 : 0)
+             | (this._timerIRQ ? 0x04 : 0)
+             | (external ? 0x08 : 0);
     }
 
     /** Check all IRQ/FIRQ sources and assert on CPUs */
@@ -2070,8 +2277,8 @@ export class FM7 {
 
     /**
      * $FD04 read. Bit 0 = ATTENTION, bit 1 = BREAK (0 = active),
-     * bit 7 = the same BUSY line as $FD05 bit 7, bits 6-2 read 1
-     * (HW manual 4.1). The read clears ATTENTION and drops the
+     * bit 7 = the same BUSY line as $FD05 bit 7, bits 6-2 read 1.
+     * The read clears ATTENTION and drops the
      * FIRQ it drives (a held BREAK keeps its own request).
      */
     _readAttentionStatus() {
@@ -2145,7 +2352,7 @@ export class FM7 {
      * After a main instruction that wrote $FD05, before the sub CPU runs
      * again: the sub CPU runs only between main instructions, so it is at an
      * instruction boundary here (an interrupt entry counts as one). It stops
-     * there, or resumes where it stopped (MC6809 data sheet, HALT).
+     * there, or resumes where it stopped.
      */
     _takeHaltRequest() {
         this._haltWritten = false;
@@ -2156,8 +2363,7 @@ export class FM7 {
 
     /**
      * True when a HALT has been taken and the sub CPU has not read $D40A
-     * since: $FD05 shows BUSY then (F-BASIC Kaiseki Manual, Phase III: the
-     * hardware raises BUSY when the sub CPU takes a HALT).
+     * since: $FD05 shows BUSY then.
      */
     _haltNotYetAnswered() {
         return this._haltTakenSerial > this._readySerial;
@@ -2189,7 +2395,7 @@ export class FM7 {
     }
 
     /**
-     * $FD13 write. HW manual 8.6.5: every write resets the sub CPU and starts
+     * $FD13 write: every write resets the sub CPU and starts
      * the monitor chosen by bits 1-0. On the EX series bit 2 starts the
      * program in the extended sub RAM instead.
      */
@@ -2200,17 +2406,16 @@ export class FM7 {
     }
 
     /**
-     * Sub system reset by $FD13 (HW manual 8.6.3 calls it a reset of the sub
-     * system). The sub I/O registers with a reset row in HW manual 4.2 take
-     * that value; the $D430 RESET status becomes 1. Main
+     * Sub system reset by $FD13. The sub I/O registers that have a reset
+     * value take it; the $D430 RESET status becomes 1. Main
      * side registers and all memories keep their contents. A HALT request
-     * still latched keeps the reset CPU stopped (MC6809 data sheet, HALT).
+     * still latched keeps the reset CPU stopped.
      */
     _restartSubSystem() {
         this.display.initForSubReset();   // $D408, $D409, $D40D, $D40E/$D40F, $D430 DB/AB/OA
         this._busyToMain = true;          // $D40A: BUSY
         this._haltTakenSerial = this._readySerial = this._ifaceSerial = 0;
-        this._nmiMaskSub = false;         // $D430 bit 7
+        this._subNmiBlocked = false;     // $D430 bit 7
         this._characterGeneratorBank = 0; // $D430 bits 1-0
         this._subResetStatus = true;      // $D430 bit 0 (read)
         this._cancelLatch = false;
@@ -2574,11 +2779,13 @@ export class FM7 {
     /**
      * Pick the main CPU bus cycle lengths: the MMR or
      * text window in use selects 625 / 875 ns, otherwise 500 / 750 ns.
-     * $FD95 bit 3 (high-speed mode) does not change them.
+     * The high-speed MMR ($FD95 bit 3, only on the machines that have
+     * $FD95) keeps 500 / 750 ns with the MMR or window on.
      */
     _selectBusCycleLengths() {
         const mapped = this.hasMMR && (this._mappingOn || this._windowOn);
-        this._busTicks = mapped ? BUS_TICKS_MMR_MODE : BUS_TICKS_FM7_MODE;
+        const slowed = mapped && !this.ex.highSpeedBit;
+        this._busTicks = slowed ? BUS_TICKS_MMR_MODE : BUS_TICKS_FM7_MODE;
     }
 
     /**
@@ -2624,7 +2831,7 @@ export class FM7 {
     // ---- Capability flags (machine → feature mapping in one place) ----
 
     /**
-     * MMR and window (HW manual 8.1) present: FM-77 and every later machine.
+     * MMR and window present: FM-77 and every later machine.
      *
      * The FM-7 has neither.  Everything the FM-77 shares with the FM77AV
      * family — the $FD80-$FD93 register file, address translation, and the
@@ -2697,41 +2904,44 @@ export class FM7 {
     // =========================================================================
 
     /**
-     * $FD15 write: the low 4 bits are the command, carried out
-     * when it is written.
+     * The $FD15 codes that do something. `run` happens as the code is
+     * written; `value` is what $FD16 reads while the code stands. Any other
+     * code leaves $FD16 reading $FF.
      */
-    _opnCommandWrite(val) {
-        const cmd = val & 0x0F;
-        this._opnCommand = cmd;
-        if (cmd === 0x03) {
-            this._opnRegisterNo = this._opnDataLatch;
-            this.opn.selectAddress(this._opnRegisterNo);
-        } else if (cmd === 0x02) {
-            this._opnRegisterWrite(this._opnRegisterNo, this._opnDataLatch);
-        }
+    _soundBusCodeTable() {
+        return {
+            0x01: { value: () => this._ssgRegisterRead(this._opnRegisterNo) },
+            0x02: { run: () => this._soundBusStore() },
+            0x03: {
+                run: () => {
+                    this._opnRegisterNo = this._opnDataLatch;
+                    this.opn.selectAddress(this._opnRegisterNo);
+                },
+            },
+            0x04: { value: () => this.opn.readStatus() },
+            0x09: { value: () => this.soundPorts.readPortA() },
+        };
     }
 
-    /** Hand a register write to the OPN and to the I/O port model. */
-    _opnRegisterWrite(reg, val) {
-        this.opn.writeReg(reg, val);
+    /** $FD15 write: the low 4 bits are the code, taken at once. */
+    _soundBusStrobe(val) {
+        this._opnCommand = val & 0x0F;
+        this._soundBusCodes[this._opnCommand]?.run?.();
+    }
+
+    /** $FD16 read. */
+    _soundBusValue() {
+        return this._soundBusCodes[this._opnCommand]?.value?.() ?? 0xFF;
+    }
+
+    /** Code $02: the latched byte goes to the selected register and to the I/O port model. */
+    _soundBusStore() {
+        const reg = this._opnRegisterNo;
+        const byte = this._opnDataLatch;
+        this.opn.writeReg(reg, byte);
         if (reg < 0x10) {
-            this._ssgRegisters[reg] = val;
-            this.soundPorts.write(reg, val, ticksToUs(this.scheduler.elapsedTicks));
-        }
-    }
-
-    /** $FD16 write: kept for the next $03 / $02 command. */
-    _opnDataWrite(val) {
-        this._opnDataLatch = val & 0xFF;
-    }
-
-    /** $FD16 read: what the last command selected. */
-    _opnDataRead() {
-        switch (this._opnCommand) {
-            case 0x01: return this._ssgRegisterRead(this._opnRegisterNo);
-            case 0x04: return this.opn.readStatus();
-            case 0x09: return this.soundPorts.readPortA();
-            default:   return 0xFF;   // inactive: the bus floats high
+            this._ssgRegisters[reg] = byte;
+            this.soundPorts.write(reg, byte, ticksToUs(this.scheduler.elapsedTicks));
         }
     }
 
@@ -2837,6 +3047,7 @@ export class FM7 {
         // Clear main RAM. The shared RAM keeps its contents.
         this.mainRAM.fill(0x00);
         this._subWaitTicks = 0;
+        this._owedPassTicks = 0;
 
         // Reset I/O state
         this._powerOnSubInterface();
@@ -2871,7 +3082,7 @@ export class FM7 {
         if (this.isFM77AV) {
             this._initiatorActive = false; // Set before boot path logic overrides it
             this._characterGeneratorBank = 0;
-            this._nmiMaskSub = false;
+            this._subNmiBlocked = false;
             this._inVsyncPulse = false;
             this._fieldSegment = 0;
             this._verticalBlanking = false;
@@ -2879,7 +3090,7 @@ export class FM7 {
             this._analogPaletteAddr = 0;
             this._palette4096.fill(0);
             this._resetMemoryManagement();
-            this._resetDmaController();
+            this._clearDmacControls();
             // Banked $C000 RAM contents
             this.ex.clearC000BankRam();
             // Share analog palette reference with display
@@ -2894,14 +3105,14 @@ export class FM7 {
             this._initiatorActive = false;
             this._characterGeneratorBank = 0;
             // Clear FM77AV state that may linger from a previous AV session
-            this._nmiMaskSub = false;
+            this._subNmiBlocked = false;
             this._inVsyncPulse = false;
             this._fieldSegment = 0;
             this._inHorizontalBlank = true;
             this._analogPaletteAddr = 0;
             this._palette4096.fill(0);
             this._resetMemoryManagement();
-            this._resetDmaController();
+            this._clearDmacControls();
             this.display.palette4096 = null;
             this._applyDisplayFeatures();
             // FM-7 / FM-77: 9-bit key codes (no scan codes), no break codes
@@ -2943,18 +3154,18 @@ export class FM7 {
 
         // Reset sub CPU — it reads its own reset vector from sub ROM
         this.subCPU.reset();
-        // The sub CPU NMI mask (_nmiMaskSub) was cleared above; software sets
-        // or clears it via $D430 bit 7.
+        // _subNmiBlocked was cleared above, so the sub CPU NMI gets through;
+        // software sets or clears it via $D430 bit 7.
         this.scheduler.setSubHalted(false);
 
         // Memory map at reset. The main CPU then fetches its restart address
-        // through that map (MC6809 data sheet, RESET), so nothing is copied
+        // through that map, so nothing is copied
         // into RAM here.
         //   FM-7 / FM-77: the boot ROM picked by the mode switch answers
         //     $FE00-$FFDF, and $FFFE/$FFFF give the fixed restart address
-        //     $FE00 (FM-7 User's Manual System Specification 1.2.2).
+        //     $FE00.
         //   FM77AV family: the initiator ROM answers $6000-$7FFF and
-        //     $FFFE/$FFFF (HW manual 3.1); it places the boot program in
+        //     $FFFE/$FFFF; it places the boot program in
         //     the RAM at $FE00-$FFDF itself.
         this._initiatorActive = this.isFM77AV && this.romLoaded.initiate;
         this._standInBootShown = this.isFM77AV && !this.romLoaded.initiate;
@@ -2983,11 +3194,10 @@ export class FM7 {
 
     /**
      * The boot ROM that answers reads of $FE00-$FFDF, or null for RAM.
-     *  - FM-7 / FM-77: the ROM selected by the mode switch (FM-7 User's
-     *    Manual System Specification 1.2.2; FM-Techknow 1-5). In BASIC mode
+     *  - FM-7 / FM-77: the ROM selected by the mode switch. In BASIC mode
      *    without the BASIC boot ROM the DOS boot ROM is shown; in DOS mode
      *    without the DOS boot ROM the RAM answers.
-     *  - FM77AV family: RAM (HW manual 3.1), except under the stand-in map
+     *  - FM77AV family: RAM, except under the stand-in map
      *    used when no initiator ROM is loaded: in DOS mode the DOS boot ROM
      *    is shown in place of the program the initiator would have placed.
      * @returns {Uint8Array|null}
@@ -3007,12 +3217,12 @@ export class FM7 {
     /**
      * The address the hardware supplies at $FFFE/$FFFF, or -1 when the RAM
      * answers. (The initiator ROM case is handled before this, in _mainRead.)
-     *  - FM-7 / FM-77: fixed at $FE00 (System Specification 1.2.2). With no
-     *    boot ROM for BASIC mode, the BASIC ROM's own start address is used
-     *    instead so that BASIC still comes up.
+     *  - FM-7 / FM-77: fixed at $FE00. With no
+     *    boot ROM for BASIC mode, the start address taken from the loaded
+     *    BASIC ROM is used instead so that BASIC still comes up.
      *  - FM77AV family: RAM, except under the stand-in map (no initiator
-     *    ROM), which gives $FE00 in DOS mode and the BASIC ROM's start
-     *    address in BASIC mode.
+     *    ROM), which gives $FE00 in DOS mode and the start address taken
+     *    from the loaded BASIC ROM in BASIC mode.
      * @returns {number}
      */
     _restartAddress() {
@@ -3025,9 +3235,8 @@ export class FM7 {
     }
 
     /**
-     * Start address held in the last two bytes of the BASIC ROM ($FBFE/$FBFF),
-     * or $FE00 when the ROM is missing or the value is plainly unset
-     * ($0000 or $FFFF).
+     * Start address taken from the loaded BASIC ROM, or $FE00 when the ROM is
+     * missing or gives no usable value ($0000 or $FFFF).
      * @returns {number}
      */
     _basicStartAddress() {
@@ -3089,8 +3298,8 @@ export class FM7 {
     // Gamepad Polling
     // =========================================================================
 
-    // FM-7 joystick is read via OPN ($FD15/$FD16) Port A/B only.
-    // PSG ($FD0D/$FD0E) does not provide joystick input on FM-7.
+    // The gamepads set the switches of the joystick connectors; programs read
+    // them through the OPN I/O ports (soundPorts).
 
     /**
      * Assign a host gamepad to joystick connector 1 or 2 (0 / 1).
@@ -3127,14 +3336,14 @@ export class FM7 {
     }
 
     // =========================================================================
-    // Key encoder commands (HW manual 4.2 $D431 / $D432)
+    // Key encoder commands ($D431 / $D432)
     // =========================================================================
 
     /**
      * $D432: bit 7 LATCH (0 = a byte can be read from $D431), bit 0 ACK
-     * (0 = the last byte sent is not taken yet), the other bits 1. The
-     * encoder takes a byte by the time the sub CPU looks again: ACK reads 0
-     * on the first status read after a byte is sent and 1 after that.
+     * (0 = the last byte sent is not taken yet), the other bits 1. Here a
+     * byte counts as taken at the next status read: ACK reads 0 on the
+     * first status read after a byte is sent and 1 after that.
      * Reading it also satisfies the handshake between command bytes.
      */
     _readEncoderStatus() {
@@ -3186,11 +3395,11 @@ export class FM7 {
         this.keyboard._enableBreakCodes = scan;
         this._encoderCodeMode = mode;
         this.keyboard.stopGreeting();
+        this.keyboard.dropPendingCodes();
     }
 
     /**
-     * Clock reply: the 13 digits of the READ RTC return (FM-Techknow 5-4-1,
-     * figure 5-21) two to a byte, upper digit first: year, month, day (the
+     * Clock reply: the 13 digits of the READ RTC return two to a byte, upper digit first: year, month, day (the
      * tens digit carries the leap year select in bits 3-2), weekday, hour
      * (the tens digit carries 24-hour select in bit 3 and PM in bit 2),
      * minute, second; the low half of the last byte is 0.
@@ -3198,8 +3407,7 @@ export class FM7 {
     _encoderReplyClock() {
         const now = new Date();
         const year = now.getFullYear();
-        // Leap year select (bits 3-2 of the day tens digit): FM-Techknow 5-4-1,
-        // READ RTC (figure 5-21), D10: 00 when year mod 4 = 0, 01 when 3,
+        // Leap year select (bits 3-2 of the day tens digit): 00 when year mod 4 = 0, 01 when 3,
         // 10 when 2, 11 when 1.
         const leapSelect = (4 - (year % 4)) % 4;
         const digits = [
@@ -3220,21 +3428,20 @@ export class FM7 {
     // =========================================================================
 
     /**
-     * $FD03 write, the buzzer register (FM-7 User's Manual System
-     * Specification 1.2.3): bit 7 continuous buzzer, bit 6 single buzzer
+     * $FD03 write, the buzzer register: bit 7 continuous buzzer, bit 6 single buzzer
      * (each write with it set starts one beep), bit 0 tape sound to the
      * speaker. The buzzer output is then decided from the new state.
      */
     _writeBuzzerRegister(val) {
         this._buzzerContinuous = (val & 0x80) !== 0;
         this._cassetteToSpeaker = (val & 0x01) !== 0;
-        if ((val & 0x40) !== 0) this._buzzerSingleTicks = usToTicks(SINGLE_BEEP_US);
+        if ((val & 0x40) !== 0) this._buzzerSingleTicks = usToTicks(SINGLE_BUZZER_US);
         this._refreshBuzzer();
     }
 
     /** Start (or restart) the single beep: about 0.2 s. */
     _buzzerSingle() {
-        this._buzzerSingleTicks = usToTicks(SINGLE_BEEP_US);
+        this._buzzerSingleTicks = usToTicks(SINGLE_BUZZER_US);
         this._refreshBuzzer();
     }
 

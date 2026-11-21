@@ -38,6 +38,6 @@
 
   <!-- result -->
   <rect x="140" y="344" width="560" height="58" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
-  <text x="420" y="368" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1a7f37" text-anchor="middle">結果の良い方を自動で採用</text>
+  <text x="420" y="368" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1a7f37" text-anchor="middle">波形の特徴と読み取り結果から方式を自動で選択</text>
   <text x="420" y="390" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">数えたブロックがあれば正常ブロック数を表示（BAD はチェックサムの不一致の数）</text>
 </svg>

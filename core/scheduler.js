@@ -4,7 +4,7 @@
  * Emulated time keeping.
  *
  * Time is counted in periods of the 8 MHz master clock (125 ns, "ticks").
- * Every main CPU bus cycle length in the hardware manual is a whole number
+ * Every main CPU bus cycle length is a whole number
  * of these periods (4, 5, 6 or 7 ticks), so the main CPU
  * adds the exact length of each instruction and no fractional main clock is
  * needed. The sub CPU runs from its own 2.016 MHz clock: elapsed ticks
@@ -12,13 +12,12 @@
  */
 
 /**
- * Master clock that all main CPU bus cycle lengths are multiples of
- * (FM-7 User's Manual, system specification 1.1.1: clock 8 MHz).
+ * Master clock that all main CPU bus cycle lengths are multiples of.
  */
 export const MASTER_CLOCK_HZ = 8000000;
 export const TICKS_PER_US = MASTER_CLOCK_HZ / 1000000;
 
-/** Sub CPU clock: 16.128 MHz / 8 (FM77AV Hardware Manual 7.1 (1)). */
+/** Sub CPU clock: 16.128 MHz / 8. */
 export const SUB_CPU_CLOCK_HZ = 2016000;
 /** Sub CPU cycles that elapse per master tick. */
 export const SUB_CYCLES_PER_TICK = SUB_CPU_CLOCK_HZ / MASTER_CLOCK_HZ;

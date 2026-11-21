@@ -4,7 +4,7 @@
 // MB8877 FDC Simulator + D77 Disk Image Parser for FM-7
 // =============================================================================
 
-import { decodeHFE, crc16 } from './hfe.js';
+import { decodeHFE, fieldCrc } from './hfe.js';
 
 // FDC State Machine
 const FDC_STATE = {
@@ -62,8 +62,7 @@ const TYPE_I_DRIVE_BITS = STATUS.INDEX | STATUS.TRACK0 | STATUS.WRITE_PROTECT | 
 // Accelerated seek step rates (µs), used in fast-read mode.
 const STEP_RATES_FAST_US = [100, 200, 300, 500];
 
-// Step rates at the 1 MHz clock (µs): MB8877A data sheet, Table 1
-// "Stepping Rates" (the 1 MHz column); FM77AV Hardware Manual 5.9.4.
+// Step rates at the 1 MHz clock (µs).
 const STEP_RATES_REAL_US = [6000, 12000, 20000, 30000];
 
 // D77 header size
@@ -83,8 +82,7 @@ const COMMAND_WORDS = ['restore', 'seek', 'step', 'step', 'step-in', 'step-in', 
 
 
 // Raw (headerless) image geometry. A 2D disk has 40 tracks per side, 2
-// sides, 16 sectors of 256 bytes per track (FM-7 User's Manual System
-// Description, chapter 13, the floppy disk structure); 2DD doubles the
+// sides, 16 sectors of 256 bytes per track; 2DD doubles the
 // tracks, 1S is one side of a 2D disk.
 const RAW_SECTORS_PER_TRACK = 16;
 const RAW_SECTOR_BYTES = 256;
@@ -391,8 +389,7 @@ export class FloppyImage {
             }
         };
         this.writeProtect = false;
-        // F-BASIC disk layout (FM-7 User's Manual System Description,
-        // chapter 13, the floppy disk structure): the ID sector, the FAT and
+        // F-BASIC disk layout: the ID sector, the FAT and
         // the directory.
         // ID sector (track 0, sector 3): starts with "S", the rest is 0.
         fill(0, 3, 3, 0x00);
@@ -710,8 +707,7 @@ export class FDC {
     }
 
     // Timing parameters in microseconds (converted to ticks by setTickRate)
-    // MFM byte transfer delay per byte: a DRQ every 32 us
-    // (FM77AV Hardware Manual 5.9.4 (3)).
+    // MFM byte transfer delay per byte: a DRQ every 32 us.
     static BYTE_DELAY_US = 32;
     // Inter-sector gap delay for multi-sector reads/writes
     static MULTI_SECTOR_GAP_US = 6000;
@@ -737,15 +733,14 @@ export class FDC {
     static SPINUP_US = 500000;
     static SPINUP_CYCLES = 0;
     // E flag wait (Type II / III) used when fast-read mode is off: about
-    // 30 ms at 1 MHz (FM77AV Hardware Manual 5.9.5).
+    // 30 ms at 1 MHz.
     static E_SETTLE_US = 30000;
     static E_SETTLE_CYCLES = 0;
     // fastReadMode ON: accelerated E flag wait.
     static E_SETTLE_FAST_US = 16700;
     static E_SETTLE_FAST_CYCLES = 0;
     // Head settling after the last step of a verifying Type I command:
-    // 15 ms at 2 MHz, 30 ms with the 1 MHz clock (FD179X-01 data sheet,
-    // "Head Positioning" and "Verification").
+    // 15 ms at 2 MHz, 30 ms with the 1 MHz clock.
     static HEAD_SETTLE_US = 30000;
     static HEAD_SETTLE_CYCLES = 0;
     // fastReadMode ON: short end-of-seek waits (moved / not moved).
@@ -754,7 +749,7 @@ export class FDC {
     static SEEK_END_FAST_MOVED_CYCLES = 0;
     static SEEK_END_FAST_STAY_CYCLES = 0;
     // HLT hardware timer (HLTIME): 60 ms after a STEP pulse, a head load or
-    // a drive register write (FM77AV Hardware Manual 5.9.4 (1)).
+    // a drive register write.
     static WAIT60_US = 60000;
     static WAIT60_CYCLES = 0;
     // Width of the INDEX pulse seen in the Type I status (once per revolution).
@@ -1650,7 +1645,7 @@ export class FDC {
         if (pos === 0) {
             // Already at track 0: no step pulse. BUSY is set when the command
             // is loaded and cleared by the Type I end sequence, as for any
-            // other Type I command (FD179X-01 data sheet, "Type I Commands").
+            // other Type I command.
             this.trackReg = 0;
             this.headPosition[this.currentDrive] = 0;
             this.delayCycles = this._typeIEndWait(false);
@@ -1775,7 +1770,9 @@ export class FDC {
             if (this.cmdFlags.v) this._settleRemaining = 0;
             else if (this._stepped || this.cmdFlags.h) this._settleRemaining = FDC.WAIT60_CYCLES;
         }
-        if (this.cmdFlags.h || this.cmdFlags.v) this._headLoaded = true;
+        // h = 1 loads the head and h = 0 releases it; a verify reads the
+        // track, so it leaves the head loaded.
+        this._headLoaded = this.cmdFlags.h || this.cmdFlags.v;
         this._stepped = false;
 
         this._completeCommand(status);
@@ -1857,8 +1854,7 @@ export class FDC {
 
     /**
      * Type II C flag: when it is 1, the LSB of the side number in the ID
-     * field must equal the S flag, or the sector is not found (FM77AV
-     * Hardware Manual 5.9.5, S flag and C flag). With C = 0 any side passes.
+     * field must equal the S flag, or the sector is not found. With C = 0 any side passes.
      */
     _sideMatches(sector) {
         return !this.cmdFlags.c || ((sector.h & 1) === (this.cmdFlags.s ? 1 : 0));
@@ -2007,9 +2003,7 @@ export class FDC {
             return;
         }
 
-        // a0 = 1 writes a deleted data mark ($F8), 0 a data mark ($FB)
-        // (FM77AV Hardware Manual 5.9.5, Type II (5); FD179X-01 data sheet,
-        // Write Sector).
+        // a0 = 1 writes a deleted data mark ($F8), 0 a data mark ($FB).
         sector.deleted = this.cmdFlags.a0;
 
         // Set up write buffer
@@ -2207,11 +2201,9 @@ export class FDC {
         this.idBuffer[1] = sector.h;
         this.idBuffer[2] = sector.r;
         this.idBuffer[3] = sector.n;
-        // CRC1, CRC2: the CRC bytes of the ID field (FM77AV Hardware Manual
-        // 5.9.5, Type III (1) Read Address). CRC-CCITT preset to all ones,
-        // over the address mark ($A1 x3, $FE) and C, H, R, N (FD179X-01 data
-        // sheet, Organization, CRC Logic).
-        const idCrc = crc16([0xA1, 0xA1, 0xA1, 0xFE, sector.c, sector.h, sector.r, sector.n]);
+        // CRC1, CRC2: the CRC bytes of the ID field. CRC-CCITT preset to all
+        // ones, over the address mark ($A1 x3, $FE) and C, H, R, N.
+        const idCrc = fieldCrc([0xA1, 0xA1, 0xA1, 0xFE, sector.c, sector.h, sector.r, sector.n]);
         this.idBuffer[4] = idCrc >> 8;
         this.idBuffer[5] = idCrc & 0xFF;
 

@@ -32,7 +32,7 @@ export class FM7Browser extends FM7 {
         super({
             psg:      parts.psg || new WebPSG(),
             opn:      parts.opn || new WebOPN(),
-            fddSound: (parts.fddSound !== undefined) ? parts.fddSound : new DriveNoiseSynth(),
+            driveNoise: (parts.driveNoise !== undefined) ? parts.driveNoise : new DriveNoiseSynth(),
         });
 
         // Buzzer tone (Web Audio nodes on the PSG's context)
@@ -74,7 +74,7 @@ export class FM7Browser extends FM7 {
             } else {
                 this.opn.resumeAudio();
             }
-            this.fddSound.init(this.psg._audioCtx);
+            this.driveNoise.init(this.psg._audioCtx);
 
             if (this._breakKeyCodes.includes(e.code)) {
                 e.preventDefault();
@@ -139,7 +139,7 @@ export class FM7Browser extends FM7 {
         } else {
             this.opn.resumeAudio();
         }
-        this.fddSound.init(this.psg._audioCtx);
+        this.driveNoise.init(this.psg._audioCtx);
 
         // Bind frame method
         this._boundFrame = () => this._frame();

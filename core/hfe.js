@@ -20,18 +20,22 @@ const HFE_SIGNATURE = 'HXCPICFE';
 const SYNC_A1 = 0x4489;
 
 // ---------------------------------------------------------------------------
-// Sector CRC.
+// Check bytes of an ID or data field: x^16 + x^12 + x^5 + 1, register set to
+// all ones first, address mark included. The bits go through one at a time,
+// most significant bit of each byte first, as the controller shifts them.
 // ---------------------------------------------------------------------------
-export function crc16(bytes) {
-    let crc = 0xFFFF;
-    for (const b of bytes) {
-        crc ^= (b & 0xFF) << 8;
-        for (let i = 0; i < 8; i++) {
-            crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
-            crc &= 0xFFFF;
+const CRC_TAPS = 0x1021;   // x^12 + x^5 + 1; x^16 is the bit shifted out
+
+export function fieldCrc(bytes) {
+    let reg = 0xFFFF;
+    for (const value of bytes) {
+        for (let bit = 0x80; bit !== 0; bit >>= 1) {
+            const feedback = ((reg >> 15) & 1) ^ ((value & bit) ? 1 : 0);
+            reg = (reg << 1) & 0xFFFF;
+            if (feedback) reg ^= CRC_TAPS;
         }
     }
-    return crc & 0xFFFF;
+    return reg;
 }
 
 // ---------------------------------------------------------------------------
@@ -81,8 +85,7 @@ export function encodeMFMTrack(sectors, opts = {}) {
     const sync00 = (n) => { for (let i = 0; i < n; i++) encodeByte(bw, 0x00, state); };
 
     // Gap 4a, the sync fields and Gap 2 follow the double density (IBM
-    // System 34) track format of the FD179X-01 data sheet, "Formatting the
-    // Disk"; Gap 1 / Gap 3 and Gap 4b are shorter defaults that opts can
+    // System 34) track format; Gap 1 / Gap 3 and Gap 4b are shorter defaults that opts can
     // override.
     gapByte(opts.indexGap ?? 80);        // Gap 4a, after the index
     sync00(12);                          // sync
@@ -96,7 +99,7 @@ export function encodeMFMTrack(sectors, opts = {}) {
         bw.sync16(SYNC_A1); state.prev = 1;
         bw.sync16(SYNC_A1); state.prev = 1;
         const idBytes = [0xA1, 0xA1, 0xA1, 0xFE, s.c, s.h, s.r, s.n];
-        const idCrc = crc16(idBytes);
+        const idCrc = fieldCrc(idBytes);
         encodeByte(bw, 0xFE, state);
         encodeByte(bw, s.c, state);
         encodeByte(bw, s.h, state);
@@ -114,7 +117,7 @@ export function encodeMFMTrack(sectors, opts = {}) {
         const size = 128 << (s.n & 0xFF);
         const data = s.data || new Uint8Array(size);
         const dataBytes = [0xA1, 0xA1, 0xA1, mark, ...Array.from(data.subarray(0, size))];
-        const dataCrc = crc16(dataBytes);
+        const dataCrc = fieldCrc(dataBytes);
         encodeByte(bw, mark, state);
         for (let i = 0; i < size; i++) encodeByte(bw, data[i] || 0, state);
         encodeByte(bw, (dataCrc >> 8) & 0xFF, state);
@@ -272,12 +275,12 @@ export function validateHFETrackLengths(parsed, opts = {}) {
         if (len > nominal + overSlack) {
             warnings.push({
                 track: t, length: len, nominal, kind: 'over',
-                message: `track ${t}: MFM length ${len} bytes/side exceeds nominal ${nominal} (+${len - nominal})`,
+                message: `track ${t}: data length ${len} bytes/side exceeds nominal ${nominal} (+${len - nominal})`,
             });
         } else if (len > 0 && len < nominal - underSlack) {
             warnings.push({
                 track: t, length: len, nominal, kind: 'under',
-                message: `track ${t}: MFM length ${len} bytes/side is short of nominal ${nominal} (${len - nominal})`,
+                message: `track ${t}: data length ${len} bytes/side is short of nominal ${nominal} (${len - nominal})`,
             });
         }
     }
@@ -338,7 +341,7 @@ export function decodeMFMTrack(bytes) {
                 const crc = (id.bytes[4] << 8) | id.bytes[5];
                 pendingId = {
                     c: id.bytes[0], h: id.bytes[1], r: id.bytes[2], n: id.bytes[3],
-                    crcOk: crc16(idField) === crc,
+                    crcOk: fieldCrc(idField) === crc,
                 };
             }
         } else if ((markByte === 0xFB || markByte === 0xF8) && pendingId) {
@@ -349,7 +352,7 @@ export function decodeMFMTrack(bytes) {
                 const data = dat.bytes.subarray(0, size);
                 const crc = (dat.bytes[size] << 8) | dat.bytes[size + 1];
                 const dataField = [0xA1, 0xA1, 0xA1, markByte, ...Array.from(data)];
-                const crcOk = crc16(dataField) === crc;
+                const crcOk = fieldCrc(dataField) === crc;
                 sectors.push({
                     c: pendingId.c, h: pendingId.h, r: pendingId.r, n: pendingId.n,
                     size,

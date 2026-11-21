@@ -1,16 +1,18 @@
-// SPDX-License-Identifier: LicenseRef-fmgen AND MIT
-// Copyright (c) 2026 7032 / Naomitsu Tsugiiwa (MIT portion)
+// SPDX-License-Identifier: LicenseRef-fmgen
+// Port of "FM Sound Generator" (fmgen) 008, Copyright (C) by cisc 1998, 2003.
+// Modifications by 7032 / Naomitsu Tsugiiwa, under the fmgen terms.
 // =============================================================================
 // YM2203 (OPN) FM + SSG Sound Synthesizer
 //
-// The FM synthesis portion of this file is a JavaScript port of
-// "FM Sound Generator" (fmgen), Copyright (C) by cisc 1998, 2003.
-// This portion is NOT covered by the project's MIT License; it is
-// provided under the original fmgen terms (see LICENSE-fmgen.md and
-// core/fmgen_readme.txt, the original readme included unmodified).
-// Modifications from the original: C++ to JavaScript translation,
-// reduction to the YM2203 (OPN) feature set, and integration with
-// this simulator's sample output stage.
+// This file is a JavaScript port of "FM Sound Generator" (fmgen) 008,
+// Copyright (C) by cisc 1998, 2003. It is NOT covered by the project's
+// MIT License; the whole file is provided under the original fmgen terms
+// only (see LICENSE-fmgen.md and core/fmgen_readme.txt, the original readme
+// included unmodified).
+// Modifications from the original: C++ to JavaScript translation; reduction
+// to what the YM2203 uses (no LFO, no noise, no OPM or OPNA/B parts);
+// integration with this simulator's sample output stage, timers and SSG.
+// LICENSE-fmgen.md has the list.
 //
 // 3 FM channels (4 operators each, phase modulation synthesis) plus
 // 3 SSG channels rendered through an embedded PSGCore (psg.js).
@@ -26,41 +28,37 @@ const MASTER_CLOCK  = 1228800;
 const OPN_TIMER_CLOCK_AV = 1228800;
 const SAMPLE_RATE   = 44100;
 
-
 // ---------------------------------------------------------------------------
-// Envelope phase identifiers
+// Envelope phases, numbered so that phase + 1 is the one that follows
 // ---------------------------------------------------------------------------
 const ENV_PHASE_ATTACK  = 1;
 const ENV_PHASE_DECAY   = 2;
 const ENV_PHASE_SUSTAIN = 3;
 const ENV_PHASE_RELEASE = 4;
 const ENV_PHASE_OFF     = 5;
-const ENV_PHASE_HOLD    = 6;
 
 // ---------------------------------------------------------------------------
-// Synthesis dimension constants
+// Synthesis dimensions
 // ---------------------------------------------------------------------------
-const SINE_INDEX_BITS    = 10;
-const SINE_TABLE_SIZE    = 1 << SINE_INDEX_BITS;    // 1024
-const PHASE_EXTRA_BITS   = 2;
-const CLOCK_RATIO_BITS   = 8;
-const ENV_BITS           = 16;
-const LFO_BITS           = 8;
-const LFO_TABLE_SIZE     = 1 << LFO_BITS;           // 256
-const TOTAL_LEVEL_BITS   = 7;
-const TOTAL_LEVEL_COUNT  = 1 << TOTAL_LEVEL_BITS;   // 128
-const LOG_TO_LIN_SIZE    = 0x1000 * 2;               // 8192
-const OUTPUT_SCALE       = 16384;
-const PI_CONST           = Math.PI;
+const SINE_INDEX_BITS  = 10;
+const SINE_TABLE_SIZE  = 1 << SINE_INDEX_BITS;
+const PHASE_EXTRA_BITS = 9;
+const CLOCK_RATIO_BITS = 7;
+const LOG_TO_LIN_SIZE  = 0x1000 * 2;
+
+// One full turn of the phase is 2^(20 + PHASE_EXTRA_BITS).
+const PHASE_TO_SINE_SHIFT = 20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS;
+// Shift from an operator output to the envelope count of one turn.
+const OUTPUT_TO_ENV_SHIFT = (20 + PHASE_EXTRA_BITS) - 13;
+const INPUT_TO_SINE_SHIFT = PHASE_TO_SINE_SHIFT - (2 + OUTPUT_TO_ENV_SHIFT);
 
 // Envelope level treated as silence.
-const ENV_QUIET_LEVEL   = 960;
-
-// OUTPUT_TO_ENV_SHIFT = (20 + PHASE_EXTRA_BITS) - 13 = 9
-const OUTPUT_TO_ENV_SHIFT = (20 + PHASE_EXTRA_BITS) - 13;
+const ENV_QUIET_LEVEL = 955;
+// Counter value of one envelope step; the rate takes from it every sample.
+const ENV_STEP_SPAN = (2047 * 3) << CLOCK_RATIO_BITS;
 
 // ---------------------------------------------------------------------------
-// Hardware mapping tables
+// Tables
 // ---------------------------------------------------------------------------
 
 // Register slot order -> operator index
@@ -77,264 +75,184 @@ const SUSTAIN_LEVEL_TABLE = [
 
 // Key scale: F-number (bits 7..13) -> key code (0..31)
 const KEY_SCALE_TABLE = new Uint8Array([
-     0,  0,  0,  0,  0,  0,  0,  1,  2,  3,  3,  3,  3,  3,  3,  3,
-     4,  4,  4,  4,  4,  4,  4,  5,  6,  7,  7,  7,  7,  7,  7,  7,
-     8,  8,  8,  8,  8,  8,  8,  9, 10, 11, 11, 11, 11, 11, 11, 11,
-    12, 12, 12, 12, 12, 12, 12, 13, 14, 15, 15, 15, 15, 15, 15, 15,
-    16, 16, 16, 16, 16, 16, 16, 17, 18, 19, 19, 19, 19, 19, 19, 19,
-    20, 20, 20, 20, 20, 20, 20, 21, 22, 23, 23, 23, 23, 23, 23, 23,
-    24, 24, 24, 24, 24, 24, 24, 25, 26, 27, 27, 27, 27, 27, 27, 27,
-    28, 28, 28, 28, 28, 28, 28, 29, 30, 31, 31, 31, 31, 31, 31, 31,
+      0,   0,   0,   0,   0,   0,   0,   1,   2,   3,   3,   3,   3,   3,   3,   3,
+      4,   4,   4,   4,   4,   4,   4,   5,   6,   7,   7,   7,   7,   7,   7,   7,
+      8,   8,   8,   8,   8,   8,   8,   9,  10,  11,  11,  11,  11,  11,  11,  11,
+     12,  12,  12,  12,  12,  12,  12,  13,  14,  15,  15,  15,  15,  15,  15,  15,
+     16,  16,  16,  16,  16,  16,  16,  17,  18,  19,  19,  19,  19,  19,  19,  19,
+     20,  20,  20,  20,  20,  20,  20,  21,  22,  23,  23,  23,  23,  23,  23,  23,
+     24,  24,  24,  24,  24,  24,  24,  25,  26,  27,  27,  27,  27,  27,  27,  27,
+     28,  28,  28,  28,  28,  28,  28,  29,  30,  31,  31,  31,  31,  31,  31,  31,
 ]);
 
-// Detune table: (dt*32 + bn) -> detune value
+// Detune: (dt * 32 + key code) -> phase offset
 const DETUNE_TABLE = new Int8Array([
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  2,  2,  2,  2,  2,  2,  2,  2,  4,  4,  4,  4,
-      4,  6,  6,  6,  8,  8,  8, 10, 10, 12, 12, 14, 16, 16, 16, 16,
-      2,  2,  2,  2,  4,  4,  4,  4,  4,  6,  6,  6,  8,  8,  8, 10,
-     10, 12, 12, 14, 16, 16, 18, 20, 22, 24, 26, 28, 32, 32, 32, 32,
-      4,  4,  4,  4,  4,  6,  6,  6,  8,  8,  8, 10, 10, 12, 12, 14,
-     16, 16, 18, 20, 22, 24, 26, 28, 32, 34, 38, 40, 44, 44, 44, 44,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0, -2, -2, -2, -2, -2, -2, -2, -2, -4, -4, -4, -4,
-     -4, -6, -6, -6, -8, -8, -8,-10,-10,-12,-12,-14,-16,-16,-16,-16,
-     -2, -2, -2, -2, -4, -4, -4, -4, -4, -6, -6, -6, -8, -8, -8,-10,
-    -10,-12,-12,-14,-16,-16,-18,-20,-22,-24,-26,-28,-32,-32,-32,-32,
-     -4, -4, -4, -4, -4, -6, -6, -6, -8, -8, -8,-10,-10,-12,-12,-14,
-    -16,-16,-18,-20,-22,-24,-26,-28,-32,-34,-38,-40,-44,-44,-44,-44,
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+      0,   0,   0,   0,   2,   2,   2,   2,   2,   2,   2,   2,   4,   4,   4,   4,
+      4,   6,   6,   6,   8,   8,   8,  10,  10,  12,  12,  14,  16,  16,  16,  16,
+      2,   2,   2,   2,   4,   4,   4,   4,   4,   6,   6,   6,   8,   8,   8,  10,
+     10,  12,  12,  14,  16,  16,  18,  20,  22,  24,  26,  28,  32,  32,  32,  32,
+      4,   4,   4,   4,   4,   6,   6,   6,   8,   8,   8,  10,  10,  12,  12,  14,
+     16,  16,  18,  20,  22,  24,  26,  28,  32,  34,  38,  40,  44,  44,  44,  44,
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+      0,   0,   0,   0,  -2,  -2,  -2,  -2,  -2,  -2,  -2,  -2,  -4,  -4,  -4,  -4,
+     -4,  -6,  -6,  -6,  -8,  -8,  -8, -10, -10, -12, -12, -14, -16, -16, -16, -16,
+     -2,  -2,  -2,  -2,  -4,  -4,  -4,  -4,  -4,  -6,  -6,  -6,  -8,  -8,  -8, -10,
+    -10, -12, -12, -14, -16, -16, -18, -20, -22, -24, -26, -28, -32, -32, -32, -32,
+     -4,  -4,  -4,  -4,  -4,  -6,  -6,  -6,  -8,  -8,  -8, -10, -10, -12, -12, -14,
+    -16, -16, -18, -20, -22, -24, -26, -28, -32, -34, -38, -40, -44, -44, -44, -44,
 ]);
 
-// ---------------------------------------------------------------------------
-// Envelope rate tables
-// ---------------------------------------------------------------------------
+// Decay: [rate * 8 + step of the pattern] -> level added
+const ENV_DECAY_STEPS = new Int8Array([
+     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+     1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+     1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+     1,  1,  1,  0,  1,  1,  1,  0,  1,  1,  1,  0,  1,  1,  1,  0,
+     1,  0,  1,  0,  1,  0,  1,  0,  1,  1,  1,  0,  1,  0,  1,  0,
+     1,  1,  1,  0,  1,  1,  1,  0,  1,  1,  1,  1,  1,  1,  1,  0,
+     1,  0,  1,  0,  1,  0,  1,  0,  1,  1,  1,  0,  1,  0,  1,  0,
+     1,  1,  1,  0,  1,  1,  1,  0,  1,  1,  1,  1,  1,  1,  1,  0,
+     1,  0,  1,  0,  1,  0,  1,  0,  1,  1,  1,  0,  1,  0,  1,  0,
+     1,  1,  1,  0,  1,  1,  1,  0,  1,  1,  1,  1,  1,  1,  1,  0,
+     1,  0,  1,  0,  1,  0,  1,  0,  1,  1,  1,  0,  1,  0,  1,  0,
+     1,  1,  1,  0,  1,  1,  1,  0,  1,  1,  1,  1,  1,  1,  1,  0,
+     1,  0,  1,  0,  1,  0,  1,  0,  1,  1,  1,  0,  1,  0,  1,  0,
+     1,  1,  1,  0,  1,  1,  1,  0,  1,  1,  1,  1,  1,  1,  1,  0,
+     1,  0,  1,  0,  1,  0,  1,  0,  1,  1,  1,  0,  1,  0,  1,  0,
+     1,  1,  1,  0,  1,  1,  1,  0,  1,  1,  1,  1,  1,  1,  1,  0,
+     1,  0,  1,  0,  1,  0,  1,  0,  1,  1,  1,  0,  1,  0,  1,  0,
+     1,  1,  1,  0,  1,  1,  1,  0,  1,  1,  1,  1,  1,  1,  1,  0,
+     1,  0,  1,  0,  1,  0,  1,  0,  1,  1,  1,  0,  1,  0,  1,  0,
+     1,  1,  1,  0,  1,  1,  1,  0,  1,  1,  1,  1,  1,  1,  1,  0,
+     1,  0,  1,  0,  1,  0,  1,  0,  1,  1,  1,  0,  1,  0,  1,  0,
+     1,  1,  1,  0,  1,  1,  1,  0,  1,  1,  1,  1,  1,  1,  1,  0,
+     1,  0,  1,  0,  1,  0,  1,  0,  1,  1,  1,  0,  1,  0,  1,  0,
+     1,  1,  1,  0,  1,  1,  1,  0,  1,  1,  1,  1,  1,  1,  1,  0,
+     1,  1,  1,  1,  1,  1,  1,  1,  2,  1,  1,  1,  2,  1,  1,  1,
+     2,  1,  2,  1,  2,  1,  2,  1,  2,  2,  2,  1,  2,  2,  2,  1,
+     2,  2,  2,  2,  2,  2,  2,  2,  4,  2,  2,  2,  4,  2,  2,  2,
+     4,  2,  4,  2,  4,  2,  4,  2,  4,  4,  4,  2,  4,  4,  4,  2,
+     4,  4,  4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  8,  4,  4,  4,
+     8,  4,  8,  4,  8,  4,  8,  4,  8,  8,  8,  4,  8,  8,  8,  4,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+]);
 
-// Envelope rate pattern: [rate][patternIdx & 7] -> EG increment
-function buildEnvRatePattern() {
-    // Build the envelope update tables.
-    const basePatterns = [
-        [1, 0, 1, 0, 1, 0, 1, 0],
-        [1, 1, 1, 0, 1, 0, 1, 0],
-        [1, 1, 1, 0, 1, 1, 1, 0],
-        [1, 1, 1, 1, 1, 1, 1, 0],
-    ];
-    const table = new Array(64);
-    for (let rate = 0; rate < 64; rate++) {
-        if (rate < 2) {
-            // Rates 0-1: no envelope change
-            table[rate] = [0, 0, 0, 0, 0, 0, 0, 0];
-        } else if (rate < 4) {
-            // Rates 2-3: all ones (uniform increment)
-            table[rate] = [1, 1, 1, 1, 1, 1, 1, 1];
-        } else if (rate < 8) {
-            // Rates 4-7: transitional patterns
-            if (rate < 6) {
-                table[rate] = [1, 1, 1, 1, 1, 1, 1, 1];
-            } else {
-                table[rate] = [1, 1, 1, 0, 1, 1, 1, 0];
-            }
-        } else if (rate < 48) {
-            // Rates 8-47: base pattern with increment 1
-            const pat = basePatterns[rate % 4];
-            table[rate] = pat.slice();
-        } else if (rate < 60) {
-            // Rates 48-59: increment doubles every 4 rates
-            const pat = basePatterns[rate % 4];
-            const group = Math.floor((rate - 48) / 4); // 0, 1, 2
-            const hi = 1 << (group + 1);  // 2, 4, 8
-            const lo = 1 << group;        // 1, 2, 4
-            table[rate] = pat.map(v => v ? hi : lo);
-        } else {
-            // Rates 60-63: all 16 (maximum increment, clamped)
-            table[rate] = [16, 16, 16, 16, 16, 16, 16, 16];
-        }
-    }
-    return table;
-}
-const ENV_RATE_PATTERN = buildEnvRatePattern();
+// Rate / 4 -> how fast the step counter runs
+const ENV_RATE_DIVIDER = [
+       1,    2,    4,    8,   16,   32,   64,  128,
+     256,  512, 1024, 2047, 2047, 2047, 2047, 2047,
+];
 
-// Envelope rate table: rate/4 -> counter decrement per tick
-// Powers of 2 from 2^0 to 2^10, clamped at 2047 for indices 11-15.
-const ENV_RATE_DIVIDER = Array.from({length: 16}, (_, i) =>
-    i < 11 ? (1 << i) : 2047
-);
+// Attack: [rate * 8 + step of the pattern] -> shift of the level (-1: no step)
+const ATTACK_CURVE_TABLE = new Int8Array([
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+     4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,
+     4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,
+     4,  4,  4, -1,  4,  4,  4, -1,  4,  4,  4, -1,  4,  4,  4, -1,
+     4, -1,  4, -1,  4, -1,  4, -1,  4,  4,  4, -1,  4, -1,  4, -1,
+     4,  4,  4, -1,  4,  4,  4, -1,  4,  4,  4,  4,  4,  4,  4, -1,
+     4, -1,  4, -1,  4, -1,  4, -1,  4,  4,  4, -1,  4, -1,  4, -1,
+     4,  4,  4, -1,  4,  4,  4, -1,  4,  4,  4,  4,  4,  4,  4, -1,
+     4, -1,  4, -1,  4, -1,  4, -1,  4,  4,  4, -1,  4, -1,  4, -1,
+     4,  4,  4, -1,  4,  4,  4, -1,  4,  4,  4,  4,  4,  4,  4, -1,
+     4, -1,  4, -1,  4, -1,  4, -1,  4,  4,  4, -1,  4, -1,  4, -1,
+     4,  4,  4, -1,  4,  4,  4, -1,  4,  4,  4,  4,  4,  4,  4, -1,
+     4, -1,  4, -1,  4, -1,  4, -1,  4,  4,  4, -1,  4, -1,  4, -1,
+     4,  4,  4, -1,  4,  4,  4, -1,  4,  4,  4,  4,  4,  4,  4, -1,
+     4, -1,  4, -1,  4, -1,  4, -1,  4,  4,  4, -1,  4, -1,  4, -1,
+     4,  4,  4, -1,  4,  4,  4, -1,  4,  4,  4,  4,  4,  4,  4, -1,
+     4, -1,  4, -1,  4, -1,  4, -1,  4,  4,  4, -1,  4, -1,  4, -1,
+     4,  4,  4, -1,  4,  4,  4, -1,  4,  4,  4,  4,  4,  4,  4, -1,
+     4, -1,  4, -1,  4, -1,  4, -1,  4,  4,  4, -1,  4, -1,  4, -1,
+     4,  4,  4, -1,  4,  4,  4, -1,  4,  4,  4,  4,  4,  4,  4, -1,
+     4, -1,  4, -1,  4, -1,  4, -1,  4,  4,  4, -1,  4, -1,  4, -1,
+     4,  4,  4, -1,  4,  4,  4, -1,  4,  4,  4,  4,  4,  4,  4, -1,
+     4, -1,  4, -1,  4, -1,  4, -1,  4,  4,  4, -1,  4, -1,  4, -1,
+     4,  4,  4, -1,  4,  4,  4, -1,  4,  4,  4,  4,  4,  4,  4, -1,
+     4,  4,  4,  4,  4,  4,  4,  4,  3,  4,  4,  4,  3,  4,  4,  4,
+     3,  4,  3,  4,  3,  4,  3,  4,  3,  3,  3,  4,  3,  3,  3,  4,
+     3,  3,  3,  3,  3,  3,  3,  3,  2,  3,  3,  3,  2,  3,  3,  3,
+     2,  3,  2,  3,  2,  3,  2,  3,  2,  2,  2,  3,  2,  2,  2,  3,
+     2,  2,  2,  2,  2,  2,  2,  2,  1,  2,  2,  2,  1,  2,  2,  2,
+     1,  2,  1,  2,  1,  2,  1,  2,  1,  1,  1,  2,  1,  1,  1,  2,
+     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+]);
 
-// Attack curve: [rate][patternIdx & 7] -> shift amount (-1 = skip)
-function buildAttackTable() {
-    const basePatterns = [
-        [1, 0, 1, 0, 1, 0, 1, 0],
-        [1, 1, 1, 0, 1, 0, 1, 0],
-        [1, 1, 1, 0, 1, 1, 1, 0],
-        [1, 1, 1, 1, 1, 1, 1, 0],
-    ];
-    const table = new Array(64);
-    for (let rate = 0; rate < 64; rate++) {
-        if (rate < 2) {
-            // No attack
-            table[rate] = [-1, -1, -1, -1, -1, -1, -1, -1];
-        } else if (rate < 4) {
-            // All active, shift 4
-            table[rate] = [4, 4, 4, 4, 4, 4, 4, 4];
-        } else if (rate < 8) {
-            // Transitional: same logic as ENV_RATE_PATTERN but with shift 4 / -1
-            if (rate < 6) {
-                table[rate] = [4, 4, 4, 4, 4, 4, 4, 4];
-            } else {
-                table[rate] = [4, 4, 4, -1, 4, 4, 4, -1];
-            }
-        } else if (rate < 48) {
-            // Standard range: shift 4 where pattern is active, -1 otherwise
-            const pat = basePatterns[rate % 4];
-            table[rate] = pat.map(v => v ? 4 : -1);
-        } else if (rate < 60) {
-            // High rates: decreasing shift values (3, 2, 1) with pattern blending
-            const group = Math.floor((rate - 48) / 4); // 0, 1, 2
-            const hi = 4 - (group + 1);  // 3, 2, 1
-            const lo = 4 - group;        // 4, 3, 2
-            const pat = basePatterns[rate % 4];
-            table[rate] = pat.map(v => v ? hi : lo);
-        } else {
-            // Maximum rate: instant attack (shift 0)
-            table[rate] = [0, 0, 0, 0, 0, 0, 0, 0];
-        }
-    }
-    return table;
-}
-const ATTACK_CURVE_TABLE = buildAttackTable();
+// SSG-EG: [((shape * 2 + fast attack) * 3 + part) * 2] -> offset in $200
+// steps, then direction. Shape is the register value & 7.
+const SSG_ENV_TABLE = new Int8Array([
+     1,  1,  1,  1,  1,  1,
+     0,  1,  1,  1,  1,  1,
+     0,  1,  2,  0,  2,  0,
+     0,  1,  2,  0,  2,  0,
+     1, -1,  0,  1,  1, -1,
+     0,  1,  1, -1,  0,  1,
+     1, -1,  0,  0,  0,  0,
+     0,  1,  0,  0,  0,  0,
+     2, -1,  2, -1,  2, -1,
+     1, -1,  2, -1,  2, -1,
+     1, -1,  0,  0,  0,  0,
+     1, -1,  0,  0,  0,  0,
+     0,  1,  1, -1,  0,  1,
+     1, -1,  0,  1,  1, -1,
+     0,  1,  2,  0,  2,  0,
+     1, -1,  2,  0,  2,  0,
+]);
 
-
-// ---------------------------------------------------------------------------
-// Computed waveform and conversion tables (built once at module load)
-// ---------------------------------------------------------------------------
-
-// Logarithmic sine lookup table.
-// 1024 entries, output is index into expTable (as s*2 or s*2+1)
+// Log sine: phase -> index into expTable (pairs of positive and negative)
 const logSinTable = new Uint32Array(SINE_TABLE_SIZE);
 
-// Log-to-linear lookup table, pairs of [positive, negative]
+// Log level -> linear value, as positive and negative pairs
 const expTable = new Int32Array(LOG_TO_LIN_SIZE);
 
-// LFO modulation tables
-const lfoPhaseTable = new Array(2);
-const lfoAmpTable = new Array(2);
-
-// LFO rate table
-const lfoRateTable = new Uint32Array(8);
-
-function _clampLow(a, b) { return a < b ? a : b; }
-function _clampHigh(a, b) { return a > b ? a : b; }
-
-// Build all computed tables
-(function initializeTables() {
-    // -- expTable (log-to-linear conversion) --
-    let tableIdx = 0;
-    let pos = 0;
-    while (pos < LOG_TO_LIN_SIZE) {
-        let v = Math.floor(Math.pow(2, 13 - (tableIdx % 256) / 256));
-        v = ((v + 2) & ~3) >> (tableIdx >> 8);
-        expTable[pos++] = v;
-        expTable[pos++] = -v;
-        tableIdx++;
+(function buildLogTables() {
+    for (let i = 0; i < 256; i++) {
+        const v = (Math.floor(Math.pow(2, 13 - i / 256)) + 2) & ~3;
+        expTable[i * 2] = v;
+        expTable[i * 2 + 1] = -v;
+    }
+    // Each further 512 entries are the 512 before them, halved.
+    for (let i = 512; i < LOG_TO_LIN_SIZE; i++) {
+        expTable[i] = Math.trunc(expTable[i - 512] / 2);
     }
 
-    // -- logSinTable --
     const ln2 = Math.log(2);
     for (let i = 0; i < SINE_TABLE_SIZE / 2; i++) {
-        const angle = (i * 2 + 1) * PI_CONST / SINE_TABLE_SIZE;
-        const logVal = -256 * Math.log(Math.sin(angle)) / ln2;
-        const quantized = Math.floor(logVal + 0.5) + 1;
-        logSinTable[i] = quantized * 2;
-        logSinTable[SINE_TABLE_SIZE / 2 + i] = quantized * 2 + 1;
-    }
-
-    // -- LFO tables (phase modulation and amplitude modulation) --
-    const pmDepths = [
-        [0, 1/360, 2/360, 3/360, 4/360, 6/360, 12/360, 24/360],   // variant 0
-        [0, 1/480, 2/480, 4/480, 10/480, 20/480, 80/480, 140/480], // variant 1
-    ];
-    const amShifts = [
-        [31, 6, 4, 3], // variant 0
-        [31, 2, 1, 0], // variant 1
-    ];
-
-    for (let variant = 0; variant < 2; variant++) {
-        lfoPhaseTable[variant] = new Array(8);
-        for (let i = 0; i < 8; i++) {
-            lfoPhaseTable[variant][i] = new Int32Array(LFO_TABLE_SIZE);
-            const depth = pmDepths[variant][i];
-            for (let j = 0; j < LFO_TABLE_SIZE; j++) {
-                const expVal = Math.pow(2, depth * (2 * j - LFO_TABLE_SIZE + 1) / (LFO_TABLE_SIZE - 1));
-                const sinVal = 0.6 * depth * Math.sin(2 * j * PI_CONST / LFO_TABLE_SIZE) + 1;
-                if (variant === 0)
-                    lfoPhaseTable[variant][i][j] = Math.floor(0x10000 * (sinVal - 1));
-                else
-                    lfoPhaseTable[variant][i][j] = Math.floor(0x10000 * (expVal - 1));
-            }
-        }
-        lfoAmpTable[variant] = new Array(4);
-        for (let i = 0; i < 4; i++) {
-            lfoAmpTable[variant][i] = new Uint32Array(LFO_TABLE_SIZE);
-            for (let j = 0; j < LFO_TABLE_SIZE; j++) {
-                lfoAmpTable[variant][i][j] = (((j * 4) >> amShifts[variant][i]) * 2) << 2;
-            }
-        }
+        const angle = (i * 2 + 1) * Math.PI / SINE_TABLE_SIZE;
+        const level = Math.floor(-256 * Math.log(Math.sin(angle)) / ln2 + 0.5) + 1;
+        logSinTable[i] = level * 2;
+        logSinTable[SINE_TABLE_SIZE / 2 + i] = level * 2 + 1;
     }
 })();
 
+function _clampLow(a, b) { return a < b ? a : b; }
+
 // ---------------------------------------------------------------------------
-// SynthChip: per-chip state (clock-ratio-dependent tables)
+// SynthChip: what the operators share, set by the clock to output rate ratio
 // ---------------------------------------------------------------------------
 class SynthChip {
     constructor() {
         this.clockRatio = 0;
-        this.ampModLevel = 0;
-        this.phaseModLevel = 0;
-        this.phaseModValue = 0;
-        this.phaseMultTable = [];
-        this.envRateTable = new Uint32Array(16);
-        for (let h = 0; h < 4; h++) {
-            this.phaseMultTable.push(new Uint32Array(16));
-        }
+        this.phaseFactors = new Uint32Array(16);    // by MUL
     }
 
     updateRatio(ratio) {
-        if (this.clockRatio !== ratio) {
-            this.clockRatio = ratio;
-            this._buildDerivedTables();
+        if (this.clockRatio === ratio) return;
+        this.clockRatio = ratio;
+        const unit = ratio / (1 << (2 + CLOCK_RATIO_BITS - PHASE_EXTRA_BITS));
+        for (let mul = 0; mul < 16; mul++) {
+            this.phaseFactors[mul] = (mul ? mul * 2 : 1) * unit;
         }
     }
-
-    // Part of the fmgen port (see the file header and LICENSE-fmgen.md): the
-    // clock ratio is folded into the multiplier table.
-    _buildDerivedTables() {
-        const dt2Coefficients = [1.0, 1.414, 1.581, 1.732];
-        for (let h = 0; h < 4; h++) {
-            const scaled = dt2Coefficients[h] * this.clockRatio;
-            for (let l = 0; l < 16; l++) {
-                const mul = l ? l * 2 : 1;
-                this.phaseMultTable[h][l] = Math.floor(mul * scaled);
-            }
-        }
-        this.envRateTable[0] = 0;
-        for (let h = 1; h < 16; h++) {
-            this.envRateTable[h] =
-                ((this.clockRatio << (ENV_BITS - CLOCK_RATIO_BITS)) << _clampLow(h, 11)) >>> 0;
-        }
-    }
-
-    getMultiplied(dt2, mul) { return this.phaseMultTable[dt2][mul]; }
-    getAmpModLevel() { return this.ampModLevel; }
-    getPhaseModLevel() { return this.phaseModLevel; }
-    getPhaseModValue() { return this.phaseModValue; }
-    setAmpModLevel(l) { this.ampModLevel = l & (LFO_TABLE_SIZE - 1); }
-    setPhaseModLevel(l) { this.phaseModLevel = l & (LFO_TABLE_SIZE - 1); }
-    setPhaseModValue(v) { this.phaseModValue = v; }
 }
 
 // ---------------------------------------------------------------------------
-// FMOperator: single FM operator with phase generator and envelope generator
+// FMOperator: one operator, with its phase and envelope generators
 // ---------------------------------------------------------------------------
 class FMOperator {
     constructor() {
@@ -343,24 +261,20 @@ class FMOperator {
         // Output
         this.outputVal = 0;
         this.prevSample = 0;
-        this.modulationInput = 0;
 
-        // Phase Generator
+        // Phase generator
         this.phaseStep = 0;
         this.detuneOffset = 0;
-        this.detune2Index = 0;
         this.freqMultiple = 0;
-        this.phaseAccum = 0;
+        this.phaseAccum = 0;        // int32 holding the 32-bit counter
         this.phaseDelta = 0;
-        this.phaseDeltaLFO = 0;
 
-        // Envelope Generator
-        this.synthVariant = 0;
+        // Envelope generator
         this.keyNote = 0;
         this.envLevel = 0;
         this.envLevelNextThreshold = 0;
         this.envCounter = 0;
-        this.envCounterThreshold = 0;
+        this.envCounterStep = 0;
         this.envOutput = 0;
         this.totalLevelScaled = 0;
         this.envRate = 0;
@@ -371,8 +285,6 @@ class FMOperator {
 
         this.keyScaleAdjust = 0;
         this.egStage = ENV_PHASE_OFF;
-        this.ampModSource = lfoAmpTable[0][0];
-        this.lfoSensitivity = 0;
 
         this.totalLevel = 127;
         this.totalLevelLatched = 127;
@@ -385,18 +297,17 @@ class FMOperator {
         this.ssgMode = 0;
 
         this.keyPressed = false;
-        this.ampModEnabled = false;
         this.needsRecalc = true;
-        this.silenced = false;
     }
 
     assignChip(chip) { this.chip = chip; }
 
     reset() {
         this.totalLevel = this.totalLevelLatched = 127;
-        this._updatePhase(ENV_PHASE_OFF);
+        this._enterPhase(ENV_PHASE_OFF);
         this.envCounter = 0;
         this.envPatternIdx = 0;
+        this.ssgEnvState = 0;
         this.phaseAccum = 0;
         this.outputVal = this.prevSample = 0;
         this.needsRecalc = true;
@@ -406,15 +317,13 @@ class FMOperator {
         this.outputVal = this.prevSample = 0;
     }
 
+    /** Non-zero while the envelope is not OFF. */
     isActive() {
         return this.egStage - ENV_PHASE_OFF;
     }
 
-    currentOutput() { return this.outputVal; }
-
-    // --- Parameter setters ---
+    // --- Parameters ---
     writeDT(dt) { this.detuneOffset = dt * 0x20; this.needsRecalc = true; }
-    writeDT2(dt2) { this.detune2Index = dt2 & 3; this.needsRecalc = true; }
     writeMUL(mul) { this.freqMultiple = mul; this.needsRecalc = true; }
 
     writeTL(tl, csm) {
@@ -431,314 +340,144 @@ class FMOperator {
     writeSR(sr) { this.sustainRate = sr; this.needsRecalc = true; }
     writeRR(rr) { this.releaseRate = rr; this.needsRecalc = true; }
     writeSL(sl) { this.sustainLevel = sl; this.needsRecalc = true; }
-    writeAMON(on) { this.ampModEnabled = on; this.needsRecalc = true; }
-    writeLFOSens(ms) { this.lfoSensitivity = ms; this.needsRecalc = true; }
-    setSilenced(m) { this.silenced = m; this.needsRecalc = true; }
 
-    writeSSGEG(ssgec) {
-        if (ssgec & 8)
-            this.ssgMode = ssgec & 0x0f;
-        else
-            this.ssgMode = 0;
-        this.needsRecalc = true;
+    writeSSGEG(value) {
+        this.ssgMode = (value & 8) ? value : 0;
     }
 
-    // Key on — only triggers on 0→1 transition.
     keyOn() {
-        if (!this.keyPressed) {
-            this.keyPressed = true;
-            if (this.egStage === ENV_PHASE_OFF || this.egStage === ENV_PHASE_RELEASE) {
-                if (this.ssgMode & 8) {
-                    this.ssgMode &= ~0x10;
-                    this.ssgMode |= (this.ssgMode & 4) << 2;
-                }
-                this.ssgEnvState = -1;
-                this._updatePhase(ENV_PHASE_ATTACK);
-                this._refreshEnvOutput();
-                this.modulationInput = this.outputVal = this.prevSample = 0;
-                this.phaseAccum = 0;
-            }
+        if (this.keyPressed) return;
+        this.keyPressed = true;
+        if (this.egStage === ENV_PHASE_OFF || this.egStage === ENV_PHASE_RELEASE) {
+            this.ssgEnvState = -1;
+            this._enterPhase(ENV_PHASE_ATTACK);
+            this._refreshEnvOutput();
+            this.outputVal = this.prevSample = 0;
+            this.phaseAccum = 0;
         }
     }
 
-    // Key off — only triggers on 1→0 transition
     keyOff() {
-        if (this.keyPressed) {
-            this.keyPressed = false;
-            this._updatePhase(ENV_PHASE_RELEASE);
-        }
+        if (!this.keyPressed) return;
+        this.keyPressed = false;
+        this._enterPhase(ENV_PHASE_RELEASE);
     }
 
-    // Set F-Number (block/fnum combined)
+    /** Block and F-number, as the registers hold them together. */
     setFrequency(f) {
         this.phaseStep = (f & 2047) << ((f >> 11) & 7);
         this.keyNote = KEY_SCALE_TABLE[(f >> 7) & 127];
         this.needsRecalc = true;
     }
 
-    setPhaseAndNote(dp, bn) {
-        this.phaseStep = dp;
-        this.keyNote = bn;
-        this.needsRecalc = true;
-    }
-
-    // --- Recalculate derived parameters ---
+    /** Work out again what depends on the parameters, once they changed. */
     recalculate() {
-        if (this.needsRecalc) {
-            this.needsRecalc = false;
+        if (!this.needsRecalc) return;
+        this.needsRecalc = false;
 
-            // Phase generator computation
-            let pgc = this.phaseStep + DETUNE_TABLE[this.detuneOffset + this.keyNote];
-            if (pgc < 0) pgc = 0x3ff80; // 2047 << 7
+        // A 32-bit unsigned product: a negative sum wraps around.
+        this.phaseDelta = Math.imul(
+            this.phaseStep + DETUNE_TABLE[this.detuneOffset + this.keyNote],
+            this.chip.phaseFactors[this.freqMultiple],
+        );
 
-            this.phaseDelta = Math.floor(
-                (pgc * this.chip.getMultiplied(this.detune2Index, this.freqMultiple))
-                / (1 << (2 + CLOCK_RATIO_BITS - PHASE_EXTRA_BITS))
-            );
-            this.phaseDeltaLFO = this.phaseDelta >> 11;
+        this.keyScaleAdjust = this.keyNote >> (3 - this.keyScale);
+        this.totalLevelScaled = this.totalLevel * 8;
 
-            // Envelope generator computation
-            this.keyScaleAdjust = this.keyNote >> (3 - this.keyScale);
-            this.totalLevelScaled = this.silenced ? 0x3ff : this.totalLevel * 8;
-
-            switch (this.egStage) {
-                case ENV_PHASE_ATTACK:
-                    this._configureEnvRate(this.attackRate ? _clampLow(63, this.attackRate + this.keyScaleAdjust) : 0);
-                    break;
-                case ENV_PHASE_DECAY:
-                    this._configureEnvRate(this.decayRate ? _clampLow(63, this.decayRate + this.keyScaleAdjust) : 0);
-                    this.envLevelNextThreshold = this.sustainLevel * 8;
-                    break;
-                case ENV_PHASE_SUSTAIN:
-                    this._configureEnvRate(this.sustainRate ? _clampLow(63, this.sustainRate + this.keyScaleAdjust) : 0);
-                    break;
-                case ENV_PHASE_RELEASE:
-                    this._configureEnvRate(_clampLow(63, this.releaseRate + this.keyScaleAdjust));
-                    break;
-            }
-
-            // LFO amplitude modulation source
-            this.ampModSource = lfoAmpTable[this.synthVariant][this.ampModEnabled ? (this.lfoSensitivity >> 4) & 3 : 0];
-            this._refreshEnvOutput();
+        switch (this.egStage) {
+            case ENV_PHASE_ATTACK:
+                this._configureEnvRate(this._scaledRate(this.attackRate));
+                break;
+            case ENV_PHASE_DECAY:
+                this._configureEnvRate(this._scaledRate(this.decayRate));
+                this.envLevelNextThreshold = this.sustainLevel * 8;
+                break;
+            case ENV_PHASE_SUSTAIN:
+                this._configureEnvRate(this._scaledRate(this.sustainRate));
+                break;
+            case ENV_PHASE_RELEASE:
+                this._configureEnvRate(_clampLow(63, this.releaseRate + this.keyScaleAdjust));
+                break;
         }
+
+        if (this.ssgMode && this.egStage !== ENV_PHASE_RELEASE) this._loadSsgPart();
+        this._refreshEnvOutput();
     }
 
-    // --- Envelope internals ---
+    // --- Envelope ---
+    _scaledRate(rate) {
+        return rate ? _clampLow(63, rate + this.keyScaleAdjust) : 0;
+    }
+
     _configureEnvRate(rate) {
         this.envRate = rate;
-        this.envCounterThreshold = ENV_RATE_DIVIDER[rate >> 2];
+        this.envCounterStep = ENV_RATE_DIVIDER[rate >> 2] * this.chip.clockRatio;
+    }
+
+    /**
+     * The offset and direction of the current part of an SSG-EG shape. The
+     * table is flat: a part of -1, left by a key-on without SSG-EG, reads the
+     * entry before, and before the first entry there is only the first.
+     */
+    _loadSsgPart() {
+        const fast = this.attackRate >= ((this.ssgMode === 8 || this.ssgMode === 12) ? 56 : 60) ? 1 : 0;
+        const at = (((this.ssgMode & 7) * 2 + fast) * 3 + this.ssgEnvState) * 2;
+        const entry = at < 0 ? 0 : at;
+        this.ssgEnvOffset = SSG_ENV_TABLE[entry] * 0x200;
+        this.ssgEnvVector = SSG_ENV_TABLE[entry + 1];
     }
 
     _refreshEnvOutput() {
-        if (!this.ssgMode) {
-            this.envOutput = _clampLow(this.totalLevelScaled + this.envLevel, 0x3ff) << (1 + 2);
-        } else {
-            if ((this.ssgMode & 0x18) === 0x18) {
-                this.ssgEnvVector = -1;
-                this.ssgEnvOffset = 1023;
-            } else {
-                this.ssgEnvVector = 1;
-                this.ssgEnvOffset = 0;
-            }
-            this.envOutput = _clampHigh(0, _clampLow(
-                this.totalLevelScaled + this.envLevel * this.ssgEnvVector + this.ssgEnvOffset, 0x3ff
-            )) << (1 + 2);
-        }
+        const level = this.ssgMode
+            ? this.totalLevelScaled + this.envLevel * this.ssgEnvVector + this.ssgEnvOffset
+            : this.totalLevelScaled + this.envLevel;
+        this.envOutput = _clampLow(level, 0x3ff) << (1 + 2);
     }
 
-    _advanceEnvelope() {
-        // Part of the fmgen port (see the file header and LICENSE-fmgen.md):
-        // the counter reload is scaled by the clock ratio.
-        this.envCounter = Math.floor((2047 * 3 * (1 << CLOCK_RATIO_BITS)) / this.chip.clockRatio);
-
-        if (this.egStage === ENV_PHASE_ATTACK) {
-            const c = ATTACK_CURVE_TABLE[this.envRate][this.envPatternIdx & 7];
-            if (c >= 0) {
-                this.envLevel -= 1 + (this.envLevel >> c);
-                if (this.envLevel <= 0)
-                    this._updatePhase(ENV_PHASE_DECAY);
-            }
-        } else {
-            if (!this.ssgMode || (this.egStage === ENV_PHASE_RELEASE)) {
-                this.envLevel += ENV_RATE_PATTERN[this.envRate][this.envPatternIdx & 7];
-                if (this.envLevel >= this.envLevelNextThreshold)
-                    this._updatePhase(this.egStage + 1);
-            } else {
-                this.envLevel += 4 * ENV_RATE_PATTERN[this.envRate][this.envPatternIdx & 7];
-                if (this.envLevel >= this.envLevelNextThreshold) {
-                    if (this.egStage !== ENV_PHASE_OFF)
-                        this._updatePhase(this.egStage + 1);
-                }
-            }
-        }
-        this._refreshEnvOutput();
-        this.envPatternIdx++;
-    }
-
-    _tickEnvelope() {
-        this.envCounter -= this.envCounterThreshold;
-        if (this.envCounter <= 0)
-            this._advanceEnvelope();
-    }
-
-    // --- Phase Generator ---
-    _stepPhase() {
-        const ret = this.phaseAccum >>> 0;
-        this.phaseAccum = (this.phaseAccum + this.phaseDelta) >>> 0;
-        return ret;
-    }
-
-    _stepPhaseVibrato() {
-        const ret = this.phaseAccum >>> 0;
-        this.phaseAccum = (this.phaseAccum + this.phaseDelta +
-            ((this.phaseDeltaLFO * this.chip.getPhaseModValue()) >> 5)) >>> 0;
-        return ret;
-    }
-
-    // --- Log to linear ---
-    _expLookup(a) {
-        return (a < LOG_TO_LIN_SIZE) ? expTable[a] : 0;
-    }
-
-    // --- Operator sample generation ---
-    // Modulated operator (no LFO)
-    generateSample(inp) {
-        this._tickEnvelope();
-        this.prevSample = this.outputVal;
-
-        let pgin = this._stepPhase() >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
-        pgin += inp >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS - (2 + OUTPUT_TO_ENV_SHIFT));
-        this.outputVal = this._expLookup(this.envOutput + logSinTable[pgin & (SINE_TABLE_SIZE - 1)]);
-
-        return this.outputVal;
-    }
-
-    // Modulated operator with LFO
-    generateSampleLFO(inp) {
-        this._tickEnvelope();
-
-        let pgin = this._stepPhaseVibrato() >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
-        pgin += inp >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS - (2 + OUTPUT_TO_ENV_SHIFT));
-        this.outputVal = this._expLookup(
-            this.envOutput + logSinTable[pgin & (SINE_TABLE_SIZE - 1)] + this.ampModSource[this.chip.getAmpModLevel()]
-        );
-
-        return this.outputVal;
-    }
-
-    // Self-feedback operator (no LFO), returns PREVIOUS output
-    generateFeedback(fb) {
-        this._tickEnvelope();
-
-        const combined = this.outputVal + this.prevSample;
-        this.prevSample = this.outputVal;
-
-        let pgin = this._stepPhase() >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
-        if (fb < 31) {
-            pgin += ((combined << (1 + OUTPUT_TO_ENV_SHIFT)) >> fb) >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
-        }
-        this.outputVal = this._expLookup(this.envOutput + logSinTable[pgin & (SINE_TABLE_SIZE - 1)]);
-
-        return this.prevSample;
-    }
-
-    // Self-feedback operator with LFO, returns CURRENT output
-    generateFeedbackLFO(fb) {
-        this._tickEnvelope();
-
-        const combined = this.outputVal + this.prevSample;
-        this.prevSample = this.outputVal;
-
-        let pgin = this._stepPhaseVibrato() >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
-        if (fb < 31) {
-            pgin += ((combined << (1 + OUTPUT_TO_ENV_SHIFT)) >> fb) >> (20 + PHASE_EXTRA_BITS - SINE_INDEX_BITS);
-        }
-        this.outputVal = this._expLookup(
-            this.envOutput + logSinTable[pgin & (SINE_TABLE_SIZE - 1)] + this.ampModSource[this.chip.getAmpModLevel()]
-        );
-
-        return this.outputVal;
-    }
-
-    // --- Envelope phase transitions ---
-    _updatePhase(nextphase) {
-        switch (nextphase) {
-            case ENV_PHASE_HOLD:
-                this.envLevel = ENV_QUIET_LEVEL;
-                this.envLevelNextThreshold = ENV_QUIET_LEVEL;
-                break;
-
+    _enterPhase(phase) {
+        switch (phase) {
             case ENV_PHASE_ATTACK:
                 this.totalLevel = this.totalLevelLatched;
-                if ((this.attackRate + this.keyScaleAdjust) < 62) {
-                    this._configureEnvRate(this.attackRate ? _clampLow(63, this.attackRate + this.keyScaleAdjust) : 0);
+                if (this.ssgMode) {
+                    this.ssgEnvState++;
+                    if (this.ssgEnvState > 2) this.ssgEnvState = 1;
+                    this._loadSsgPart();
+                }
+                if (this.attackRate + this.keyScaleAdjust < 62) {
+                    this._configureEnvRate(this._scaledRate(this.attackRate));
                     this.egStage = ENV_PHASE_ATTACK;
                     break;
                 }
-                // fall through to decay
-            // falls through
+                // falls through
             case ENV_PHASE_DECAY:
                 if (this.sustainLevel) {
                     this.envLevel = 0;
-                    this.envLevelNextThreshold = this.sustainLevel * 8;
-                    this._configureEnvRate(this.decayRate ? _clampLow(63, this.decayRate + this.keyScaleAdjust) : 0);
+                    this.envLevelNextThreshold = this.ssgMode
+                        ? _clampLow(this.sustainLevel * 8, 0x200) : this.sustainLevel * 8;
+                    this._configureEnvRate(this._scaledRate(this.decayRate));
                     this.egStage = ENV_PHASE_DECAY;
                     break;
                 }
-                // fall through to sustain
-            // falls through
+                // falls through
             case ENV_PHASE_SUSTAIN:
-                if (this.ssgMode && (this.sustainLevel >= 124)) {
-                    this.envLevel = this.envLevelNextThreshold = 0x400;
-                    this.egStage = ENV_PHASE_RELEASE;
-                } else {
-                    this.envLevel = this.sustainLevel * 8;
-                    this.envLevelNextThreshold = 0x400;
-                    this._configureEnvRate(this.sustainRate ? _clampLow(63, this.sustainRate + this.keyScaleAdjust) : 0);
-                    this.egStage = ENV_PHASE_SUSTAIN;
-                    break;
-                }
-                // fall through to release
-            // falls through
+                this.envLevel = this.sustainLevel * 8;
+                this.envLevelNextThreshold = this.ssgMode ? 0x200 : 0x400;
+                this._configureEnvRate(this._scaledRate(this.sustainRate));
+                this.egStage = ENV_PHASE_SUSTAIN;
+                break;
             case ENV_PHASE_RELEASE:
-                if (this.egStage === ENV_PHASE_ATTACK ||
-                    (this.envLevel < (this.ssgMode ? 0x400 : ENV_QUIET_LEVEL))) {
-                    if (this.ssgMode) {
-                        if (this.ssgMode & 0x10) {
-                            this.envLevel = 1023 - this.envLevel;
-                        }
-                        this.ssgMode &= ~0x10;
-                    }
+                if (this.ssgMode) {
+                    this.envLevel = this.envLevel * this.ssgEnvVector + this.ssgEnvOffset;
+                    this.ssgEnvVector = 1;
+                    this.ssgEnvOffset = 0;
+                }
+                if (this.egStage === ENV_PHASE_ATTACK || this.envLevel < ENV_QUIET_LEVEL) {
                     this.envLevelNextThreshold = 0x400;
                     this._configureEnvRate(_clampLow(63, this.releaseRate + this.keyScaleAdjust));
                     this.egStage = ENV_PHASE_RELEASE;
                     break;
-                } else if (this.ssgMode) {
-                    if ((this.ssgMode & 3) !== 2) {
-                        this.envLevel = ENV_QUIET_LEVEL;
-                        this.envLevelNextThreshold = ENV_QUIET_LEVEL;
-                    }
-                    if (this.ssgMode & 1) {
-                        // one shot
-                        this._configureEnvRate(0);
-                        this.egStage = ENV_PHASE_HOLD;
-                    } else {
-                        // repeat
-                        this._configureEnvRate(this.attackRate ? _clampLow(63, this.attackRate + this.keyScaleAdjust) : 0);
-                        this.egStage = ENV_PHASE_ATTACK;
-                    }
-                    if (this.ssgMode & 2) {
-                        // alternate
-                        this.ssgMode ^= 0x10;
-                        if (!(this.ssgMode & 1)) {
-                            this.envLevel = this.envLevelNextThreshold = 0;
-                        }
-                    }
-                    break;
                 }
-                // fall through to off
-            // falls through
-            case ENV_PHASE_OFF:
+                // falls through
             default:
                 this.envLevel = ENV_QUIET_LEVEL;
                 this.envLevelNextThreshold = ENV_QUIET_LEVEL;
@@ -747,6 +486,74 @@ class FMOperator {
                 this.egStage = ENV_PHASE_OFF;
                 break;
         }
+    }
+
+    /** One step of the envelope, when the counter has run out. */
+    _advanceEnvelope() {
+        this.envCounter = ENV_STEP_SPAN;
+        const step = this.envRate * 8 + (this.envPatternIdx & 7);
+
+        if (this.egStage === ENV_PHASE_ATTACK) {
+            const shift = ATTACK_CURVE_TABLE[step];
+            if (shift >= 0) {
+                this.envLevel -= 1 + (this.envLevel >> shift);
+                if (this.envLevel <= 0) this._enterPhase(ENV_PHASE_DECAY);
+            }
+            this._refreshEnvOutput();
+        } else if (!this.ssgMode) {
+            this.envLevel += ENV_DECAY_STEPS[step];
+            if (this.envLevel >= this.envLevelNextThreshold) this._enterPhase(this.egStage + 1);
+            this._refreshEnvOutput();
+        } else {
+            this.envLevel += 4 * ENV_DECAY_STEPS[step];
+            if (this.envLevel >= this.envLevelNextThreshold) {
+                this._refreshEnvOutput();
+                if (this.egStage === ENV_PHASE_DECAY) this._enterPhase(ENV_PHASE_SUSTAIN);
+                else if (this.egStage === ENV_PHASE_SUSTAIN) this._enterPhase(ENV_PHASE_ATTACK);
+                else if (this.egStage === ENV_PHASE_RELEASE) this._enterPhase(ENV_PHASE_OFF);
+            }
+        }
+        this.envPatternIdx++;
+    }
+
+    _tickEnvelope() {
+        this.envCounter -= this.envCounterStep;
+        if (this.envCounter <= 0) this._advanceEnvelope();
+    }
+
+    /** The phase of this sample, in sine table steps; the counter moves on. */
+    _stepPhase() {
+        const phase = this.phaseAccum >>> PHASE_TO_SINE_SHIFT;
+        this.phaseAccum = (this.phaseAccum + this.phaseDelta) | 0;
+        return phase;
+    }
+
+    _levelToSample(sineIndex) {
+        // Unsigned: an SSG-EG level below 0 is out of the table, so silent.
+        const level = (this.envOutput + logSinTable[sineIndex & (SINE_TABLE_SIZE - 1)]) >>> 0;
+        return level < LOG_TO_LIN_SIZE ? expTable[level] : 0;
+    }
+
+    /** One sample, modulated by `input`. */
+    generateSample(input) {
+        this._tickEnvelope();
+        this.prevSample = this.outputVal;
+        const sineIndex = this._stepPhase() + (input >> INPUT_TO_SINE_SHIFT);
+        this.outputVal = this._levelToSample(sineIndex);
+        return this.outputVal;
+    }
+
+    /** One sample, modulated by the last two outputs. Returns the one before. */
+    generateFeedback(shift) {
+        this._tickEnvelope();
+        const sum = this.outputVal + this.prevSample;
+        this.prevSample = this.outputVal;
+        let sineIndex = this._stepPhase();
+        if (shift < 31) {
+            sineIndex += ((sum << (1 + OUTPUT_TO_ENV_SHIFT)) >> shift) >> PHASE_TO_SINE_SHIFT;
+        }
+        this.outputVal = this._levelToSample(sineIndex);
+        return this.prevSample;
     }
 }
 
@@ -760,51 +567,20 @@ const FM_CARRIER_MASK = [0x08, 0x08, 0x08, 0x08, 0x0a, 0x0e, 0x0e, 0x0f];
 class OpnVoice {
     constructor() {
         this.op = [new FMOperator(), new FMOperator(), new FMOperator(), new FMOperator()];
-        this.fb = 31;   // feedback shift (from FEEDBACK_SHIFT_TABLE)
+        this.feedbackShift = 0;
         this.algorithm = 0;
-        this.chip = null;
-        this.phaseLfoData = lfoPhaseTable[0][0];
-        this.channelMuted = false;
     }
 
     assignChip(chip) {
-        this.chip = chip;
         for (let i = 0; i < 4; i++) this.op[i].assignChip(chip);
-    }
-
-    setSynthVariant(variant) {
-        for (let i = 0; i < 4; i++) this.op[i].synthVariant = variant;
-    }
-
-    writeFeedback(feedback) {
-        this.fb = FEEDBACK_SHIFT_TABLE[feedback];
-    }
-
-    setFrequency(f) {
-        for (let i = 0; i < 4; i++) this.op[i].setFrequency(f);
-    }
-
-    writeLFOSens(ms) {
-        for (let i = 0; i < 4; i++) this.op[i].writeLFOSens(ms);
-    }
-
-    muteChannel(m) {
-        for (let i = 0; i < 4; i++) this.op[i].setSilenced(m);
-        this.channelMuted = m;
-    }
-
-    markDirty() {
-        for (let i = 0; i < 4; i++) this.op[i].needsRecalc = true;
-    }
-
-    /** True while any operator's envelope is not OFF (bit 0 of prepareForRender()). */
-    isActive() {
-        const op = this.op;
-        return (op[0].isActive() | op[1].isActive() | op[2].isActive() | op[3].isActive()) !== 0;
     }
 
     reset() {
         for (let i = 0; i < 4; i++) this.op[i].reset();
+    }
+
+    writeFeedback(feedback) {
+        this.feedbackShift = FEEDBACK_SHIFT_TABLE[feedback];
     }
 
     configureAlgorithm(algo) {
@@ -812,73 +588,72 @@ class OpnVoice {
         this.algorithm = algo;
     }
 
-    setKeyOnSlots(key) {
-        if (key & 0x1) this.op[0].keyOn(); else this.op[0].keyOff();
-        if (key & 0x2) this.op[1].keyOn(); else this.op[1].keyOff();
-        if (key & 0x4) this.op[2].keyOn(); else this.op[2].keyOff();
-        if (key & 0x8) this.op[3].keyOn(); else this.op[3].keyOff();
+    setFrequency(f) {
+        for (let i = 0; i < 4; i++) this.op[i].setFrequency(f);
     }
 
+    setKeyOnSlots(slots) {
+        for (let i = 0; i < 4; i++) {
+            if (slots & (1 << i)) this.op[i].keyOn(); else this.op[i].keyOff();
+        }
+    }
+
+    /** Bring the operators up to date; true if any of them sounds. */
     prepareForRender() {
-        this.op[0].recalculate();
-        this.op[1].recalculate();
-        this.op[2].recalculate();
-        this.op[3].recalculate();
-
-        this.phaseLfoData = lfoPhaseTable[this.op[0].synthVariant][this.op[0].lfoSensitivity & 7];
-        const active = (this.op[0].isActive() | this.op[1].isActive() |
-                     this.op[2].isActive() | this.op[3].isActive()) ? 1 : 0;
-        const lfo = (this.op[0].lfoSensitivity &
-            (this.op[0].ampModEnabled | this.op[1].ampModEnabled |
-             this.op[2].ampModEnabled | this.op[3].ampModEnabled ? 0x37 : 7)) ? 2 : 0;
-        return active | lfo;
+        const op = this.op;
+        let active = 0;
+        for (let i = 0; i < 4; i++) {
+            op[i].recalculate();
+            active |= op[i].isActive();
+        }
+        return active !== 0;
     }
 
-    // Compute one sample: no LFO
+    /** One sample of the channel. */
     compute() {
-        let r;
         const op = this.op;
-        const fb = this.fb;
+        const fb = this.feedbackShift;
+        let r;
         switch (this.algorithm) {
             case 0:
-                op[2].generateSample(op[1].currentOutput());
-                op[1].generateSample(op[0].currentOutput());
-                r = op[3].generateSample(op[2].currentOutput());
+                op[2].generateSample(op[1].outputVal);
+                op[1].generateSample(op[0].outputVal);
+                r = op[3].generateSample(op[2].outputVal);
                 op[0].generateFeedback(fb);
                 break;
             case 1:
-                op[2].generateSample(op[0].currentOutput() + op[1].currentOutput());
+                op[2].generateSample(op[0].outputVal + op[1].outputVal);
                 op[1].generateSample(0);
-                r = op[3].generateSample(op[2].currentOutput());
+                r = op[3].generateSample(op[2].outputVal);
                 op[0].generateFeedback(fb);
                 break;
             case 2:
-                op[2].generateSample(op[1].currentOutput());
+                op[2].generateSample(op[1].outputVal);
                 op[1].generateSample(0);
-                r = op[3].generateSample(op[0].currentOutput() + op[2].currentOutput());
+                r = op[3].generateSample(op[0].outputVal + op[2].outputVal);
                 op[0].generateFeedback(fb);
                 break;
             case 3:
                 op[2].generateSample(0);
-                op[1].generateSample(op[0].currentOutput());
-                r = op[3].generateSample(op[1].currentOutput() + op[2].currentOutput());
+                op[1].generateSample(op[0].outputVal);
+                r = op[3].generateSample(op[1].outputVal + op[2].outputVal);
                 op[0].generateFeedback(fb);
                 break;
             case 4:
                 op[2].generateSample(0);
-                r = op[1].generateSample(op[0].currentOutput());
-                r += op[3].generateSample(op[2].currentOutput());
+                r = op[1].generateSample(op[0].outputVal);
+                r += op[3].generateSample(op[2].outputVal);
                 op[0].generateFeedback(fb);
                 break;
             case 5:
-                r  = op[2].generateSample(op[0].currentOutput());
-                r += op[1].generateSample(op[0].currentOutput());
-                r += op[3].generateSample(op[0].currentOutput());
+                r  = op[2].generateSample(op[0].outputVal);
+                r += op[1].generateSample(op[0].outputVal);
+                r += op[3].generateSample(op[0].outputVal);
                 op[0].generateFeedback(fb);
                 break;
             case 6:
                 r  = op[2].generateSample(0);
-                r += op[1].generateSample(op[0].currentOutput());
+                r += op[1].generateSample(op[0].outputVal);
                 r += op[3].generateSample(0);
                 op[0].generateFeedback(fb);
                 break;
@@ -891,76 +666,6 @@ class OpnVoice {
         }
         return r;
     }
-
-    // Compute one sample: with LFO
-    computeWithLFO() {
-        this.chip.setPhaseModValue(this.phaseLfoData[this.chip.getPhaseModLevel()]);
-
-        let r;
-        const op = this.op;
-        const fb = this.fb;
-        switch (this.algorithm) {
-            case 0:
-                op[2].generateSampleLFO(op[1].currentOutput());
-                op[1].generateSampleLFO(op[0].currentOutput());
-                r = op[3].generateSampleLFO(op[2].currentOutput());
-                op[0].generateFeedbackLFO(fb);
-                break;
-            case 1:
-                op[2].generateSampleLFO(op[0].currentOutput() + op[1].currentOutput());
-                op[1].generateSampleLFO(0);
-                r = op[3].generateSampleLFO(op[2].currentOutput());
-                op[0].generateFeedbackLFO(fb);
-                break;
-            case 2:
-                op[2].generateSampleLFO(op[1].currentOutput());
-                op[1].generateSampleLFO(0);
-                r = op[3].generateSampleLFO(op[0].currentOutput() + op[2].currentOutput());
-                op[0].generateFeedbackLFO(fb);
-                break;
-            case 3:
-                op[2].generateSampleLFO(0);
-                op[1].generateSampleLFO(op[0].currentOutput());
-                r = op[3].generateSampleLFO(op[1].currentOutput() + op[2].currentOutput());
-                op[0].generateFeedbackLFO(fb);
-                break;
-            case 4:
-                op[2].generateSampleLFO(0);
-                r = op[1].generateSampleLFO(op[0].currentOutput());
-                r += op[3].generateSampleLFO(op[2].currentOutput());
-                op[0].generateFeedbackLFO(fb);
-                break;
-            case 5:
-                r  = op[2].generateSampleLFO(op[0].currentOutput());
-                r += op[1].generateSampleLFO(op[0].currentOutput());
-                r += op[3].generateSampleLFO(op[0].currentOutput());
-                op[0].generateFeedbackLFO(fb);
-                break;
-            case 6:
-                r  = op[2].generateSampleLFO(0);
-                r += op[1].generateSampleLFO(op[0].currentOutput());
-                r += op[3].generateSampleLFO(0);
-                op[0].generateFeedbackLFO(fb);
-                break;
-            case 7:
-                r  = op[2].generateSampleLFO(0);
-                r += op[1].generateSampleLFO(0);
-                r += op[3].generateSampleLFO(0);
-                r += op[0].generateFeedbackLFO(fb);
-                break;
-        }
-        return r;
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Linear interpolation helper
-// ---------------------------------------------------------------------------
-function linearInterpolate(table, index) {
-    const i = Math.floor(index);
-    const frac = index - i;
-    if (i >= table.length - 1) return table[table.length - 1];
-    return table[i] + (table[i + 1] - table[i]) * frac;
 }
 
 // ---------------------------------------------------------------------------
@@ -975,11 +680,14 @@ function clampRange(v, hi, lo) {
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-// YM2203 timers (YM2203 data sheet, registers $24-$27)
+// YM2203 timers (registers $24-$27)
 // -----------------------------------------------------------------------------
 
 /** Master clocks per timer A count for prescaler setting 0-2 ($2D / $2E / $2F). */
 const TIMER_A_UNIT = [72, 36, 24];
+
+/** Register numbers that pick a prescaler when named on the bus. */
+const PRESCALER_BY_NAME = new Map([[0x2D, 0], [0x2E, 1], [0x2F, 2]]);
 
 /** One timer: counts (range - value) units of `scale` timer A counts, then overflows. */
 class OpnTimer {
@@ -1025,8 +733,7 @@ class OpnTimer {
     }
 }
 
-// $27, timer control and channel 3 mode (YM2203 data sheet, register $27;
-// FM77AV BIOS manual appendix 3 (2)). Each timer owns one bit of three
+// $27, timer control and channel 3 mode. Each timer owns one bit of three
 // pairs, timer B one place above timer A:
 //   bits 1-0  LOAD    the timer counts while the bit is 1
 //   bits 3-2  ENABLE  an overflow sets the timer's status flag
@@ -1038,12 +745,12 @@ const CTRL_RESET_SHIFT = 4;
 const CTRL_CH3_MODE_SHIFT = 6;
 
 // Channel 3 modes. Any mode but the normal one gives the operators of
-// channel 3 their own F-numbers ($A8-$AE); the CSM mode also keys the
-// channel on at each timer A overflow (YM2203 data sheet, register $27).
+// channel 3 their own F-numbers ($A8-$AE); with this bit of the mode set,
+// a timer A overflow also keys the channel on (CSM).
 const CH3_MODE_NORMAL = 0;
-const CH3_MODE_CSM = 2;
+const CH3_MODE_CSM_BIT = 2;
 
-// Timer counts (YM2203 data sheet, registers $24-$26): NA has 10 bits,
+// Timer counts (registers $24-$26): NA has 10 bits,
 // the upper 8 in $24 and the lower 2 in $25; NB is the 8 bits of $26.
 // register -> [timer (0 = A, 1 = B), lowest count bit it sets, bit width]
 const TIMER_COUNT_FIELDS = new Map([
@@ -1052,8 +759,8 @@ const TIMER_COUNT_FIELDS = new Map([
     [0x26, [1, 0, 8]],
 ]);
 
-// Operator parameters $30-$9E by the upper hex digit of the register
-// (YM2203 data sheet, register map). Each takes the operator, the value
+// Operator parameters $30-$9E by the upper hex digit of the register.
+// Each takes the operator, the value
 // written and whether the operator belongs to the channel keyed by CSM.
 const OPERATOR_WRITERS = [];
 OPERATOR_WRITERS[0x3] = (op, v) => {                 // DT, MULTI
@@ -1065,10 +772,7 @@ OPERATOR_WRITERS[0x5] = (op, v) => {                 // KS, AR
     op.writeKS(v >> 6);
     op.writeAR((v & 0x1F) * 2);
 };
-OPERATOR_WRITERS[0x6] = (op, v) => {                 // DR
-    op.writeDR((v & 0x1F) * 2);
-    op.writeAMON(false);    // the YM2203 has no amplitude modulation
-};
+OPERATOR_WRITERS[0x6] = (op, v) => op.writeDR((v & 0x1F) * 2); // DR
 OPERATOR_WRITERS[0x7] = (op, v) => op.writeSR((v & 0x1F) * 2); // SR
 OPERATOR_WRITERS[0x8] = (op, v) => {                 // SL, RR
     op.writeSL(SUSTAIN_LEVEL_TABLE[v >> 4]);
@@ -1076,8 +780,7 @@ OPERATOR_WRITERS[0x8] = (op, v) => {                 // SL, RR
 };
 OPERATOR_WRITERS[0x9] = (op, v) => op.writeSSGEG(v & 0x0F); // SSG-EG
 
-// Register writes by the upper hex digit of the register (YM2203 data
-// sheet, register map): $0x the SSG, $2x mode and timers, $3x-$9x
+// Register writes by the upper hex digit of the register: $0x the SSG, $2x mode and timers, $3x-$9x
 // operator parameters, $Ax F-numbers, $Bx feedback and algorithm. The
 // other digits hold no register on the YM2203; writing them does nothing.
 const REGISTER_GROUPS = new Array(16).fill(null);
@@ -1124,12 +827,6 @@ export class OPN {
 
         // FM volume
         this._fmvolume = 0;
-
-        // Interpolation
-        this._interpolation = false;
-        this._mpratio = 0;
-        this._mixdelta = 0;
-        this._mb = [0, 0, 0, 0];
 
         // Timers
         this._timerUnit = TIMER_A_UNIT[0];
@@ -1180,7 +877,7 @@ export class OPN {
     _initialize(c, r) {
         this._clock = c;
         this._psgrate = r;
-        this._configureRate(c, r, false);
+        this._configureRate(c, r);
         this.reset();
         this._setFMVolume(0);
     }
@@ -1214,13 +911,10 @@ export class OPN {
         }
     }
 
-    _configureRate(c, r, ip) {
-        this._interpolation = ip;
+    _configureRate(c, r) {
         this._clock = c;
         this._psgrate = r;
         this._recalcFrequencies();
-        this._mb[0] = this._mb[1] = this._mb[2] = this._mb[3] = 0;
-        this._mixdelta = 0;
     }
 
     _recalcFrequencies() {
@@ -1230,31 +924,17 @@ export class OPN {
     }
 
     _configurePrescaler(p) {
-        const dividers = [[6, 4], [3, 2], [2, 1]];
-        const lfoRateDivisors = [109, 78, 72, 68, 63, 45, 9, 6];
+        const dividers = [6, 3, 2];
 
         if (this._prescale !== p) {
             this._prescale = p;
-            const fmclock = Math.floor(this._clock / dividers[p][0] / 12);
+            const fmclock = Math.floor(this._clock / dividers[p] / 12);
 
-            if (this._interpolation) {
-                this._rate = fmclock * 2;
-                do {
-                    this._rate >>= 1;
-                    this._mpratio = Math.floor(this._rate * OUTPUT_SCALE / this._psgrate);
-                } while (this._mpratio >= OUTPUT_SCALE * 2);
-            } else {
-                this._rate = this._psgrate;
-            }
+            this._rate = this._psgrate;
 
             // Ratio of FM clock to output rate
-            const ratio = Math.floor(((fmclock << CLOCK_RATIO_BITS) + this._rate / 2) / this._rate);
-            this._chip.updateRatio(ratio);
-
-            // LFO rate table
-            for (let i = 0; i < 8; i++) {
-                lfoRateTable[i] = Math.floor((ratio << (1 + 14 - CLOCK_RATIO_BITS)) / lfoRateDivisors[i]);
-            }
+            const half = Math.floor(this._rate / 2);
+            this._chip.updateRatio(Math.floor(((fmclock << CLOCK_RATIO_BITS) + half) / this._rate));
         }
     }
 
@@ -1283,21 +963,14 @@ export class OPN {
         // FM77AV mode, CPU cycles otherwise). Set in writeReg().
         this._busyCycles = 0;
 
-        this._fnum = [0, 0, 0];
-        this._fnumHighLatch.fill(0);
-        this._fnum3 = [0, 0, 0];
-
-        this._mixdelta = 0;
-        this._mb = [0, 0, 0, 0];
         this._fmAccum = 0;
         // Counted samples are dropped with the buffer below.
         this._pendingSamples = 0;
 
-        // Reset registers
-        this._configurePrescaler(0);
         // Every voice register $30-$BF to 0. The timers and the channel 3
         // mode ($24-$27) were cleared above.
         for (let reg = 0x30; reg < 0xC0; reg++) this._storeRegister(reg, 0);
+        this._configurePrescaler(0);
         this._ch[0].reset();
         this._ch[1].reset();
         this._ch[2].reset();
@@ -1312,16 +985,15 @@ export class OPN {
     // =========================================================================
 
     /**
-     * Register address select. Selecting $2D, $2E or $2F picks the
-     * prescaler by itself (YM2203 data sheet, prescaler registers); the
-     * other addresses only wait for the data write.
+     * The bus has named a register. Naming one of PRESCALER_BY_NAME selects
+     * the prescaler at once; every other number waits for its data in
+     * writeReg().
      */
     selectAddress(addr) {
-        addr &= 0xFF;
-        if (addr >= 0x2D && addr <= 0x2F) {
-            this.renderPendingSamples();
-            this._selectPrescaler(addr - 0x2D);
-        }
+        const choice = PRESCALER_BY_NAME.get(addr & 0xFF);
+        if (choice === undefined) return;
+        this.renderPendingSamples();
+        this._selectPrescaler(choice);
     }
 
     writeReg(reg, value) {
@@ -1343,7 +1015,7 @@ export class OPN {
     }
 
     /**
-     * $20-$2F (YM2203 data sheet, register map): $24-$27 the timers,
+     * $20-$2F: $24-$27 the timers,
      * $28 key on / off, $2D-$2F the prescaler. The rest do nothing.
      */
     _writeModeRegister(reg, v) {
@@ -1367,8 +1039,7 @@ export class OPN {
 
     /**
      * $30-$9E: bits 1-0 of the register pick the channel (3 is none),
-     * bits 3-2 the operator slot through REG_TO_OP_MAP (YM2203 data
-     * sheet, register map).
+     * bits 3-2 the operator slot through REG_TO_OP_MAP.
      */
     _writeOperatorRegister(reg, v) {
         const channel = reg & 3;
@@ -1379,7 +1050,7 @@ export class OPN {
     }
 
     /**
-     * $A0-$AE (YM2203 data sheet, F-number registers): bit 2 of the
+     * $A0-$AE: bit 2 of the
      * register selects the high byte (block and F-number bits 10-8), which
      * is held until the low byte is written; bit 3 selects the per-operator
      * F-numbers of channel 3 ($A8-$AE) instead of the channel F-numbers.
@@ -1396,7 +1067,7 @@ export class OPN {
         }
     }
 
-    /** $B0-$B2: feedback (bits 5-3) and algorithm (bits 2-0) (YM2203 data sheet). */
+    /** $B0-$B2: feedback (bits 5-3) and algorithm (bits 2-0). */
     _writeVoiceRegister(reg, v) {
         if (reg > 0xB2) return;
         const voice = this._ch[reg & 3];
@@ -1405,7 +1076,7 @@ export class OPN {
     }
 
     _isCSMMode() {
-        return this._ch3Mode === CH3_MODE_CSM;
+        return (this._ch3Mode & CH3_MODE_CSM_BIT) !== 0;
     }
 
     readStatus() {
@@ -1447,7 +1118,7 @@ export class OPN {
 
     /**
      * FM channel output level for channels 1-3, as 0.0-1.0.
-     * A muted channel reports 0; operators whose envelope is OFF are not counted.
+     * Operators whose envelope is OFF are not counted.
      * @param {number[]} [out] optional 3-element array to fill (avoids garbage)
      */
     getFMChannelLevels(out = [0, 0, 0]) {
@@ -1455,16 +1126,14 @@ export class OPN {
         for (let i = 0; i < 3; i++) {
             const ch = this._ch[i];
             let level = 0;
-            if (!ch.channelMuted) {
-                const mask = FM_CARRIER_MASK[ch.algorithm & 7];
-                for (let o = 0; o < 4; o++) {
-                    if (!(mask & (1 << o))) continue;
-                    const op = ch.op[o];
-                    if (op.egStage === ENV_PHASE_OFF) continue;
-                    const att = op.envOutput >> 3;
-                    if (att >= 1023) continue;
-                    level += Math.pow(2, -att / 64);
-                }
+            const mask = FM_CARRIER_MASK[ch.algorithm & 7];
+            for (let o = 0; o < 4; o++) {
+                if (!(mask & (1 << o))) continue;
+                const op = ch.op[o];
+                if (op.egStage === ENV_PHASE_OFF) continue;
+                const att = op.envOutput >> 3;
+                if (att >= 1023) continue;
+                level += Math.pow(2, -att / 64);
             }
             out[i] = level > 1 ? 1 : level;
         }
@@ -1487,7 +1156,7 @@ export class OPN {
     // FM sample rendering
     // =========================================================================
 
-    _scaleSample(s) {
+    _scaleFM(s) {
         return (clampRange(s, 0x7fff, -0x8000) * this._fmvolume) >> 14;
     }
 
@@ -1506,31 +1175,20 @@ export class OPN {
             ch[2].op[3].setFrequency(this._fnum[2]);
         }
 
-        const actch = (((ch[2].prepareForRender() << 2) | ch[1].prepareForRender()) << 2) | ch[0].prepareForRender();
-        const fmActive = !!(actch & 0x15);
+        const active0 = ch[0].prepareForRender();
+        const active1 = ch[1].prepareForRender();
+        const active2 = ch[2].prepareForRender();
         const ssg = this._ssg;
         const ssgGain = this._ssgMixGain;
 
-        let act = actch;
         for (let n = 0; n < nsamples; n++) {
-            let fmSample = 0;
-            if (fmActive) {
-                let x = 0, y = 0, z = 0;
-                if (act & 0x01) x = ch[0].compute();
-                if (act & 0x04) y = ch[1].compute();
-                if (act & 0x10) z = ch[2].compute();
-                fmSample = x + y + z;
-                // A channel whose operators have all ended is skipped
-                // from the next sample on.
-                if ((act & 0x01) && !ch[0].isActive()) act &= ~0x01;
-                if ((act & 0x04) && !ch[1].isActive()) act &= ~0x04;
-                if ((act & 0x10) && !ch[2].isActive()) act &= ~0x10;
-            }
+            let fm = 0;
+            if (active0) fm = ch[0].compute();
+            if (active1) fm += ch[1].compute();
+            if (active2) fm += ch[2].compute();
 
             // SSG always renders; generateSample() returns one output sample.
-            const ssgSample = (ssg.generateSample() * ssgGain) | 0;
-
-            buffer[n] += this._scaleSample(fmSample + ssgSample);
+            buffer[n] += this._scaleFM(fm) + ((ssg.generateSample() * ssgGain) | 0);
         }
     }
 

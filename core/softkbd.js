@@ -24,6 +24,7 @@ const TYPEWRITER_CODES = new Set([
     'Comma','Period','Slash','IntlRo',
 ]);
 
+// Upper legend of each key cap (SHIFT gives the upper legend).
 const LABEL_SHIFT = new Map([
     ['1','!'], ['2','"'], ['3','#'], ['4','$'], ['5','%'],
     ['6','&'], ['7','\''], ['8','('], ['9',')'],
@@ -75,17 +76,17 @@ const LAYOUT = [
     [_,_,_,_,_,_,_,_,_,_,_,_,_,K('EL','End'),K('CLS','PageUp'),_,K('INS','Insert'),K('\u25B2','ArrowUp'),K('DEL','Delete')],
     // --- Top row 2 ---
     [K('BRK',BREAK_CODE,'break-key'),_,K('PF1','F1'),K('PF2','F2'),K('PF3','F3'),K('PF4','F4'),K('PF5','F5'),K('PF6','F6'),K('PF7','F7'),K('PF8','F8'),K('PF9','F9'),K('PF10','F10'),_,K('DUP','PageDown'),K('HOM','Home'),_,K('\u25C0','ArrowLeft'),K('\u25BC','ArrowDown'),K('\u25B6','ArrowRight')],
-    // --- Main row 1: ESC~BS + numpad 789* ---
-    [K('ESC','Escape'),K('1','Digit1'),K('2','Digit2'),K('3','Digit3'),K('4','Digit4'),K('5','Digit5'),K('6','Digit6'),K('7','Digit7'),K('8','Digit8'),K('9','Digit9'),K('0','Digit0'),K('-','Minus'),K('^','Equal'),K('\u00A5','Backslash'),K('BS','Backspace'),_,K('7','Numpad7'),K('8','Numpad8'),K('9','Numpad9'),K('*','NumpadMultiply')],
-    // --- Main row 2: TAB~RET + numpad 456/ ---
-    [K('TAB','Tab'),K('Q','KeyQ'),K('W','KeyW'),K('E','KeyE'),K('R','KeyR'),K('T','KeyT'),K('Y','KeyY'),K('U','KeyU'),K('I','KeyI'),K('O','KeyO'),K('P','KeyP'),K('@','BracketLeft'),K('[','BracketRight'),K('RET','Enter'),_,K('4','Numpad4'),K('5','Numpad5'),K('6','Numpad6'),K('/','NumpadDivide')],
-    // --- Main row 3: CTR~] + numpad 123= ---
-    [K('CTR','ControlLeft','ctrl'),K('A','KeyA'),K('S','KeyS'),K('D','KeyD'),K('F','KeyF'),K('G','KeyG'),K('H','KeyH'),K('J','KeyJ'),K('K','KeyK'),K('L','KeyL'),K(';','Semicolon'),K(':','Quote'),K(']','IntlBackslash'),_,_,_,K('1','Numpad1'),K('2','Numpad2'),K('3','Numpad3'),K('=','NumpadEqual')],
-    // --- Main row 4: SHF~SHF + numpad 0.+RT ---
-    [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('"','IntlRo'),K('SHF','ShiftRight'),_,_,_,K('0','Numpad0'),K('.','NumpadDecimal'),K('+','NumpadAdd'),K('RT','NumpadEnter')],
-    // --- Main row 5: CAP/GRP/(無変換)/(変換)/SPACE/カナ ---
+    // --- Main row 1: ESC~BS + numpad */+- ---
+    [K('ESC','Escape'),K('1','Digit1'),K('2','Digit2'),K('3','Digit3'),K('4','Digit4'),K('5','Digit5'),K('6','Digit6'),K('7','Digit7'),K('8','Digit8'),K('9','Digit9'),K('0','Digit0'),K('-','Minus'),K('^','Equal'),K('\u00A5','Backslash'),K('BS','Backspace'),_,K('*','NumpadMultiply'),K('/','NumpadDivide'),K('+','NumpadAdd'),K('-','NumpadSubtract')],
+    // --- Main row 2: TAB~RET + numpad 789= ---
+    [K('TAB','Tab'),K('Q','KeyQ'),K('W','KeyW'),K('E','KeyE'),K('R','KeyR'),K('T','KeyT'),K('Y','KeyY'),K('U','KeyU'),K('I','KeyI'),K('O','KeyO'),K('P','KeyP'),K('@','BracketLeft'),K('[','BracketRight'),K('RET','Enter'),_,K('7','Numpad7'),K('8','Numpad8'),K('9','Numpad9'),K('=','NumpadEqual')],
+    // --- Main row 3: CTR~] + numpad 456, ---
+    [K('CTR','ControlLeft','ctrl'),K('A','KeyA'),K('S','KeyS'),K('D','KeyD'),K('F','KeyF'),K('G','KeyG'),K('H','KeyH'),K('J','KeyJ'),K('K','KeyK'),K('L','KeyL'),K(';','Semicolon'),K(':','Quote'),K(']','IntlBackslash'),_,_,_,K('4','Numpad4'),K('5','Numpad5'),K('6','Numpad6'),K(',','NumpadComma')],
+    // --- Main row 4: SHF~SHF + numpad 123 + RT (two rows tall) ---
+    [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('"','IntlRo'),K('SHF','ShiftRight'),_,_,_,K('1','Numpad1'),K('2','Numpad2'),K('3','Numpad3'),K('RT','NumpadEnter','key-tall')],
+    // --- Main row 5: CAP/GRP/(無変換)/(変換)/SPACE/カナ + numpad 0 (two cells wide) . ---
     // 無変換 / 変換 は FM77AV 以降のみ表示
-    [K('CAP','CapsLock','led'),K('GRP','AltLeft'),K('\u7121\u5909\u63DB','NonConvert','av-key'),K('\u5909\u63DB','Convert','av-key'),K('SPACE','Space','space'),K('\u30AB\u30CA','AltRight','led')],
+    [K('CAP','CapsLock','led'),K('GRP','AltLeft'),K('\u7121\u5909\u63DB','NonConvert','av-key'),K('\u5909\u63DB','Convert','av-key'),K('SPACE','Space','space'),K('\u30AB\u30CA','AltRight','led'),_,_,_,_,_,K('0','Numpad0','key-wide'),K('.','NumpadDecimal'),_],
 ];
 
 // --- Portrait (tall phone) layout ---
@@ -107,10 +108,11 @@ const PORTRAIT_LAYOUT = [
     // --- Main row 5: CAP/GRP/(\u7121\u5909\u63DB)/(\u5909\u63DB)/SPACE/\u30AB\u30CA ---
     [K('CAP','CapsLock','led'),K('GRP','AltLeft'),K('\u7121\u5909\u63DB','NonConvert','av-key'),K('\u5909\u63DB','Convert','av-key'),K('SPACE','Space','space'),K('\u30AB\u30CA','AltRight','led')],
     // --- Cursor / edit cluster (left) + numeric keypad (right), below main ---
-    [K('CLS','PageUp'),K('\u25B2','ArrowUp'),K('INS','Insert'),_,K('7','Numpad7'),K('8','Numpad8'),K('9','Numpad9'),K('*','NumpadMultiply')],
-    [K('\u25C0','ArrowLeft'),K('\u25BC','ArrowDown'),K('\u25B6','ArrowRight'),_,K('4','Numpad4'),K('5','Numpad5'),K('6','Numpad6'),K('/','NumpadDivide')],
-    [K('HOM','Home'),K('DEL','Delete'),K('EL','End'),_,K('1','Numpad1'),K('2','Numpad2'),K('3','Numpad3'),K('=','NumpadEqual')],
-    [K('DUP','PageDown'),_,_,_,K('0','Numpad0'),K('.','NumpadDecimal'),K('+','NumpadAdd'),K('RT','NumpadEnter')],
+    [K('CLS','PageUp'),K('\u25B2','ArrowUp'),K('INS','Insert'),_,K('*','NumpadMultiply'),K('/','NumpadDivide'),K('+','NumpadAdd'),K('-','NumpadSubtract')],
+    [K('\u25C0','ArrowLeft'),K('\u25BC','ArrowDown'),K('\u25B6','ArrowRight'),_,K('7','Numpad7'),K('8','Numpad8'),K('9','Numpad9'),K('=','NumpadEqual')],
+    [K('HOM','Home'),K('DEL','Delete'),K('EL','End'),_,K('4','Numpad4'),K('5','Numpad5'),K('6','Numpad6'),K(',','NumpadComma')],
+    [K('DUP','PageDown'),_,_,_,K('1','Numpad1'),K('2','Numpad2'),K('3','Numpad3'),K('RT','NumpadEnter','key-tall')],
+    [_,_,_,_,K('0','Numpad0','key-wide'),K('.','NumpadDecimal'),_],
 ];
 
 // Use the portrait layout on narrow, portrait-oriented screens.
@@ -207,6 +209,7 @@ class SoftKeyboard {
             if (isBreak) { this._fm7.pressBreak(); btn.classList.add('active'); return; }
             if (isShift) {
                 this._shiftHeld = !this._shiftHeld;
+                this._keyboard.setVirtualShift(code, this._shiftHeld);
                 this._updateShiftState();
                 this._refreshKeyLabels(true);
                 return;
@@ -245,6 +248,7 @@ class SoftKeyboard {
             this._updateModState();
             if (this._shiftHeld) {
                 this._shiftHeld = false;
+                this._keyboard.setVirtualShift(code, false);
                 this._updateShiftState();
                 this._refreshKeyLabels(true);
             }

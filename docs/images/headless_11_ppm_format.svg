@@ -25,7 +25,8 @@
   <text x="110" y="158" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">形式の印</text>
   <text x="110" y="175" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">（P6 = バイナリ）</text>
   <text x="245" y="158" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">幅と高さ</text>
-  <text x="245" y="175" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">（表示モードで変わる）</text>
+  <text x="245" y="175" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">（幅は 640 で固定）</text>
+  <text x="245" y="192" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">（高さは表示モードで変わる）</text>
   <text x="380" y="158" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">最大輝度値</text>
   <text x="590" y="158" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">ピクセルデータ（1 ピクセル = 3 バイト）</text>
 

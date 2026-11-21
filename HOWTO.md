@@ -37,7 +37,7 @@ css/
 assets/
   granite.png       FM77AV40SX スキンの前面パネルのテクスチャ
   altroms/          同梱の互換 ROM セット（独立実装。本体は MIT License、漢字字形の扱いはルートの LICENSE-Shinonome.md）
-core/               共有エンジン（View 横断で再利用する中核）とブラウザ結合部
+core/               エンジン（ブラウザに依存しない中核）とブラウザ結合部
   [エンジン部: ブラウザ API 非依存。Node.js から直接動かせる（docs/Headless_Test_Manual.md）]
   index.js          コアの公開 API 窓口（FM7 / FloppyImage / CPU6809 / Display / キーボード定数 等を再エクスポート）
   fm7.js            システム全体の統合クラス（メモリマップ、I/O、スケジューラ連携、キーボードエンコーダ）
@@ -49,7 +49,7 @@ core/               共有エンジン（View 横断で再利用する中核）�
   keyboard.js       キーボード入力（FM-7 ASCIIモード / FM77AV スキャンコードモード、カスタムリマップ対応）
   psg.js            PSG音源（AY-3-8910）のレジスタと波形生成
   opn.js            OPN FM音源（YM2203: 3ch FM合成 + SSG + タイマー）
-  exseries.js       FM77AV20EX / FM77AV40 / FM77AV40EX で増えるレジスタとメモリ（拡張 MMR、拡張サブシステム RAM、第 2 水準漢字 ROM ほか）
+  exseries.js       FM77AV20 / FM77AV20EX / FM77AV40 / FM77AV40EX で増えるレジスタとメモリ（拡張 MMR、拡張サブシステム RAM、第 2 水準漢字 ROM ほか。FM77AV20 は第 2 水準漢字のポートだけ）
   inputports.js     マウスとジョイスティックの口（マウスセットのカード、OPN の I/O ポートとジョイスティック端子、ジョイスティック端子のマウス）
   scheduler.js      タイミング制御（デュアルCPU同期、イベントスケジューラ）
   [ブラウザ結合部: DOM / Canvas / Web Audio を扱う。index.html はここから FM7Browser を生成する]
@@ -89,8 +89,8 @@ core/               共有エンジン（View 横断で再利用する中核）�
 | FM-7 | 640×200 8色 | PSG (AY-3-8910)。FM 音源カード (OPN) はオプション | ASCIIコード |
 | FM-77 | 640×200 8色 | PSG (AY-3-8910)。FM 音源カード (OPN) はオプション | ASCIIコード |
 | FM77AV | 640×200 8色 / 320×200 4096色 | PSG + OPN FM (YM2203) | スキャンコード |
-| FM77AV20 | FM77AV + 2DD 対応 | PSG + OPN FM (YM2203) | スキャンコード |
-| FM77AV20EX | FM77AV20 + DMAC（高速MMR はモードの切り替えのみ）、KANJI2.ROM（第 2 水準漢字 ROM。オプション） | PSG + OPN FM (YM2203) | スキャンコード |
+| FM77AV20 | FM77AV + 2DD 対応。第 2 水準漢字は日本語拡張カードを足したときだけ（ROM Files 欄に行は無く、Folder の読み込みでだけ使える） | PSG + OPN FM (YM2203) | スキャンコード |
+| FM77AV20EX | FM77AV20 + DMAC・高速MMR。第 2 水準漢字は FM77AV20 と同じ | PSG + OPN FM (YM2203) | スキャンコード |
 | FM77AV40 | 640×200 / 320×200 4096色 / 262,144色 / 640×400 8色、2DD、DMAC、KANJI2.ROM（第 2 水準漢字 ROM） | PSG + OPN FM (YM2203) | スキャンコード |
 | FM77AV40EX/SX | FM77AV40 + EXTSUB.ROM（拡張サブシステム ROM）。ハードウェアウィンドウは未対応（設定を受け付けるだけ） | PSG + OPN FM (YM2203) | スキャンコード |
 
@@ -98,4 +98,4 @@ core/               共有エンジン（View 横断で再利用する中核）�
 
 [MIT License](LICENSE) © 2026 [7032](https://x.com/7032) / Naomitsu Tsugiiwa
 
-本ライセンスは WebM7 自体の成果物（ソースコードのほか、本プロジェクトが作成したドキュメント・図・アイコン・テクスチャ等を含みます）に適用されます。第三者に権利が帰属する要素（各社ブランドロゴなど）には適用されません。FM 音源の FM 合成部（core/opn.js の一部）は "FM Sound Generator" (fmgen) Copyright (C) by cisc 1998, 2003 の移植で、原典の利用条件が適用されます（原文は core/fmgen_readme.txt を同梱）。同梱の互換 ROM セット（`assets/altroms/`）の条件は同梱の `assets/altroms/LICENSE` に従います（漢字系 ROM の字形の扱いは [LICENSE-Shinonome.md](LICENSE-Shinonome.md)）。詳細は [LICENSE-MIT.md](LICENSE-MIT.md)（「ライセンスの案内」の表と各 `LICENSE-*.md`） を参照してください。
+本ライセンスは WebM7 自体の成果物（ソースコードのほか、本プロジェクトが作成したドキュメント・図・アイコン・テクスチャ等を含みます）に適用されます。第三者に権利が帰属する要素（各社ブランドロゴなど）には適用されません。FM 音源の移植部（core/opn.js のファイル全体）は "FM Sound Generator" (fmgen) Copyright (C) by cisc 1998, 2003 の移植で、MIT License の対象ではなく、原典の利用条件だけが適用されます（原文は core/fmgen_readme.txt を同梱）。同梱の互換 ROM セット（`assets/altroms/`）の条件は同梱の `assets/altroms/LICENSE` に従います（漢字系 ROM の字形の扱いは [LICENSE-Shinonome.md](LICENSE-Shinonome.md)）。詳細は [LICENSE-MIT.md](LICENSE-MIT.md)（「ライセンスの案内」の表と各 `LICENSE-*.md`） を参照してください。

@@ -5,20 +5,20 @@
 | 上流の名前 | FM Sound Generator with OPN/OPM interface（"fmgen"） |
 | 作者 | cisc |
 | 著作権表示 | Copyright (C) by cisc 1998, 2003. |
-| バージョン | 008（2003-09-02。同梱の原文 readme の変更点に記載の最終バージョン） |
-| ライセンス文 | 原文は [`core/fmgen_readme.txt`](core/fmgen_readme.txt)（EUC-JP。上流の条件に従い、一切改変せずそのまま同梱） |
-| 本プロジェクトでの範囲 | `core/opn.js` の FM 合成部 |
+| バージョン | 008（2003-09-02。同梱の原文 readme の変更点に記載の最終バージョン）。上流の配布物 `fmgen008.lzh` のソースから移植した |
+| ライセンス文 | 原文は [`core/fmgen_readme.txt`](core/fmgen_readme.txt)（Shift_JIS、改行は CRLF。上流の配布物の `readme.txt` を、上流の条件に従い一切改変せずそのまま同梱） |
+| 本プロジェクトでの範囲 | `core/opn.js` のファイル全体 |
 | 改変の有無 | あり（下記） |
 
 ## 適用範囲
 
-`core/opn.js` の FM 合成部は fmgen の JavaScript への移植であり、本プロジェクトの
-MIT License（[`LICENSE`](LICENSE)）の対象ではありません。この部分には上流の
-fmgen の利用条件が適用されます。`core/opn.js` の先頭には
-`SPDX-License-Identifier: LicenseRef-fmgen AND MIT` を記しています。
+`core/opn.js` は fmgen の JavaScript への移植であり、ファイル全体が本プロジェクトの
+MIT License（[`LICENSE`](LICENSE)）の対象ではありません。このファイルには上流の
+fmgen の利用条件だけが適用されます。`core/opn.js` の先頭には
+`SPDX-License-Identifier: LicenseRef-fmgen` と fmgen の著作権表示を記しています。
 
-同じ `core/opn.js` の FM 合成部以外の部分（SSG 部など）と、それが用いる `core/psg.js` は
-本プロジェクトの独自実装で、MIT License が適用されます。
+`core/opn.js` が用いる別のファイル `core/psg.js` は本プロジェクトの独自実装で、
+MIT License が適用されます。
 
 ## ライセンス文の要旨
 
@@ -34,6 +34,19 @@ fmgen の利用条件が適用されます。`core/opn.js` の先頭には
 
 ## 本プロジェクトでの改変内容
 
-- C++ から JavaScript への翻訳。
-- YM2203（OPN）の機能範囲への縮小。
+移植元は上流の fmgen 008 の配布物（`fmgen.cpp`・`fmgen.h`・`fmgeninl.h`・`opna.cpp`・`opna.h`）です。FM 合成の計算（位相、エンベロープ、SSG-EG、アルゴリズム、表の値、比率 7 ビットと位相 9 ビットの精度）は 008 のとおりです。上流との違いは次のものだけです。
+
+- C++ から JavaScript への翻訳。名前と細かな関数の分け方は改めています。32 ビットの符号なしの計算は JavaScript の整数の演算で置き換えています。
+- YM2203（OPN）の機能範囲への縮小。YM2203 では使われない次のものを除きました。
+  - YM2608 / YM2610 / YM2151 のクラス、ADPCM、リズム音源。
+  - LFO（`pmtable`・`amtable`・`lfotable` と LFO の付く計算）、AMON、MS、DT2、KC / KF、ノイズの計算。
+  - チャネルのマスク、ファイルの入出力、デバッグ用の関数。
 - 本シミュレータのサンプル出力段への結合。
+  - 出力は 1 チャネルで、サンプルは本シミュレータの都合の長さの塊で作ります。
+  - 出力のレートは 44100Hz に固定です。
+  - FM の音量は 0dB に固定です。
+- SSG は上流の `psg.cpp` を移植せず、本プロジェクトの `core/psg.js` を使います。上流と違い、プリスケーラでは SSG のクロックを切り替えません。
+- タイマは上流の `fmtimer.cpp` を移植せず、本プロジェクトの処理です。クロックの周期で数え、割り込みの要求、ステータスの BUSY、タイマ A の桁あふれのたびの CSM のキーオンは本シミュレータの処理です。
+- レジスタの受け口は本プロジェクトの処理です。レジスタへの振り分けの構成が異なるほか、レジスタの値の読み返しと、音量の表示のための読み出しがあります。
+- $2D〜$2F は、データの書き込みに加えて、アドレスの指定でもプリスケーラを切り替えます（上流はデータの書き込みでだけ切り替えます）。
+- SSG-EG の表の先頭より前を読むことになる場合（SSG-EG なしでキーオンした後に SSG-EG を設定した場合の一部）は、表の先頭を読みます（上流では表の外を読みます）。

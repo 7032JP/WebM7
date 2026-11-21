@@ -72,7 +72,7 @@ export class PSGCore {
     }
 
     reset() {
-        // Reset clears every register (AY-3-8910 data sheet, RESET); the
+        // Reset clears every register; the
         // amplitude registers at 0 keep the output silent.
         this.regs.fill(0);
         this._latchedReg = 0;
