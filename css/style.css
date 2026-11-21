@@ -506,8 +506,16 @@ input[type="file"]::file-selector-button:hover {
     color: #7fa6c4;
     border: 1px solid #38506a;
 }
+.rom-badge-onboard {
+    background: #1e3a2a;
+    color: #8fd6a8;
+    border: 1px solid #3a6a4c;
+}
+/* 漢字 ROM カードを外しているときの KANJI.ROM の行 */
+.rom-item.rom-item-off { opacity: 0.45; }
 /* Tint the ROM name so required items stand out at a glance. */
-.rom-item[data-req="required"] .rom-name { color: #c0d4e8; }
+.rom-item[data-req="required"] .rom-name,
+.rom-item[data-req="onboard"] .rom-name { color: #c0d4e8; }
 .rom-item[data-req="optional"] .rom-name { color: #5d7790; }
 
 /* === 録音セクションの見出し ===
@@ -1006,7 +1014,10 @@ button:disabled {
     padding: 0;
     overflow: hidden;
 }
-.fm7-key.enter-wide { width: 49px; }
+.fm7-key.enter-wide, .fm7-key.key-wide { width: 49px; }
+/* Two rows tall: the negative margin keeps the row height, and the z-index
+   puts the lower half above the spacer of the next row so it can be pressed. */
+.fm7-key.key-tall { height: 49px; margin-bottom: -25px; position: relative; z-index: 1; }
 .fm7-spacer { width: 24px; height: 24px; flex-shrink: 0; flex-grow: 0; }
 /* SPACE: 8 cells wide (8 * 24 + 7 * 1 = 199px) so the following カナ key
    lands at column 10 — aligned with the `/` key in the row above. */
@@ -1116,16 +1127,91 @@ button:disabled {
 }
 /* Stagger via `top` only (do not set `bottom` together with `top` on a
    fixed panel). */
-#debugPanel { left: 16px;  width: 200px; }
-/* Memory は CPU (#debugPanel) の真下。CPU の高さは文字サイズに連動するので、
-   ずらし量も rem で持ち、文字を大きくしても重ならないようにする */
-#memPanel   { top: 20rem; }
+/* CPU はデバッガの節を持つので広め。Memory はダンプを持つので CPU の右隣に置く
+   (CPU の高さは節の開閉で変わるため、下に並べると重なる) */
+#debugPanel { left: 16px;  width: 340px; }
+#memPanel   { left: 372px; width: 340px; }
+/* 本体が画面より高くなったら本体だけスクロールさせ、狭い画面では幅を画面に収める */
+#debugPanel .ip-body,
+#memPanel .ip-body { max-height: 80vh; overflow-y: auto; }
+#debugPanel, #memPanel { max-width: calc(100vw - 32px); }
+/* 2 枚が横に並ばない幅では、Memory も左端に置いて画面の外へ出さない */
+@media (max-width: 760px) {
+    #memPanel { left: 16px; top: 96px; }
+}
 #keyPanel   { left: 48px;  top: 88px;  width: 528px; }
 #palPanel   { left: 80px;  top: 120px; width: 176px; }
 /* Sound パネルは OPN のレジスタマトリクス (16 列) を載せるので幅を広げ、
    高さが伸びたときは本体だけスクロールさせる */
 #sndPanel   { left: 112px; top: 152px; width: 420px; }
 #sndPanel .ip-body { max-height: 70vh; overflow-y: auto; }
+
+/* ---- Debugger (CPU panel) and Memory Dump (Memory panel) ---- */
+.dbg-section { border-top: 1px solid #2a2a4a; padding-top: 6px; }
+.dbg-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+.dbg-row button { font-size: 0.95em; padding: 2px 8px; }
+.dbg-row select,
+.dbg-input {
+    font-family: monospace;
+    font-size: 0.95em;
+    background: #0d1b2a;
+    color: #cde;
+    border: 1px solid #334;
+    border-radius: 3px;
+    padding: 2px 4px;
+    min-width: 0;
+}
+.dbg-input { flex: 1 1 60px; }
+.dbg-input.dbg-addr { flex: 0 0 4.5em; }
+.dbg-input.dbg-short { flex: 0 0 3.5em; }
+.dbg-field { color: #6688aa; display: inline-flex; align-items: center; gap: 4px; }
+.dbg-status {
+    color: #aaccee;
+    background: #0d1b2a;
+    border-radius: 3px;
+    padding: 3px 6px;
+    margin: 2px 0 4px;
+    font-family: monospace;
+    word-break: break-word;
+}
+.dbg-error { color: #ff8a80 !important; }
+.dbg-hint { color: #6688aa; font-size: 0.85em; margin-bottom: 2px; }
+.dbg-flag { color: #aaccee; display: inline-flex; align-items: center; gap: 2px; margin-right: 4px; font-family: monospace; }
+.dbg-wrap { row-gap: 2px; }
+.dbg-details { margin-top: 4px; }
+.dbg-details > summary { color: #4ea8de; cursor: pointer; user-select: none; }
+.dbg-code,
+.dbg-dump,
+.dbg-log,
+.dbg-list {
+    font-family: monospace;
+    color: #cde;
+    background: #0d1b2a;
+    border-radius: 3px;
+    padding: 3px 4px;
+    margin: 3px 0 0;
+    white-space: pre;
+    overflow-x: auto;
+}
+.dbg-list { white-space: normal; }
+.dbg-log { max-height: 8em; overflow-y: auto; white-space: pre-wrap; }
+.dbg-line { cursor: pointer; }
+.dbg-line:hover { background: #1b2b45; }
+.dbg-line.dbg-cur { background: #2b3f1f; color: #e8ffd0; }
+.dbg-line.dbg-bp { color: #ffb4a8; }
+.dbg-item { display: flex; align-items: center; gap: 4px; }
+.dbg-item > span { flex: 1 1 auto; word-break: break-all; }
+.dbg-del { background: none; border: none; color: #6688aa; font-size: 1.1em; padding: 0 4px; cursor: pointer; }
+.dbg-del:hover { color: #fff; }
+/* While stopped, the registers can be clicked to change them */
+.dbg-halted .dbg-reg { cursor: pointer; text-decoration: underline dotted; }
+.dbg-reg-input { width: 5em; flex: none; }
 
 .draggable-header {
     cursor: grab;
@@ -3737,7 +3823,8 @@ body {
 .toolbar-debug-label { color: var(--ui-panel-head); }
 .status-led-name { color: var(--ui-muted); }
 .rom-item .rom-name { color: var(--ui-name); }
-.rom-item[data-req="required"] .rom-name { color: var(--ui-name-req); }
+.rom-item[data-req="required"] .rom-name,
+.rom-item[data-req="onboard"] .rom-name { color: var(--ui-name-req); }
 .rom-item[data-req="optional"] .rom-name { color: var(--ui-name-opt); }
 .file-name-row.loaded { color: var(--ui-ok); }
 .disk-geom.loaded { color: var(--ui-geom); }

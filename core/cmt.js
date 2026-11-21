@@ -21,13 +21,32 @@ const T77_SAVE_SCALE = 72;
 // scaled so that their most common short pulse takes this long, which keeps tapes
 // readable whatever width unit the image was made with.
 const SHORT_PULSE_TICKS = 252 * (TAPE_TICK_HZ / 1000000);
+// Share of the pulses that shows a pulse length is really in use.
+const LENGTH_SEEN_SHARE = 0.005;
+// The short and long pulses (within this ratio of their lengths) take at least
+// this share of the tape's time; less means the most common short widths are
+// noise rather than the carrier.
+const CARRIER_NEAR = 0.15;
+const CARRIER_TIME_SHARE = 0.4;
+// Share of the pulses each of the two lengths needs to count as the carrier.
+const CARRIER_COUNT_SHARE = 0.03;
+// A half-cycle under this length (s) is not one of the two standard lengths;
+// this share of such pulses marks a tape that goes on in a faster format.
+// A stretch of the tape where under this share of the half-cycles are longer
+// than twice that length is in the faster format.
+const FASTER_PULSE_S = 166e-6;
+const FASTER_PULSE_SHARE = 0.05;
+// The faster parts play at the speed of a T77 image: 26 width units of 9 us
+// take the short pulse time (see SHORT_PULSE_TICKS).
+const FASTER_TAPE_STRETCH = SHORT_PULSE_TICKS / (26 * T77_SAVE_SCALE);
 const T77_MAX_WIDTH = 0x7FFF; // 15-bit width field
 // Serial frame of one tape byte, sent LSB first: start bit (0), the 8 data
-// bits from bit 0, two stop bits (1). Source: FM-7 User's Manual System
-// Specifications, 1.12 (audio cassette interface) and FM-7 User's Manual
-// System Description, 12.8 (data format on cassette tape).
+// bits from bit 0, two stop bits (1).
 const FRAME_BITS       = 11;
 const FRAME_STOP_BITS  = 0x3 << 9;
+// Master clock periods per width unit of the demod output: its short pulse
+// (CMT._TICK_SHORT units) takes the short pulse time.
+const DEMOD_SCALE = SHORT_PULSE_TICKS / 23;
 
 export class CMT {
     constructor() {
@@ -198,6 +217,44 @@ export class CMT {
             widths.sort((a, b) => a - b);
             shortCluster = widths[Math.floor(widths.length * 0.10)];
         }
+        // Many short noise pulses can outnumber the carrier. The carrier's
+        // short and long pulses (about 1 : 2) hold most of the time, so when
+        // the chosen pair does not, take the pair that holds the most time.
+        let time = 0;
+        for (const w of widths) time += w;
+        const near = (w) => {
+            let n = 0, t = 0;
+            for (let x = Math.ceil(w * (1 - CARRIER_NEAR)); x <= Math.floor(w * (1 + CARRIER_NEAR)); x++) {
+                n += hist[x] || 0; t += (hist[x] || 0) * x;
+            }
+            return { n, t };
+        };
+        const pairTime = (w) => near(w).t + near(w * 2).t;
+        if (pairTime(shortCluster) < time * CARRIER_TIME_SHARE) {
+            const isPeak = (w) => {
+                if (!hist[w]) return false;
+                for (let d = -3; d <= 3; d++) if ((hist[w + d] || 0) > hist[w]) return false;
+                return true;
+            };
+            let best = 0, bestTime = 0;
+            for (let w = 5; w < 100; w++) {
+                if (!isPeak(w)) continue;
+                const s = near(w), l = near(w * 2);
+                if (s.n < widths.length * CARRIER_COUNT_SHARE || l.n < widths.length * CARRIER_COUNT_SHARE) continue;
+                if (s.t + l.t > bestTime) { bestTime = s.t + l.t; best = w; }
+            }
+            if (best) shortCluster = best;
+        }
+        // A tape can go on in a faster format of its own: then the standard
+        // short pulse is the middle of three lengths at about 1 : 2 : 4. Such
+        // a tape can be mostly the faster part, so the longest length counts
+        // from a smaller share than a peak does.
+        const seenNear = (w) => {
+            let n = 0;
+            for (let d = -3; d <= 3; d++) n += hist[w + d] || 0;
+            return n >= widths.length * LENGTH_SEEN_SHARE;
+        };
+        if (seenNear(shortCluster * 2) && seenNear(shortCluster * 4)) shortCluster *= 2;
         const scale = SHORT_PULSE_TICKS / shortCluster;
         widths.sort((a, b) => a - b);
         const longCluster = (widths[Math.floor(widths.length * 0.60)] +
@@ -574,18 +631,21 @@ export class CMT {
         // clean re-encoded carrier and rescues noisy/uneven recordings; adaptive
         // slicing keeps every region's signal as recorded.
         const dbg = {};
-        const demodPulses = this._wavDemodToPulses(smp, sampleRate, dbg);
         const slicePulses = this._wavSlice(smp, sampleRate);
         const sliceQ = this._wavPulsesToBytes(slicePulses);
+        // A tape with many shorter pulses goes on in a faster format. The demod
+        // then rebuilds those stretches at their own lengths (see
+        // _wavFasterRegionPulses) and re-encodes the rest as usual.
+        const fasterTape = this._wavHasFasterPulses(slicePulses, sampleRate);
+        const fasterSpans = fasterTape ? this._wavFasterSpans(slicePulses, sampleRate) : [];
+        const demodPulses = this._wavDemodToPulses(smp, sampleRate, dbg, fasterSpans);
 
-        // Both decoders self-verify via block checksums. The checks below run in
-        // this order: the encoded-size check (falls back to the slicer when the
-        // demod output is much smaller than the decoded data); the demod when neither
-        // yields a checksum-OK block; fewest bad blocks; then most OK blocks
-        // (ties go to the demod).
-        const demodTruncated = dbg.encodedBytes < dbg.bytes * 0.5;
+        // Such a tape takes the demod. For other tapes both decoders self-verify
+        // via block checksums. The checks below run in this order: the demod
+        // when neither yields a checksum-OK block; fewest bad blocks; then most
+        // OK blocks (ties go to the demod).
         let useDemod;
-        if (demodTruncated && sliceQ.ok > 0) useDemod = false;
+        if (fasterTape) useDemod = true;
         else if (dbg.okBlocks === 0 && sliceQ.ok === 0) useDemod = true; // pure raw data:
             // prefer the demod, which regenerates a canonical-frequency carrier
             // the BIOS can read even if the tape was recorded at a drifted speed.
@@ -595,7 +655,9 @@ export class CMT {
         let mode;
         if (useDemod) {
             this._pulses = Uint16Array.from(demodPulses);
-            this._scale = this._detectScale(this._pulses.length);
+            // The faster stretches hold lengths of their own, so the scale is
+            // that of the re-encoded carrier rather than one read from the widths.
+            this._scale = fasterTape ? DEMOD_SCALE : this._detectScale(this._pulses.length);
             this._wavQuality = { mode: 'demod', okBlocks: dbg.okBlocks, badBlocks: dbg.badBlocks };
             mode = `${dbg.okBlocks} blocks OK, ${dbg.badBlocks} BAD`;
         } else {
@@ -613,6 +675,126 @@ export class CMT {
         return this._loaded;
     }
 
+    /**
+     * Sample ranges of a sliced pulse list that are in a faster format: runs
+     * of pulses where hardly any half-cycle is as long as the standard long
+     * one. A run that is mostly pause breaks a range; ranges under half a
+     * second are dropped.
+     * @param {number[]} pulses  @param {number} rate sample rate (Hz)
+     * @returns {number[][]} [start, end] sample frames
+     */
+    _wavFasterSpans(pulses, rate) {
+        const RUN = 256;
+        const longW = rate * 2 * FASTER_PULSE_S, gapW = rate * 1.5e-3;
+        const spans = [];
+        let pos = 0, cur = null;
+        for (let i = 0; i < pulses.length; i += RUN) {
+            const from = pos, end = Math.min(i + RUN, pulses.length);
+            let signal = 0, long = 0;
+            for (let j = i; j < end; j++) {
+                const w = pulses[j] & 0x7FFF;
+                pos += w;
+                if (w > gapW) continue;
+                signal++;
+                if (w > longW) long++;
+            }
+            const faster = signal >= (end - i) / 2 && long < signal * FASTER_PULSE_SHARE;
+            if (faster) { if (cur) cur[1] = pos; else cur = [from, pos]; }
+            else if (cur) { spans.push(cur); cur = null; }
+        }
+        if (cur) spans.push(cur);
+        return spans.filter(([s, e]) => e - s >= rate * 0.5);
+    }
+
+    /**
+     * Rebuild a stretch in a faster format as a clean carrier at its own
+     * lengths. Full cycles are measured between edges of one direction (the
+     * one whose cycles split most clearly into short and long); each cycle is
+     * re-emitted with the average lengths of its two halves for its class, as
+     * a loader may time one half only. Within a pause the edge between the
+     * halves keeps its place.
+     * @returns {number[]} uint16 pulse list (demod width units)
+     */
+    _wavFasterRegionPulses(smp, start, end, rate) {
+        const unit = (TAPE_TICK_HZ / rate) / DEMOD_SCALE * FASTER_TAPE_STRETCH;
+        const edges = [[], []];            // [falling, rising]
+        for (let i = start + 1; i < end; i++) {
+            if (smp[i - 1] <= 0 && smp[i] > 0) edges[1].push(i);
+            else if (smp[i - 1] > 0 && smp[i] <= 0) edges[0].push(i);
+        }
+        let best = null;
+        for (const rising of [1, 0]) {
+            const pos = edges[rising];
+            if (pos.length < 10) continue;
+            const hist = new Int32Array(200);
+            for (let i = 1; i < pos.length; i++) { const p = pos[i] - pos[i - 1]; if (p < 200) hist[p]++; }
+            let p1 = 1;
+            for (let p = 1; p < 200; p++) if (hist[p] > hist[p1]) p1 = p;
+            let p2 = 1;
+            for (let p = 1; p < 200; p++) {
+                if (Math.abs(p - p1) < p1 * 0.4) continue;
+                if (hist[p] > hist[p2]) p2 = p;
+            }
+            const sp = Math.min(p1, p2), lp = Math.max(p1, p2);
+            const mid = (sp + lp) / 2, band = (lp - sp) / 6;
+            let unclear = 0;
+            for (let p = Math.ceil(mid - band); p <= mid + band; p++) unclear += hist[p] || 0;
+            if (!best || unclear < best.unclear) best = { rising, mid, lp, unclear };
+        }
+        if (!best) return [];
+        const { rising, mid, lp } = best;
+        const pos = edges[rising], other = edges[1 - rising];
+        const first = rising ? 0x8000 : 0, second = rising ? 0 : 0x8000;
+        const pause = lp * 2;
+        // The edge inside each cycle (-1 when there is none).
+        const inner = new Float64Array(pos.length).fill(-1);
+        for (let i = 1, k = 0; i < pos.length; i++) {
+            while (k < other.length && other[k] <= pos[i - 1]) k++;
+            while (k < other.length && other[k] < pos[i]) inner[i] = other[k++];
+        }
+        const sum = [[0, 0, 0], [0, 0, 0]];   // per class: first half, second half, count
+        for (let i = 1; i < pos.length; i++) {
+            const p = pos[i] - pos[i - 1];
+            if (p > pause || inner[i] < 0) continue;
+            const c = sum[p > mid ? 1 : 0];
+            c[0] += inner[i] - pos[i - 1]; c[1] += pos[i] - inner[i]; c[2]++;
+        }
+        if (!sum[0][2] || !sum[1][2]) return [];
+        const half = sum.map(([a, b, n]) => [a / n * unit, b / n * unit]);
+        const out = [];
+        let carry = 0;
+        const put = (pol, w) => {
+            const exact = w + carry;
+            let units = Math.max(1, Math.round(exact));
+            carry = exact - units;
+            while (units > T77_MAX_WIDTH) { out.push(pol | T77_MAX_WIDTH); units -= T77_MAX_WIDTH; }
+            out.push(pol | units);
+        };
+        for (let i = 1; i < pos.length; i++) {
+            const p = pos[i] - pos[i - 1];
+            if (p > pause) {
+                const tail = inner[i] >= 0 ? pos[i] - inner[i] : p / 2;
+                put(first, (p - tail) * unit); put(second, tail * unit);
+                continue;
+            }
+            const h = half[p > mid ? 1 : 0];
+            put(first, h[0]); put(second, h[1]);
+        }
+        return out;
+    }
+
+    /**
+     * True if a sliced pulse list holds many pulses shorter than the standard
+     * short half-cycle.
+     * @param {number[]} pulses  @param {number} rate sample rate (Hz)
+     */
+    _wavHasFasterPulses(pulses, rate) {
+        const limit = rate * FASTER_PULSE_S;
+        let faster = 0;
+        for (let i = 0; i < pulses.length; i++) if ((pulses[i] & 0x7FFF) < limit) faster++;
+        return faster > pulses.length * FASTER_PULSE_SHARE;
+    }
+
     // ------------------------------------------------------------------
     // WAV FSK demodulation → clean re-encoded pulse train
     // ------------------------------------------------------------------
@@ -628,7 +810,7 @@ export class CMT {
      * @param {object} dbg out: decode statistics (regions, bytes, block counts)
      * @returns {number[]} uint16 pulse list (bit15 polarity + width)
      */
-    _wavDemodToPulses(smp, rate, dbg) {
+    _wavDemodToPulses(smp, rate, dbg, fasterSpans = []) {
         const n = smp.length;
         // --- Detect signal regions (carrier vs. silence/dropouts) ---
         const block = Math.max(1, Math.floor(rate / 20));
@@ -658,7 +840,27 @@ export class CMT {
         const threshold = 625e-6 * rate;   // full-cycle 1200↔2400 Hz boundary
         const parts = [];                  // ordered: {bytes} | {raw}
         let totalBytes = 0, totalBlocks = 0, okBlocks = 0, badBlocks = 0;
-        for (const [s, e] of merged) {
+        // A region is cut where a faster stretch begins or ends; the pieces of
+        // one region follow each other without a pause.
+        const pieces = [];
+        for (const [rs, re] of merged) {
+            let at = rs, joined = false;
+            for (const [fs, fe] of fasterSpans) {
+                if (fe <= at || fs >= re) continue;
+                if (fs > at) { pieces.push({ s: at, e: fs, joined }); joined = true; }
+                pieces.push({ s: Math.max(fs, at), e: Math.min(fe, re), joined, faster: true });
+                joined = true;
+                at = Math.min(fe, re);
+            }
+            if (at < re) pieces.push({ s: at, e: re, joined });
+        }
+        for (const piece of pieces) {
+            const s = piece.s, e = piece.e;
+            if (piece.faster) {
+                const raw = this._wavFasterRegionPulses(smp, s, e, rate);
+                if (raw.length) parts.push({ raw, joined: piece.joined });
+                continue;
+            }
             let decoded = this._wavDemodRegion(smp, s, e, threshold);
             let v = { ok: 0, bad: 0 };
             if (decoded.length) {
@@ -669,25 +871,23 @@ export class CMT {
                 totalBytes += decoded.length;
                 if (this._wavHasDataBlocks(decoded)) totalBlocks++;
                 okBlocks += v.ok; badBlocks += v.bad;
-                parts.push({ bytes: decoded });
+                parts.push({ bytes: decoded, joined: piece.joined });
             } else if (e - s > rate * 0.5) {                 // raw data region
                 const raw = this._wavRawRegionPulses(smp, s, e);
-                if (raw.length) parts.push({ raw });
+                if (raw.length) parts.push({ raw, joined: piece.joined });
             }
         }
 
         // --- Assemble in sequence ---
         const pulses = [];
         this._wavSilence(1.0, pulses);
-        let first = true, encodedBytes = 0;
+        let first = true;
         for (const p of parts) {
-            if (!first) this._wavSilence(1.0, pulses);
+            if (!first && !p.joined) this._wavSilence(1.0, pulses);
             first = false;
             if (p.bytes) {
-                encodedBytes += p.bytes.length;
                 for (let i = 0; i < p.bytes.length; i++) this._wavEncodeByte(p.bytes[i], pulses);
             } else {
-                encodedBytes += Math.floor(p.raw.length / 4);   // rough size estimate
                 for (let i = 0; i < p.raw.length; i++) pulses.push(p.raw[i]);
             }
         }
@@ -695,7 +895,7 @@ export class CMT {
 
         if (dbg) {
             dbg.regions = merged.length; dbg.bytes = totalBytes;
-            dbg.dataBlocks = totalBlocks; dbg.encodedBytes = encodedBytes;
+            dbg.dataBlocks = totalBlocks;
             dbg.okBlocks = okBlocks; dbg.badBlocks = badBlocks;
         }
         return pulses;
@@ -902,9 +1102,7 @@ export class CMT {
      * of type 0x00 or 0x01. Returns the number of good and bad blocks.
      * @returns {{ok:number, bad:number}}
      */
-    // Block layout: gap, $01 $3C, block type, length, data, checksum. Source:
-    // FM-7 User's Manual System Description, 12.8 (data format on cassette
-    // tape); F-BASIC Grammar, chapter 2 (block format figure).
+    // Block layout: gap, $01 $3C, block type, length, data, checksum.
     _wavVerifyBlocks(d) {
         let i = 0, ok = 0, bad = 0;
         while (i < d.length - 4) {
@@ -992,7 +1190,12 @@ export class CMT {
         }
     }
 
-    /** Append a run of silence (gap) pulses (seconds converted at 9 us per width unit). */
+    /**
+     * Append a run of silence (gap) pulses. The length is counted in width
+     * units of 9 us, but the demod output plays each unit for DEMOD_SCALE
+     * master clock periods (about 11 us), so 1 second here lasts about
+     * 1.22 seconds on playback.
+     */
     _wavSilence(seconds, pulses) {
         let ticks = Math.floor(seconds / 9e-6);
         while (ticks > T77_MAX_WIDTH) { pulses.push(T77_MAX_WIDTH); ticks -= T77_MAX_WIDTH; }

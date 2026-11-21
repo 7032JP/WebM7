@@ -23,3 +23,6 @@ export { CMT } from './cmt.js';
 export { Keyboard } from './keyboard.js';
 export { MouseSetCard, ProgrammableTimer, SoundChipPorts, ConnectorMouse } from './inputports.js';
 export { decodeHFE } from './hfe.js';
+export { M7DebugSession, parseLoadM, parseHitCondition, THREAD_MAIN, THREAD_SUB, EXCEPTION_FILTERS } from './debug.js';
+export { decodeInstruction, listInstructions } from './disasm6809.js';
+export { compileExpression, fillLogText } from './debug_expr.js';

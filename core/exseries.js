@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 7032 / Naomitsu Tsugiiwa
 // =============================================================================
-// Extensions of the FM77AV20EX / FM77AV40 / FM77AV40EX.
+// Extensions of the FM77AV20EX / FM77AV40 / FM77AV40EX.  The FM77AV20 takes
+// only the level 2 kanji ports, as with the Japanese extension card fitted.
+// The FM77AV40 has neither the ROM window nor mode register 2 ($FD95).
 //
 // The unit owns the registers and memories that these machines add on top of
 // the FM77AV: the wide MMR switch ($FD94), mode register 2 ($FD95), the ROM
@@ -15,9 +17,16 @@
 
 // Which machine has what.  `ram2x` tells whether the $2xxxx
 // physical pages outside the window / learning RAM hold ordinary RAM.
+// Every machine not listed: none of the extensions; $2xxxx stays with the host.
+const NO_FEATURES = {
+    wideMmr: false, modeRegister2: false, romWindow: false, learningRam: false,
+    kanjiLevel2: false, subKanjiPort: false, extSubRam: false, fd04Latch: false, ram2x: true,
+};
+
 const FEATURES_BY_MACHINE = {
+    fm77av20: { ...NO_FEATURES, kanjiLevel2: true },
     fm77av40: {
-        wideMmr: true, modeRegister2: true, romWindow: false, learningRam: false,
+        wideMmr: true, modeRegister2: false, romWindow: false, learningRam: false,
         kanjiLevel2: true, subKanjiPort: true, extSubRam: true, fd04Latch: true, ram2x: true,
     },
     fm77av20ex: {
@@ -28,12 +37,6 @@ const FEATURES_BY_MACHINE = {
         wideMmr: true, modeRegister2: true, romWindow: true, learningRam: true,
         kanjiLevel2: true, subKanjiPort: true, extSubRam: true, fd04Latch: true, ram2x: true,
     },
-};
-
-// Every other machine: none of the extensions; $2xxxx stays with the host.
-const NO_FEATURES = {
-    wideMmr: false, modeRegister2: false, romWindow: false, learningRam: false,
-    kanjiLevel2: false, subKanjiPort: false, extSubRam: false, fd04Latch: false, ram2x: true,
 };
 
 const PAGE_LEARNING_RAM = 0x28;
@@ -134,7 +137,10 @@ export class ExSeriesUnit {
         return this.features.wideMmr && (this.regFD94 & 0x80) !== 0;
     }
 
-    /** $FD95 bit 3: high-speed mode.  Remembered only; the clock is unchanged. */
+    /**
+     * $FD95 bit 3: high-speed MMR.  While it is 1 the main CPU keeps the
+     * FM-7 mode bus cycles with the MMR or window on (see FM7).
+     */
     get highSpeedBit() {
         return (this.regFD95 & 0x08) !== 0;
     }

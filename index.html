@@ -37,9 +37,9 @@
             <span class="cap-badge" id="capBadgeAV" title="4096色表示・キースキャン読込・ALU/ハードウェア直線描画">77AV機能</span>
             <span class="cap-badge" id="capBadge2DD" title="2DD ディスク対応（ドライブモード切替 対応）">2DD</span>
             <span class="cap-badge" id="capBadgeDMAC" title="DMAC による DMA 転送">DMAC</span>
-            <span class="cap-badge" id="capBadgeFMMR" title="高速MMR（MMR を使っても遅くならないモード。WebM7 ではメイン CPU の速さは変えていません）">高速MMR</span>
+            <span class="cap-badge" id="capBadgeFMMR" title="高速MMR（MMR を使っても遅くならないモード）">高速MMR</span>
             <span class="cap-badge" id="capBadgeAV40" title="400ライン表示・26万色表示">AV40機能</span>
-            <span class="cap-badge" id="capBadgeEX" title="2面VRAM・拡張サブROM・辞書（ハードウェアウィンドウは未対応）">40EX機能</span>
+            <span class="cap-badge" id="capBadgeEX" title="拡張サブROM・辞書ROM（ハードウェアウィンドウは設定を受け付けるだけで、表示には効きません）">40EX機能</span>
             <span class="cap-mem" id="capMem" title="メインRAM / VRAM 容量">RAM -- / VRAM --</span>
             <a href="#" class="machine-compare-trigger cap-compare-link" title="機種ごとの機能比較表を表示">機種比較</a>
         </div>
@@ -135,7 +135,7 @@
                         <span class="mod-pill" id="tbDriveMode" title="ドライブモード（2D / 2DD）">2D</span>
                     </div>
                     <span class="status-divider"></span>
-                    <!-- MMR / TWR: memory mapper activity -->
+                    <!-- Memory mapper activity -->
                     <div class="status-led-item" title="メモリ管理 (MMR) / テキストウィンドウレジスタ (TWR) 使用中に点灯。緑=ソフトが高速MMR のモードを選んでいる間">
                         <span class="fdc-led" id="tbMmrLed"></span>
                         <span class="status-led-name">MMR</span>
@@ -388,8 +388,8 @@
             <button id="mobilePauseBtn" title="Pause/Resume">Pause</button>
             <button id="mobileResetBtn" title="Reset">Reset</button>
         </div>
-        <!-- Virtual Keyboard: shown below the screen on touch devices, hidden
-             on desktop via CSS. -->
+        <!-- Virtual Keyboard: below the screen. Whether it shows depends on the
+             input device, the screen size and the user's setting. -->
         <div id="softKbd" hidden></div>
     </div>
 
@@ -440,6 +440,10 @@
                 <input type="checkbox" id="fmCardCheck">
                 <span id="fmCardHint" class="ui-note fs-10" style="margin-left:6px;display:none;">次回の電源投入 / リセットから有効になります</span>
             </div>
+            <div class="ctrl-row" id="kanjiCardRow" title="FM-7 の漢字 ROM カード。外すと漢字 ROM の無い状態で動きます">
+                <label for="kanjiCardCheck">Kanji ROM Card</label>
+                <input type="checkbox" id="kanjiCardCheck" checked>
+            </div>
             <div class="ctrl-row" id="mouseRow">
                 <label for="mouseModeSelect" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用できます。ジョイスティック端子につなぐマウスは、FM77AV 系以外では FM 音源カードが必要です">Mouse</label>
                 <select id="mouseModeSelect" class="fs-11" title="接続するマウスの種類を選びます。マウスセット(バスマウス)は全機種で利用できます。ジョイスティック端子につなぐマウスは、FM77AV 系以外では FM 音源カードが必要です">
@@ -459,8 +463,8 @@
                 <select id="joyDev2" class="fs-11"><option value="">(None)</option></select>
             </div>
             <div class="ctrl-row">
-                <label for="cursorToNumpad">Cursor → Ten Key</label>
-                <input type="checkbox" id="cursorToNumpad">
+                <label for="arrowKeysNumericPad">Arrow Keys as Ten Key</label>
+                <input type="checkbox" id="arrowKeysNumericPad">
             </div>
         </div>
 
@@ -508,7 +512,7 @@
                     <span class="status-tag" id="statusSubSys">--</span>
                 </div>
             </div>
-            <!-- Kanji ROM: optional on FM-7 (漢字ROMカード相当), required on FM77AV+. Always visible. -->
+            <!-- Kanji ROM: optional on FM-7 (漢字ROMカード相当), on board on FM-77 and later. Always visible. -->
             <div class="rom-list" id="romListKanji" style="margin-top:6px;">
                 <div class="rom-item" data-req="optional">
                     <span class="rom-name">KANJI.ROM <span class="rom-badge rom-badge-opt" title="任意（無ければ同梱互換で補う）">任意</span></span>
@@ -545,9 +549,9 @@
                     <span class="status-tag" id="statusCG">--</span>
                 </div>
             </div>
-            <!-- FM77AV20EX / FM77AV40 / FM77AV40EX additional ROM (hidden by default) -->
+            <!-- FM77AV40 / FM77AV40EX/SX additional ROM (hidden by default) -->
             <div class="rom-list rom-list-av40" id="romListKanji2" style="display:none;margin-top:6px;">
-                <label class="ui-warn">FM77AV20EX / FM77AV40 / FM77AV40EX ROMs:</label>
+                <label class="ui-warn">FM77AV40 / FM77AV40EX/SX ROMs:</label>
                 <div class="rom-item" data-req="optional">
                     <span class="rom-name">KANJI2.ROM <span class="rom-badge rom-badge-opt" title="任意（無ければ同梱互換で補う）">任意</span></span>
                     <select class="rom-src" data-slot="kanji2" title="この ROM の供給元"><option value="builtin">同梱互換</option><option value="user">自分の ROM</option></select>
@@ -618,15 +622,15 @@
             <div class="disk-geom" id="diskGeom1">-- (no disk)</div>
             <select id="diskSelect1" class="fs-11" style="display:none;width:100%;margin-top:2px;"></select>
             <div class="sp-row sp-row-end" style="margin-top:4px;">
-                <button id="clearDiskCacheBtn" title="ブラウザにキャッシュしたディスクイメージ・ファイル参照と、最近使ったファイルの履歴（ディスク・テープ）を消去します（ROM と Library は残ります）">Clear Disk Cache</button>
+                <button id="clearDiskCacheBtn" title="ブラウザにキャッシュしたディスクイメージ・ファイル参照と、最近使ったファイルの履歴（ディスク・テープ）を消去します。ドライブのディスクも取り出され、未保存の変更は失われます（ROM と Library は残ります）">Clear Disk Cache</button>
             </div>
             <div class="ctrl-row" style="margin-top:6px;">
-                <label for="fddSoundCheck">Drive Sound</label>
-                <input type="checkbox" id="fddSoundCheck">
+                <label for="driveNoiseCheck">Drive Sound</label>
+                <input type="checkbox" id="driveNoiseCheck">
             </div>
             <div class="ctrl-row" style="display:flex;align-items:center;gap:4px;">
-                <input type="range" id="fddSoundVolume" min="0" max="100" value="50" style="flex:1;">
-                <span class="vol-label" id="fddSoundVolLabel">50%</span>
+                <input type="range" id="driveNoiseVolume" min="0" max="100" value="50" style="flex:1;">
+                <span class="vol-label" id="driveNoiseVolLabel">50%</span>
             </div>
             <div class="ctrl-row" style="margin-top:6px;">
                 <label for="fastReadCheck" title="ON: シーク（ヘッド移動）を加速して高速ロード（既定）。 OFF: 実機相当のシーク速度・回転タイミングで動作します">高速読み込みモード</label>
@@ -704,38 +708,116 @@
             </div>
             <div class="ip-label" style="margin-top:6px;">Main CPU</div>
             <div class="debug-grid" id="mainCpuRegs">
-                <span class="d-label">PC</span><span class="d-val" id="mainPCVal">----</span>
-                <span class="d-label">A</span><span class="d-val" id="mainAVal">--</span>
-                <span class="d-label">B</span><span class="d-val" id="mainBVal">--</span>
-                <span class="d-label">X</span><span class="d-val" id="mainXVal">----</span>
-                <span class="d-label">Y</span><span class="d-val" id="mainYVal">----</span>
-                <span class="d-label">S</span><span class="d-val" id="mainSVal">----</span>
-                <span class="d-label">U</span><span class="d-val" id="mainUVal">----</span>
-                <span class="d-label">DP</span><span class="d-val" id="mainDPVal">--</span>
-                <span class="d-label">CC</span><span class="d-val" id="mainCCVal">--</span>
+                <span class="d-label">PC</span><span class="d-val dbg-reg" id="mainPCVal" data-thread="1" data-reg="pc">----</span>
+                <span class="d-label">A</span><span class="d-val dbg-reg" id="mainAVal" data-thread="1" data-reg="a">--</span>
+                <span class="d-label">B</span><span class="d-val dbg-reg" id="mainBVal" data-thread="1" data-reg="b">--</span>
+                <span class="d-label">X</span><span class="d-val dbg-reg" id="mainXVal" data-thread="1" data-reg="x">----</span>
+                <span class="d-label">Y</span><span class="d-val dbg-reg" id="mainYVal" data-thread="1" data-reg="y">----</span>
+                <span class="d-label">S</span><span class="d-val dbg-reg" id="mainSVal" data-thread="1" data-reg="s">----</span>
+                <span class="d-label">U</span><span class="d-val dbg-reg" id="mainUVal" data-thread="1" data-reg="u">----</span>
+                <span class="d-label">DP</span><span class="d-val dbg-reg" id="mainDPVal" data-thread="1" data-reg="dp">--</span>
+                <span class="d-label">CC</span><span class="d-val dbg-reg" id="mainCCVal" data-thread="1" data-reg="cc">--</span>
             </div>
             <div class="ip-label" style="margin-top:6px;">Sub CPU</div>
             <div class="debug-grid" id="subCpuRegs">
-                <span class="d-label">PC</span><span class="d-val" id="subPCVal">----</span>
-                <span class="d-label">A</span><span class="d-val" id="subAVal">--</span>
-                <span class="d-label">B</span><span class="d-val" id="subBVal">--</span>
-                <span class="d-label">X</span><span class="d-val" id="subXVal">----</span>
-                <span class="d-label">Y</span><span class="d-val" id="subYVal">----</span>
-                <span class="d-label">S</span><span class="d-val" id="subSVal">----</span>
-                <span class="d-label">U</span><span class="d-val" id="subUVal">----</span>
-                <span class="d-label">DP</span><span class="d-val" id="subDPVal">--</span>
-                <span class="d-label">CC</span><span class="d-val" id="subCCVal">--</span>
+                <span class="d-label">PC</span><span class="d-val dbg-reg" id="subPCVal" data-thread="2" data-reg="pc">----</span>
+                <span class="d-label">A</span><span class="d-val dbg-reg" id="subAVal" data-thread="2" data-reg="a">--</span>
+                <span class="d-label">B</span><span class="d-val dbg-reg" id="subBVal" data-thread="2" data-reg="b">--</span>
+                <span class="d-label">X</span><span class="d-val dbg-reg" id="subXVal" data-thread="2" data-reg="x">----</span>
+                <span class="d-label">Y</span><span class="d-val dbg-reg" id="subYVal" data-thread="2" data-reg="y">----</span>
+                <span class="d-label">S</span><span class="d-val dbg-reg" id="subSVal" data-thread="2" data-reg="s">----</span>
+                <span class="d-label">U</span><span class="d-val dbg-reg" id="subUVal" data-thread="2" data-reg="u">----</span>
+                <span class="d-label">DP</span><span class="d-val dbg-reg" id="subDPVal" data-thread="2" data-reg="dp">--</span>
+                <span class="d-label">CC</span><span class="d-val dbg-reg" id="subCCVal" data-thread="2" data-reg="cc">--</span>
             </div>
             <div class="debug-grid" id="debugAV" style="display:none;margin-top:4px;">
                 <span class="d-label">Monitor</span><span class="d-val" id="subMonVal">--</span>
                 <span class="d-label">Initiator</span><span class="d-val" id="initVal">--</span>
             </div>
         </div>
+        <!-- Debugger: stop, step and look into the main and sub CPUs -->
+        <div class="ip-section dbg-section" id="dbgSection">
+            <div class="ip-label">Debugger</div>
+            <div class="dbg-row">
+                <label class="dbg-field" title="The CPU the steps, the registers, the code and the call stack below are for">Thread
+                    <select id="dbgThread">
+                        <option value="1">Main CPU</option>
+                        <option value="2">Sub CPU</option>
+                    </select>
+                </label>
+            </div>
+            <div class="dbg-status" id="dbgStatus" title="Why the machine stopped and where">Running</div>
+            <div class="dbg-row dbg-buttons">
+                <button type="button" id="dbgBreakBtn" title="Pause the machine (Break) / let it run again (Continue)">Break</button>
+                <button type="button" id="dbgStepInBtn" title="Execute one instruction of the thread (Step In)" disabled>Step In</button>
+                <button type="button" id="dbgStepOverBtn" title="Execute one instruction; run a called subroutine or software interrupt through (Step Over)" disabled>Step Over</button>
+                <button type="button" id="dbgStepOutBtn" title="Run until the current subroutine returns (Step Out)" disabled>Step Out</button>
+            </div>
+            <div class="dbg-row">
+                <input type="text" id="dbgRunToAddr" class="dbg-input dbg-addr" placeholder="addr" spellcheck="false" autocomplete="off" title="Hex address, or an expression such as x+$10">
+                <button type="button" id="dbgRunToBtn" title="Run until the thread is about to execute the instruction at the address" disabled>Run to</button>
+                <button type="button" id="dbgRestartBtn" title="Reset the machine and run again; the breakpoints stay (Restart)" disabled>Restart</button>
+            </div>
+            <div class="dbg-hint">Click a register value while stopped to change it.</div>
+            <div class="dbg-row dbg-flags" id="dbgFlags" title="CC bits of the thread; click to change while stopped"></div>
+
+            <details class="dbg-details" open>
+                <summary>Code</summary>
+                <div class="dbg-code" id="dbgCode" title="Click a line to set or clear a breakpoint there"></div>
+            </details>
+            <details class="dbg-details">
+                <summary>Call Stack</summary>
+                <div class="dbg-list" id="dbgStack"></div>
+            </details>
+            <details class="dbg-details" open>
+                <summary>Breakpoints</summary>
+                <div class="dbg-row">
+                    <input type="text" id="dbgBpAddr" class="dbg-input dbg-addr" placeholder="addr" spellcheck="false" autocomplete="off" title="Hex address of the breakpoint (for the thread above)">
+                    <input type="text" id="dbgBpCond" class="dbg-input" placeholder="condition" spellcheck="false" autocomplete="off" title="Stop only when this expression is not 0, e.g. a==$10 &amp;&amp; [x]!=0">
+                </div>
+                <div class="dbg-row">
+                    <input type="text" id="dbgBpHits" class="dbg-input dbg-short" placeholder="hits" spellcheck="false" autocomplete="off" title="Hit count: 5 or &gt;=5 (from the 5th on), ==5, %5 (every 5th)">
+                    <input type="text" id="dbgBpLog" class="dbg-input" placeholder="log message" spellcheck="false" autocomplete="off" title="Log point: write this text instead of stopping; {expr} is shown in hex, {expr,d} in decimal">
+                    <button type="button" id="dbgBpAddBtn" title="Add the breakpoint">Add</button>
+                </div>
+                <div class="dbg-list" id="dbgBpList"></div>
+            </details>
+            <details class="dbg-details">
+                <summary>Data Breakpoints</summary>
+                <div class="dbg-row">
+                    <input type="text" id="dbgDbAddr" class="dbg-input dbg-addr" placeholder="addr" spellcheck="false" autocomplete="off" title="Hex address of the memory to watch (for the thread above)">
+                    <input type="text" id="dbgDbLen" class="dbg-input dbg-short" placeholder="len" value="1" spellcheck="false" autocomplete="off" title="Number of bytes (decimal)">
+                    <select id="dbgDbAccess" title="Accesses that stop the machine (instruction fetches count as reads)">
+                        <option value="write">Write</option>
+                        <option value="read">Read</option>
+                        <option value="readWrite">Read/Write</option>
+                    </select>
+                    <button type="button" id="dbgDbAddBtn" title="Add the data breakpoint">Add</button>
+                </div>
+                <div class="dbg-list" id="dbgDbList"></div>
+            </details>
+            <details class="dbg-details">
+                <summary>Exceptions</summary>
+                <div class="dbg-row dbg-wrap" id="dbgExceptions"></div>
+            </details>
+            <details class="dbg-details">
+                <summary>Watch</summary>
+                <div class="dbg-row">
+                    <input type="text" id="dbgWatchExpr" class="dbg-input" placeholder="expression" spellcheck="false" autocomplete="off" title="Registers a b d x y u s pc dp cc, CC bits cc.z, memory [addr] (byte) and w[addr] (word), numbers $1F / 31">
+                    <button type="button" id="dbgWatchAddBtn" title="Add the expression to the watch list">Add</button>
+                </div>
+                <div class="dbg-list" id="dbgWatchList"></div>
+            </details>
+            <details class="dbg-details">
+                <summary>Log</summary>
+                <div class="dbg-log" id="dbgLog" title="Messages of the log points"></div>
+            </details>
+        </div>
     </div>
 </div>
 
 <!-- Memory Panel -->
-<div class="input-panel" id="memPanel" style="right:auto;left:16px;">
+<div class="input-panel" id="memPanel" style="right:auto;">
     <div class="ip-header draggable-header">
         <span>Memory</span>
         <button class="ip-close" id="memPanelClose" aria-label="Close Memory panel">&times;</button>
@@ -745,15 +827,35 @@
             <div class="ip-label">Memory State</div>
             <div class="debug-grid">
                 <span class="d-label">BASIC ROM/RAM</span><span class="d-val" id="bootRamVal">--</span>
-                <span class="d-label">MMR</span><span class="d-val" id="mmrVal">--</span>
-                <span class="d-label">MMR Bank ($FD90)</span><span class="d-val" id="mmrBankVal">--</span>
-                <span class="d-label">TWR</span><span class="d-val" id="twrVal">--</span>
-                <span class="d-label">TWR Offset ($FD92)</span><span class="d-val" id="twrOffsetVal">--</span>
+                <span class="d-label">MMR</span><span class="d-val" id="memMapperVal">--</span>
+                <span class="d-label">MMR Bank ($FD90)</span><span class="d-val" id="memMapperSegmentVal">--</span>
+                <span class="d-label">TWR</span><span class="d-val" id="memWindowVal">--</span>
+                <span class="d-label">TWR Offset ($FD92)</span><span class="d-val" id="memWindowOffsetVal">--</span>
             </div>
             <div class="ip-label" id="mmrMapLabel" style="display:none;margin-top:6px;">MMR Map (logical -> physical page)</div>
             <div id="mmrMapGrid" class="fs-10" style="display:none;font-family:monospace;color:#cde;line-height:1.4;"></div>
             <div class="ip-label" id="physMapLabel" style="display:none;margin-top:6px;">Physical Memory Map</div>
             <div id="physMapGrid" class="fs-10" style="display:none;font-family:monospace;color:#cde;line-height:1.4;"></div>
+        </div>
+        <!-- Memory dump and edit (no side effects: the I/O areas read $FF and are not written) -->
+        <div class="ip-section dbg-section" id="memDumpSection">
+            <div class="ip-label">Memory Dump</div>
+            <div class="dbg-row">
+                <select id="memThread" title="Whose address space to show">
+                    <option value="1">Main CPU</option>
+                    <option value="2">Sub CPU</option>
+                </select>
+                <input type="text" id="memAddr" class="dbg-input dbg-addr" value="0000" spellcheck="false" autocomplete="off" title="Hex address, or an expression such as x+$10">
+                <button type="button" id="memGoBtn" title="Show memory from the address">Go</button>
+                <button type="button" id="memPrevBtn" title="Previous 128 bytes" aria-label="Previous 128 bytes">&lsaquo;</button>
+                <button type="button" id="memNextBtn" title="Next 128 bytes" aria-label="Next 128 bytes">&rsaquo;</button>
+            </div>
+            <pre class="dbg-dump" id="memDump"></pre>
+            <div class="dbg-row">
+                <input type="text" id="memWriteAddr" class="dbg-input dbg-addr" placeholder="addr" spellcheck="false" autocomplete="off" title="Hex address to write at">
+                <input type="text" id="memWriteBytes" class="dbg-input" placeholder="bytes, e.g. 12 34 AB" spellcheck="false" autocomplete="off" title="Hex bytes separated by spaces">
+                <button type="button" id="memWriteBtn" title="Write the bytes (only while the machine is stopped)" disabled>Write</button>
+            </div>
         </div>
         <div style="margin-top:6px;">
             <button id="stateDumpBtn" class="fs-11" style="padding:2px 8px;cursor:pointer;width:100%;">State Dump</button>
@@ -911,7 +1013,7 @@
         既定では同梱の互換 ROM セット（独立実装。本体は MIT License、第三者素材由来の漢字字形は対象外。詳細は <code>LICENSE-AltROMs.md</code>）で動作するため、ROM ファイルの用意は不要です。お手持ちの ROM ファイルを使うこともできます。</p>
 
         <p class="md-note" style="font-size:0.85em;"><strong>ROMファイルの取り扱いについて</strong><br>
-        ・本シミュレータが同梱・配信するのは、独立実装の互換 ROM セット（本体は MIT License。配布元は <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.9" target="_blank" rel="noopener">7032 Alternative ROMs</a>）のみです。純正 ROM は同梱も配信もしません。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>
+        ・本シミュレータが同梱・配信するのは、独立実装の互換 ROM セット（本体は MIT License。配布元は <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.12" target="_blank" rel="noopener">7032 Alternative ROMs</a>）のみです。純正 ROM は同梱も配信もしません。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>
         ・利用者がご用意されたROMファイルはユーザーのブラウザ内（ローカル環境）でのみ処理します。ROMデータがサーバーに送信・保存されることはありません。</p>
 
         <p class="md-note" style="font-size:0.85em;">選択した機種に合う ROM を指定してください。</p>
@@ -929,7 +1031,7 @@
         <h3 id="help-rom">1. ROM の供給元を選ぶ / ROMファイルを読み込む（ROM Files パネル）</h3>
         <p>本シミュレータは<strong>同梱の互換 ROM セットを常に土台</strong>として動作します。そのうえで、<strong>ROM 1 本ごとに供給元を選べます</strong>。各 ROM の行にある選択で「同梱互換」か「自分の ROM」を指定してください（例: <code>FBASIC30.ROM</code> だけ、あるいは <code>KANJI.ROM</code> だけをお手持ちのものにする、といった使い分けができます）。指定はブラウザに保存され、次回以降も維持されます。現在どの組み合わせで動作しているかは、同じパネル上部の <strong>ROM Set</strong> 表示で確認できます。</p>
         <ul>
-        <li><strong>同梱互換（既定）</strong> — 独立実装の互換 ROM セット（本体は MIT License）を使用します。ROM ファイルの用意は不要で、そのまま起動できます（行の横に「互換」と表示されます）。漢字 ROM（第1水準は全機種、第2水準は FM77AV20EX・FM77AV40・FM77AV40EX/SX）も同梱されており、漢字表示に対応しています。ソフトウェアの動作条件は、下記の互換 ROM の互換性情報を参照してください（辞書 ROM を使うかな漢字変換には対応していません）。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>同梱互換 ROM の BASIC は、プログラムをアスキー形式（<code>SAVE ,A</code> と同じ形式）だけで読み書きします。中間コード（バイナリ）形式で保存されたファイルは読み込めません（<a href="https://github.com/7032JP/7032AltROMs/blob/v1.0.9/docs/COMPATIBILITY.md" target="_blank" rel="noopener">COMPATIBILITY.md §3.2</a>）。お手持ちのプログラムファイルをそのまま使う場合は、<code>FBASIC30.ROM</code> の行を「自分の ROM」に切り替えてください。機械語ファイル（<code>SAVEM</code> / <code>LOADM</code>）の形式は従来どおりです</li>
+        <li><strong>同梱互換（既定）</strong> — 独立実装の互換 ROM セット（本体は MIT License）を使用します。ROM ファイルの用意は不要で、そのまま起動できます（行の横に「互換」と表示されます）。漢字 ROM（第1水準は全機種、第2水準は FM77AV40・FM77AV40EX/SX）も同梱されており、漢字表示に対応しています。ソフトウェアの動作条件は、下記の互換 ROM の互換性情報を参照してください（辞書 ROM を使うかな漢字変換には対応していません）。漢字系 ROM の字形の条件は <code>LICENSE-Shinonome.md</code> を参照してください。<br>同梱互換 ROM の BASIC は、プログラムをアスキー形式（<code>SAVE ,A</code> と同じ形式）だけで読み書きします。中間コード（バイナリ）形式で保存されたファイルは読み込めません（<a href="https://github.com/7032JP/7032AltROMs/blob/v1.0.12/docs/COMPATIBILITY.md" target="_blank" rel="noopener">COMPATIBILITY.md §3</a>）。お手持ちのプログラムファイルをそのまま使う場合は、<code>FBASIC30.ROM</code> の行を「自分の ROM」に切り替えてください。機械語ファイル（<code>SAVEM</code> / <code>LOADM</code>）の形式は従来どおりです</li>
         <li><strong>自分の ROM</strong> — お手持ちの ROM ファイルを読み込んで使用します。ROM ファイルを読み込むと、その行は自動的に「自分の ROM」に切り替わります（行の横に「OK」と表示されます）</li>
         </ul>
         <p>「自分の ROM」に指定する行には以下の ROM ファイルが必要です（ご自身が適法に所有する実機から取得したものを用意してください）。</p>
@@ -941,6 +1043,7 @@
         <tr><td><code>BOOT_DOS.ROM</code></td><td>DOS ブート ROM。FM-7 / FM-77 を Boot Mode: DOS で起動する場合に必須（FM77AV 系では使いません）</td></tr>
         <tr><td><code>BOOT_BAS.ROM</code></td><td>BASIC ブート ROM。FM-7 / FM-77 を Boot Mode: BASIC で起動する場合に必須（FM77AV 系では使いません）</td></tr>
         <tr><td><code>SUBSYS_C.ROM</code></td><td>サブシステム ROM（CGフォント内蔵）。起動に常に必須</td></tr>
+        <tr><td><code>KANJI.ROM</code></td><td>漢字 ROM（JIS第一水準）。任意（無ければ同梱互換で補います）。FM-7 では別売りの漢字 ROM カード相当で、Options の Kanji ROM Card を外すとカードの無い状態で動かせます。FM-77 と FM77AV 系では本体に搭載されている ROM です。指定すると漢字を使うソフトで漢字が表示されます</td></tr>
         </table>
 
         <h4>FM77AV 追加ROM</h4>
@@ -948,17 +1051,16 @@
         <table>
         <tr><th>ファイル名</th><th>内容</th></tr>
         <tr><td><code>INITIATE.ROM</code></td><td>イニシエータROM。FM77AV 系の起動に必須（BOOT_BAS / BOOT_DOS は不要）</td></tr>
-        <tr><td><code>KANJI.ROM</code></td><td>漢字 ROM（JIS第一水準）。任意（無ければ同梱互換で補います）。FM-7 / FM-77 では漢字ROMカード相当で、指定すると漢字を使うソフトで漢字が表示されます</td></tr>
         <tr><td><code>SUBSYSCG.ROM</code></td><td>キャラクタージェネレータ ROM（FM77AV 系で統合されたもの）。任意（無ければ同梱互換で補います）</td></tr>
         <tr><td><code>SUBSYS_A.ROM</code></td><td>新サブモニタ ROM（640×200 モード用）。Drive 0 にディスクがあるとき必須</td></tr>
         <tr><td><code>SUBSYS_B.ROM</code></td><td>新サブモニタ ROM（320×200 モード用）。Drive 0 にディスクがあるとき必須</td></tr>
         </table>
 
-        <h4>FM77AV20EX / FM77AV40 / FM77AV40EX / SX 追加ROM</h4>
-        <p>FM77AV20EX・FM77AV40・FM77AV40EX / SX で起動する場合は、上記に加えて以下の ROM を使います。</p>
+        <h4>FM77AV40 / FM77AV40EX / SX 追加ROM</h4>
+        <p>FM77AV40・FM77AV40EX / SX で起動する場合は、上記に加えて以下の ROM を使います（FM77AV20 / FM77AV20EX の第 2 水準漢字は、日本語拡張カードを足したときだけ使えます。ROM Files 欄に行は無く、同梱の第 2 水準漢字 ROM も読み込みません。Folder で <code>KANJI2.ROM</code> を読み込むと、日本語拡張カードを足した構成として使えます）。</p>
         <table>
         <tr><th>ファイル名</th><th>内容</th></tr>
-        <tr><td><code>KANJI2.ROM</code></td><td>漢字 ROM（JIS第二水準）。任意（無ければ同梱互換で補います）</td></tr>
+        <tr><td><code>KANJI2.ROM</code></td><td>漢字 ROM（JIS第二水準）。任意（無ければ同梱互換で補います）。FM77AV40・FM77AV40EX/SX では本体に搭載されている ROM です</td></tr>
         </table>
 
         <h4>FM77AV40EX / SX 追加ROM</h4>
@@ -980,7 +1082,7 @@
         <tr><td><code>互換</code></td><td>「同梱互換」を指定（同梱の互換 ROM で動作）</td></tr>
         <tr><td><code>補完</code></td><td>「自分の ROM」を指定しているがファイルが未登録で、同梱互換 ROM で補って動作</td></tr>
         </table>
-        <p>ROM 名の横の <strong>必須</strong> / <strong>任意</strong> バッジは、選択中の機種・起動モード・Drive 0 のディスクの有無で、電源を入れるのに必要な ROM かどうかを示します（電源操作時の確認と同じ区分です）。</p>
+        <p>ROM 名の横のバッジ（<strong>必須</strong> / <strong>DOS時必須</strong> / <strong>BASIC時必須</strong> / <strong>本体搭載</strong> / <strong>任意</strong>）は、選択中の機種・起動モード・Drive 0 のディスクの有無で、電源を入れるのに必要な ROM かどうかを示します（電源操作時の確認と同じ区分です）。<strong>本体搭載</strong>はその機種が本体に載せている ROM で、無ければ同梱互換で補います。</p>
         <p>「自分の ROM」に指定した行のファイルがまだ読み込まれていない場合は、<strong>その行だけ</strong>同梱の互換 ROM で自動的に補って起動します（パネル上部の <strong>ROM Set</strong> に補完中の件数が出ます）。</p>
         <p><strong>Clear ROMs</strong> ボタンを押すと、ブラウザに保存した ROM だけを消去できます（ディスクや Library はそのまま残ります）。供給元の指定もすべて「同梱互換」に戻ります。実行中に押したときは、電源を切った時点で切り替わります。</p>
 
@@ -1011,7 +1113,7 @@
         <li>ファイル選択で <code>.d77</code> / <code>.2d</code> を読み込み、<strong>Eject</strong> で取り出し</li>
         <li><strong>最近使ったファイル</strong> — 一度読み込んだファイルは履歴に残り、次に「ファイルを選択」を押すと先に一覧が開きます。行を押すだけで同じファイルを再度セットできます（Drive 0 / 1 で共通の一覧。Library から挿入したものも含まれます）。「Choose a new file…」でファイル選択ダイアログ、「✎」で表示名（メモ）、「×」で 1 件削除、「Clear history」で全消去。↑ / ↓ と Enter でも選べます</li>
         <li>履歴は PC のファイルへの参照と、開いた時点の中身の控えをブラウザ内に保存します（ディスク・テープそれぞれ 20 件まで。テープの WAV は中身を控えません）。参照を保持できるブラウザでは履歴から開くたびに PC の最新のファイルを読み直し（権限の確認が出ることがあります）、読み直せないときは開いた時点の控えが残っていればそこから復元します。<strong>履歴の中身は BASIC からの書き込みで更新されず、PC のファイルへ書き戻されることもありません</strong></li>
-        <li><strong>Clear Disk Cache</strong> ボタンは、ブラウザにキャッシュしたディスクイメージ・ファイル参照と、最近使ったファイルの履歴（ディスク・テープ）を消去します（ROM と Library は残ります）</li>
+        <li><strong>Clear Disk Cache</strong> ボタンは、ブラウザにキャッシュしたディスクイメージ・ファイル参照と、最近使ったファイルの履歴（ディスク・テープ）を消去します。ドライブのディスクも取り出され、未保存の変更は失われます（ROM と Library は残ります）</li>
         <li><code>SAVE "0:NAME"</code> / <code>SAVEM</code> で書き込まれた内容はブラウザ内にのみ反映されます。PC へ書き出すのは <strong>Save</strong> ボタン（<code>.d77</code>。Library の項目は <strong>Exp</strong>）を押したときだけです。</li>
         <li>セット中のディスク情報（2D / 2DD、シリンダ数 C・サイド数 H・トラック当たりセクタ数 R・セクタ当たりバイト数 N）をドライブごとに表示</li>
         <li>読み書き中のアクセス状況・動作状態（トラック / セクタ / 状態）は画面下のステータスバーに表示されます</li>
@@ -1061,15 +1163,15 @@
         <li><strong>Toolbar 1行目</strong> — 画面下のバーに以下の機能があります。
             <ul>
             <li><strong>スピーカーアイコン (🔊/🔇)</strong> / スライダー — 音量調整（クリックでミュート切替）</li>
-            <li><strong>ステータス表示</strong>（2 段）— 1 段目はキーボード関連（<strong>CAP / カナ / INS</strong> の LED、<strong>SHIFT / CTRL / GRPH</strong> の状態、入力したキーのコード / スキャンコード）、2 段目はドライブ・画面情報（<strong>Drive 1 / Drive 0</strong> のアクセスランプと DMAC ランプ、ドライブ動作状態 <code>T:トラック S:セクタ 状態</code>、ドライブモード（2D / 2DD）、<strong>MMR</strong> ランプ、<strong>NO STEAL</strong> ランプ、フレームレート、画面解像度＆色数）。ドライブのアクセスランプは <strong>黄＝2D / 白＝2D DMA / 緑＝2DD / 青＝2DD DMA / 赤＝書き込み</strong>。MMR ランプはメモリ管理機能の使用中に点灯し、ソフトが高速MMR のモードを選んでいる間は緑（メイン CPU の速さは変わりません）。CAP / カナ / INS の LED は点灯すると赤<br><img class="help-figure" src="docs/images/ui_status_bar.svg" alt="ステータスバー 2 段目の読み方。ドライブのアクセス LED と DMAC、FDC の状態、2D / 2DD、MMR、NO STEAL、画面モードと色数"></li>
+            <li><strong>ステータス表示</strong>（2 段）— 1 段目はキーボード関連（<strong>CAP / カナ / INS</strong> の LED、<strong>SHIFT / CTRL / GRPH</strong> の状態、入力したキーのコード / スキャンコード）、2 段目はドライブ・画面情報（<strong>Drive 1 / Drive 0</strong> のアクセスランプと DMAC ランプ、ドライブ動作状態 <code>T:トラック S:セクタ 状態</code>、ドライブモード（2D / 2DD）、<strong>MMR</strong> ランプ、<strong>NO STEAL</strong> ランプ、フレームレート、画面解像度＆色数）。ドライブのアクセスランプは <strong>黄＝2D / 白＝2D DMA / 緑＝2DD / 青＝2DD DMA / 赤＝書き込み</strong>。MMR ランプはメモリ管理機能の使用中に点灯し、ソフトが高速MMR のモードを選んでいる間は緑（このときはメイン CPU の速さが落ちません）。CAP / カナ / INS の LED は点灯すると赤<br><img class="help-figure" src="docs/images/ui_status_bar.svg" alt="ステータスバー 2 段目の読み方。ドライブのアクセス LED と DMAC、FDC の状態、2D / 2DD、MMR、NO STEAL、画面モードと色数"></li>
             <li><strong>⏸ Pause</strong> — シミュレータの一時停止 / 再開（停止中は Resume 表示）</li>
             <li><strong>📷</strong> — 現在の画面を PNG 画像として保存</li>
             </ul>
         </li>
         <li><strong>Toolbar 2行目 (Debug Panels)</strong> — 各ボタンで独立したフローティング・デバッグパネルを開閉できます。
             <ul>
-            <li><strong>CPU</strong> — Main/Sub CPU の全レジスタ (A/B/X/Y/S/U/PC/DP/CC)、動作状態、FM77AV では Monitor（動いているサブモニタ。Old 640＝旧サブモニタ、New 640 / New 320＝新サブモニタ 640×200 / 320×200、Sub RAM＝サブ RAM に置いたプログラム）/ Initiator を表示</li>
-            <li><strong>Memory</strong> — FM77AV 時のメモリ状態 (BASIC ROM/RAM / MMR / TWR / MMR Map / 物理メモリマップ)、State Dump ボタン</li>
+            <li><strong>CPU</strong> — Main/Sub CPU の全レジスタ (A/B/X/Y/S/U/PC/DP/CC)、動作状態、FM77AV では Monitor（動いているサブモニタ。Old 640＝旧サブモニタ、New 640 / New 320＝新サブモニタ 640×200 / 320×200、Sub RAM＝サブ RAM に置いたプログラム）/ Initiator を表示。下半分の Debugger で、Break（一時停止）・Step In / Over / Out・Run to・Restart、ブレークポイント（条件・回数・ログ）、データブレークポイント、例外での停止、レジスタの書き換え（止めている間に値をクリック）、逆アセンブル、呼び出し履歴、式の値（Watch）を扱います</li>
+            <li><strong>Memory</strong> — FM77AV 時のメモリ状態 (BASIC ROM/RAM / MMR / TWR / MMR Map / 物理メモリマップ)、Memory Dump（メイン / サブ CPU のメモリの 16 進表示と、止めている間の書き換え）、State Dump ボタン</li>
             <li><strong>Keyboard</strong> — キー入力表示、FM-7 キーボードレイアウト、BREAK キー変更</li>
             <li><strong>Palette</strong> — 画面モードに応じたパレット表示 (Digital 8色 / 4,096色 / 262,144色)。320x200 / 262K モードではアナログパレットキャンバスも表示</li>
             <li><strong>Sound</strong> — PSG / SSG / FM 各チャンネルの音量メーターとレジスタを表示</li>
@@ -1081,7 +1183,7 @@
         <h3>右側 — サイドパネル</h3>
         <table>
         <tr><th>セクション</th><th>内容</th></tr>
-        <tr><td><strong>Options</strong></td><td>FM Sound Card（FM-7 / FM-77 のみ）、Mouse、Joystick 1 / Joystick 2（接続したゲームパッドの割り当て）、Cursor → Ten Key（カーソルキーをテンキー代用）の選択。機種は画面上部の機種タブ、電源・リセット・Boot Mode は機種別ハードウェアパネル、Pause と 📷（PNG保存）は画面下のツールバーにあります</td></tr>
+        <tr><td><strong>Options</strong></td><td>FM Sound Card（FM-7 / FM-77 のみ）、Kanji ROM Card（FM-7 のみ）、Mouse、Joystick 1 / Joystick 2（接続したゲームパッドの割り当て）、Arrow Keys as Ten Key（カーソルキーをテンキー代用）の選択。機種は画面上部の機種タブ、電源・リセット・Boot Mode は機種別ハードウェアパネル、Pause と 📷（PNG保存）は画面下のツールバーにあります</td></tr>
         <tr><td><strong>ROM Files</strong></td><td>ROM ファイルの読み込み（フォルダ一括 or 個別指定）。各 ROM の横のタグ（OK / 互換 / 補完）で供給元を確認できます。ROM Info で読み込み済みROMのサイズ・ハッシュを確認可能（Copy ボタンでクリップボードにコピー）</td></tr>
         <tr><td><strong>Library</strong></td><td>ディスク (D77) / テープ (T77) をブラウザ内で管理する仮想メディアの棚。ファイル選択で取り込み、＋2D / ＋2DD で論理フォーマット済みの空ディスクを作成、▶0 / ▶1 / ▶T でドライブ・テープへ挿入、⬆Commit で棚へ反映。論理FMT / Exp / Ren / Dup / Del も可能</td></tr>
         <tr><td><strong>Disk Images</strong></td><td>D77 / 2D 形式のディスクイメージを Drive 0 / Drive 1 にセット。セット時にファイル名を表示。Save ボタンで書き込み後イメージを .d77 保存（書き込み後は <code>*</code> を表示。自動では保存しません。Library に反映するには ⬆Commit、PC へ保存するには Save）。Eject ボタンで取り出し。セット中ディスクの情報（2D / 2DD など）を表示。読み書き状況とドライブ動作状態は画面下のステータスバーに表示</td></tr>
@@ -1110,12 +1212,13 @@
         <p>キー配置の全体図、FM-7 固有のキー（BREAK / GRPH / カナ / HOME など）が日本語配列・英語配列のどのキーに当たるか、キーの割り当ての変え方は <a href="#" class="keyboard-manual-trigger">キーボードマニュアル</a> に図入りでまとめています。</p>
         <ul>
         <li><strong>キー入力方式</strong> — 物理キーの位置でマッピングしています。JIS配列（106/109キー）・US配列（101/104キー）のどちらでも同じ配置で使えます</li>
-        <li><strong>クリックで入力（ソフトウェアキーボード）</strong> — Keyboard パネルのキーボード図のキーをクリックすると、その文字がシミュレータに入力されます（テンキーの <code>=</code> は GRPH を押しながら押したときだけ入力されます）。Shift と CTR はスティッキー（押すたびに ON / OFF が切り替わり、次のキーを押して離すと自動で戻ります。CTR は入力コードの無いキーでは戻りません）、GRPH は押している間のみ、CAP / カナ はトグル動作です。タッチ端末では画面下部のソフトウェアキーボードでも同様に入力できます</li>
-        <li><strong>Cursor → Ten Key</strong> — テンキーのないキーボード向けのオプションです。サイドパネルの Options セクションでチェックを入れると、カーソルキー（↑↓←→）がテンキーの 8/2/4/6 として動作します。テンキーを使うプログラムに便利です</li>
+        <li><strong>クリックで入力（ソフトウェアキーボード）</strong> — Keyboard パネルのキーボード図のキーをクリックすると、その文字がシミュレータに入力されます。Shift と CTR はスティッキー（押すたびに ON / OFF が切り替わり、次のキーを押して離すと自動で戻ります。CTR は入力コードの無いキーでは戻りません）、GRPH は押している間のみ、CAP / カナ はトグル動作です。タッチ端末では画面下部のソフトウェアキーボードでも同様に入力できます</li>
+        <li><strong>Arrow Keys as Ten Key</strong> — テンキーのないキーボード向けのオプションです。サイドパネルの Options セクションでチェックを入れると、カーソルキー（↑↓←→）がテンキーの 8/2/4/6 として動作します。テンキーを使うプログラムに便利です</li>
         <li><strong>キーカスタマイズ</strong> — Keyboard パネルの「キーカスタマイズ」で、お使いの物理キーボードを配列（日本語配列 / 英語配列）と種別（フルキー / テンキーレス / コンパクト）で選べます。「カスタマイズ開始」を押し、割り当てたい FM-7 キーをクリックしてから物理キーを押すと、そのキーが割り当てられます。割当は保存され、「リセット」で既定に戻せます（手順は <a href="#" class="keyboard-manual-trigger">キーボードマニュアル</a> の第 5 章）</li>
         <li><strong>BREAK キー</strong> — デフォルトでは <code>Esc</code> キーまたは <code>Pause</code> キーが BREAK キーに割り当てられています（PC の Esc の位置が BREAK です）。FM-7 の ESC キーは、日本語配列の <code>半角/全角</code>（英語配列の <code>`</code>）の位置です。変更は「キーカスタマイズ」と共通で、「カスタマイズ開始」を押してキーボード図の <strong>BRK</strong> キーをクリックし、割り当てたい物理キーを押します（<code>Pause</code> は常に予備として有効）。「リセット」で既定に戻ります</li>
         <li><strong>英語配列向けの代替入力</strong> — <code>_</code> キーが無い配列では <code>Ctrl + /</code> で <code>_</code> を入力できます（<code>@</code> は P の右の <code>[</code> キーにそのまま割り当たっています）</li>
-        <li><strong>CAPS / カナ / INS</strong> — それぞれ CapsLock / 右Alt（またはカナキー） / Insert キーで切り替え。状態は CAP / カナ / INS の LED で確認できます</li>
+        <li><strong>CTRL を押しながらのキー</strong> — ASCII 方式で CTRL を押しながら押したときにコードを送るのは、英字と記号キー @ [ ¥ ] ^ _ だけです。RETURN・BS・TAB・ESC・SPACE・数字・カーソル・編集キー・テンキー・PF はコードを送りません（<code>/</code> だけは <code>_</code> の代わりの入力として働きます）</li>
+        <li><strong>CAPS / カナ / INS</strong> — CAPS とカナはそれぞれ CapsLock / 右Alt（またはカナキー）で切り替え、状態は CAP / カナ の LED で確認できます。Insert キーは INS キーの入力で、INS の LED は実行中のソフトウェアが点灯・消灯します</li>
         </ul>
 
         <h2>スマートフォン / タブレット</h2>
@@ -1175,7 +1278,7 @@
         <h2>同梱互換 ROM セット</h2>
         <p class="md-note" style="font-size:0.85em;">本シミュレータには、独立実装の互換 ROM セット（本体は MIT License）を同梱しており、既定ではこの互換 ROM セットで動作します。
         ROM 本体と併せてライセンス文（LICENSE・その適用範囲を記した LICENSE-MIT.md）・同梱フォントの由来と原ライセンス文（LICENSE-FONT.md）・利用条件と来歴、字形の区分の詳細（docs/LEGAL.md）・検証用ハッシュ（SHA256SUMS）・説明（README.md）を
-        <code>assets/altroms/</code> に同梱しています。互換 ROM セットのソースと文書は配布元 <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.9" target="_blank" rel="noopener">7032 Alternative ROMs</a> にあります。</p>
+        <code>assets/altroms/</code> に同梱しています。互換 ROM セットのソースと文書は配布元 <a href="https://github.com/7032JP/7032AltROMs/tree/v1.0.12" target="_blank" rel="noopener">7032 Alternative ROMs</a> にあります。</p>
         <p class="md-note" style="font-size:0.85em;">ただし、<strong>漢字系 ROM（KANJI・KANJI2）に含まれる第三者素材由来の字形は、上記 MIT License の対象ではありません。</strong>
         独自字形と変換処理の適用条件は、同梱の <code>assets/altroms/LICENSE-MIT.md</code> / <code>assets/altroms/LICENSE-FONT.md</code> を参照してください。
         これらの文書に現れる相対パスは互換 ROM セット側の配布物（ソース一式）内のパスです。</p>
@@ -1187,7 +1290,7 @@
         </ul>
 
         <h2>ライセンス</h2>
-        <p class="md-note" style="font-size:0.8em;">本ライセンスはWebM7自体の成果物（JavaScript, HTML, CSS のソースコードのほか、本プロジェクトが作成したドキュメント・図・アイコン・テクスチャ等を含みます）に適用されます。第三者に権利が帰属する要素（各社ブランドロゴなど）には適用されません。FM 音源の FM 合成部（core/opn.js の一部）は "FM Sound Generator" (fmgen) Copyright (C) by cisc 1998, 2003 の移植で、原典の利用条件が適用されます（原文は core/fmgen_readme.txt を同梱）。同梱の互換 ROM セット（<code>assets/altroms/</code>）は別配布物であり、その条件は同梱の <code>assets/altroms/LICENSE</code> に従います。適用範囲の区分は配布物の <code>LICENSE-MIT.md</code> の「ライセンスの案内」の表にあり、詳細はそれぞれ <code>LICENSE-MIT.md</code>（本プロジェクトの成果物と注記）・<code>LICENSE-fmgen.md</code>（FM 音源部）・<code>LICENSE-AltROMs.md</code>（互換 ROM セット）・<code>LICENSE-Shinonome.md</code>（漢字フォント素材）を参照してください。</p>
+        <p class="md-note" style="font-size:0.8em;">本ライセンスはWebM7自体の成果物（JavaScript, HTML, CSS のソースコードのほか、本プロジェクトが作成したドキュメント・図・アイコン・テクスチャ等を含みます）に適用されます。第三者に権利が帰属する要素（各社ブランドロゴなど）には適用されません。FM 音源の移植部（core/opn.js のファイル全体）は "FM Sound Generator" (fmgen) Copyright (C) by cisc 1998, 2003 の移植で、MIT License の対象ではなく、原典の利用条件だけが適用されます（原文は core/fmgen_readme.txt を同梱）。同梱の互換 ROM セット（<code>assets/altroms/</code>）は別配布物であり、その条件は同梱の <code>assets/altroms/LICENSE</code> に従います。適用範囲の区分は配布物の <code>LICENSE-MIT.md</code> の「ライセンスの案内」の表にあり、詳細はそれぞれ <code>LICENSE-MIT.md</code>（本プロジェクトの成果物と注記）・<code>LICENSE-fmgen.md</code>（FM 音源部）・<code>LICENSE-AltROMs.md</code>（互換 ROM セット）・<code>LICENSE-Shinonome.md</code>（漢字フォント素材）を参照してください。</p>
 
         <pre style="background:#1a1a2e;padding:16px;border-radius:6px;font-size:0.78em;color:#c8c8d0;white-space:pre-wrap;line-height:1.5;margin:12px 0;">MIT License
 
@@ -1240,6 +1343,7 @@ import {
 } from './core/keyboard.js';
 import { getCGGlyphDataURL, getCGKeyCompositeDataURL } from './core/cgrom_glyph.js';
 import { initGuideBalloons } from './core/guide_balloons.js';
+import { M7DebugSession, EXCEPTION_FILTERS } from './core/debug.js';
 
 // FM-77 の機種識別子。
 const MACHINE_FM77 = 'fm77';
@@ -1255,6 +1359,10 @@ function isAVMachine(model) {
 
 const fm7 = new FM7Browser();
 window.fm7 = fm7; // expose for console debugging
+// M7DebugSession of the core: Break / Step / breakpoints (see the Debugger section of the CPU panel)
+const dbg = new M7DebugSession(fm7).attach();
+// True once the Debugger section below has set itself up (setEmuState runs before that).
+let dbgUiReady = false;
 
 const canvas = document.getElementById('screen');
 const screenContainer = document.getElementById('screenContainer');
@@ -1375,14 +1483,17 @@ function updateMachineType() {
     const isAV = isAVMachine(model);
     romListAV.style.display = isAV ? '' : 'none';
     romListAV40.style.display = model === MACHINE_FM77AV40EX ? '' : 'none';
-    romListKanji2.style.display = [MACHINE_FM77AV20EX, MACHINE_FM77AV40, MACHINE_FM77AV40EX].includes(model) ? '' : 'none';
+    // 第 2 水準漢字 ROM の行: FM77AV40・FM77AV40EX/SX だけ（FM77AV20 / FM77AV20EX は日本語拡張カードを足した構成として、Folder の読み込みでだけ使える）
+    romListKanji2.style.display = [MACHINE_FM77AV40, MACHINE_FM77AV40EX].includes(model) ? '' : 'none';
     debugAV.style.display = isAV ? '' : 'none';
     document.getElementById('memAVSection').style.display = isAV ? '' : 'none';
     // FM sound card option: FM-7 / FM-77 only (FM77AV has OPN built-in)
     document.getElementById('fmCardRow').style.display = isAV ? 'none' : '';
+    // 漢字 ROM カードの有無: FM-7 だけ（FM-77 以降は漢字 ROM を本体に載せている）
+    document.getElementById('kanjiCardRow').style.display = model === MACHINE_FM7 ? '' : 'none';
 
-    // Mouse: available on every machine (external mouse set / OPN joystick
-    // port), so the toggle stays enabled regardless of the machine type.
+    // Mouse: the bus mouse is available on every machine. The joystick-port
+    // options depend on the OPN (see updateMouseModeAvailability below).
 
     // Update title
     const titles = {
@@ -1396,8 +1507,8 @@ function updateMachineType() {
     };
     siteTitle.textContent = titles[model] || titles[MACHINE_FM7];
 
-    // Capability badges: light up what the selected machine supports.
-    // (Same mapping as core capability getters — see docs/MachineComparison.md)
+    // Capability badges: light up what the selected machine has as a product.
+    // Not all of these follow the core feature flags.
     const caps = {
         mmr:  fm7.hasMMR,
         av:   isAV,
@@ -1468,6 +1579,7 @@ function setControlsLocked(locked) {
     // FM card checkbox: locked during run
     const fmCheck = document.getElementById('fmCardCheck');
     fmCheck.disabled = locked;
+    document.getElementById('kanjiCardCheck').disabled = locked;
 }
 // Block startupSystem radio changes during run by reverting to saved state
 ['startupSystem'].forEach(name => {
@@ -1559,28 +1671,48 @@ window.addEventListener('gamepadconnected', refreshJoystickLists);
 window.addEventListener('gamepaddisconnected', refreshJoystickLists);
 
 // =========================================================================
-// Cursor → Numpad preset
+// Arrow keys as ten key
 // =========================================================================
 
-const CURSOR_TO_NUMPAD = {
+const ARROW_KEYS_AS_NUMERIC_PAD = {
     'ArrowUp':    'Numpad8',
     'ArrowDown':  'Numpad2',
     'ArrowLeft':  'Numpad4',
     'ArrowRight': 'Numpad6',
 };
 
-const cursorToNumpadCheck = document.getElementById('cursorToNumpad');
+const arrowPadCheck = document.getElementById('arrowKeysNumericPad');
+// Name of the saved setting, the same as the checkbox.
+const ARROW_PAD_SETTING = 'arrowKeysNumericPad';
+// Where earlier sessions saved it: a setting of another name, and before that
+// a localStorage item. takeOverArrowPadSetting() moves the value over once.
+const ARROW_PAD_OLD_SETTING = 'cursorToNumpad';
+const ARROW_PAD_OLD_ITEM = 'fm7_cursor_to_numpad';
 
-function applyCursorToNumpad(enabled) {
-    // The Cursor→Ten Key preset and the per-key customization share the
-    // single keyboard custom map; rebuild the merged map from both sources.
+async function takeOverArrowPadSetting() {
+    let value = await loadSetting(ARROW_PAD_OLD_SETTING);
+    if (value === undefined) {
+        const item = localStorage.getItem(ARROW_PAD_OLD_ITEM);
+        if (item === null) return undefined;
+        value = (item === '1');
+    }
+    await saveSetting(ARROW_PAD_SETTING, value);
+    await dbDelete(STORE_SETTINGS, ARROW_PAD_OLD_SETTING);
+    localStorage.removeItem(ARROW_PAD_OLD_ITEM);
+    return value;
+}
+
+function applyArrowPad(enabled) {
+    // The setting that uses the arrow keys as numeric pad 8/2/4/6 and the
+    // per-key customization share the single keyboard custom map; rebuild
+    // the merged map from both sources.
     buildAndApplyKeymap();
 }
 
-cursorToNumpadCheck.addEventListener('change', () => {
-    const on = cursorToNumpadCheck.checked;
-    applyCursorToNumpad(on);
-    saveSetting('cursorToNumpad', on);
+arrowPadCheck.addEventListener('change', () => {
+    const on = arrowPadCheck.checked;
+    applyArrowPad(on);
+    saveSetting(ARROW_PAD_SETTING, on);
 });
 
 // =========================================================================
@@ -1597,10 +1729,10 @@ let pointerPrevX = null, pointerPrevY = null;
 // A mouse is connected when the selected mode is anything but '(None)'.
 function mouseConnected() { return mouseModeSelect.value !== 'none'; }
 
-// Read an earlier saved value as the current one.
-const OLD_MOUSE_SETTING = { intel1: 'port1', intel2: 'port2' };
-function storedMouseKind(value) {
-    return OLD_MOUSE_SETTING[value] || value;
+// A saved value that is not one of the choices falls back to '(None)'.
+function savedMouseKind(value) {
+    const choices = Array.from(mouseModeSelect.options, (o) => o.value);
+    return choices.includes(value) ? value : 'none';
 }
 
 mouseModeSelect.addEventListener('change', () => {
@@ -1617,6 +1749,17 @@ mouseModeSelect.addEventListener('change', () => {
 // the next power-on / Reset via setFMCard(); we do not apply it live here, so a
 // hint tells the user when the change becomes active.
 const fmCardCheck = document.getElementById('fmCardCheck');
+// 漢字 ROM カード (FM-7 のみ)。外しているときは KANJI.ROM を読み込まない。
+// 設定キー 'kanjiCard'。未保存は挿している扱いで、同梱互換 ROM を読み込む。
+const kanjiCardCheck = document.getElementById('kanjiCardCheck');
+function kanjiCardRemoved() {
+    return machineTypeSelect.value === MACHINE_FM7 && !kanjiCardCheck.checked;
+}
+kanjiCardCheck.addEventListener('change', async () => {
+    await saveSetting('kanjiCard', kanjiCardCheck.checked);
+    const stopped = (typeof emuState === 'undefined') || (emuState === 'stopped');
+    if (stopped) await applyRomSet();
+});
 const fmCardHint = document.getElementById('fmCardHint');
 fmCardCheck.addEventListener('change', () => {
     saveSetting('fmCard', fmCardCheck.checked);
@@ -1762,34 +1905,34 @@ muteBtn.addEventListener('click', () => {
 });
 
 // =========================================================================
-// FDD drive-sound settings
+// Drive noise settings
 // =========================================================================
 
-const fddSoundCheck    = document.getElementById('fddSoundCheck');
-const fddSoundVolume   = document.getElementById('fddSoundVolume');
-const fddSoundVolLabel = document.getElementById('fddSoundVolLabel');
+const driveNoiseCheck    = document.getElementById('driveNoiseCheck');
+const driveNoiseVolume   = document.getElementById('driveNoiseVolume');
+const driveNoiseVolLabel = document.getElementById('driveNoiseVolLabel');
 
-const storedFddEnabled = localStorage.getItem('fm7_fdd_sound_enabled');
-const storedFddVolume  = localStorage.getItem('fm7_fdd_sound_volume');
-const fddEnabledInit = storedFddEnabled === null ? false : (storedFddEnabled === '1');
-const fddVolumeInit  = storedFddVolume  === null ? 0.5  : parseFloat(storedFddVolume);
+const storedDriveNoiseEnabled = localStorage.getItem('fm7_drive_noise_enabled');
+const storedDriveNoiseVolume  = localStorage.getItem('fm7_drive_noise_volume');
+const driveNoiseEnabledInit = storedDriveNoiseEnabled === null ? false : (storedDriveNoiseEnabled === '1');
+const driveNoiseVolumeInit  = storedDriveNoiseVolume  === null ? 0.5  : parseFloat(storedDriveNoiseVolume);
 
-fddSoundCheck.checked = fddEnabledInit;
-fddSoundVolume.value  = Math.round(fddVolumeInit * 100);
-fddSoundVolLabel.textContent = Math.round(fddVolumeInit * 100) + '%';
-fm7.fddSound.setEnabled(fddEnabledInit);
-fm7.fddSound.setGain(fddVolumeInit);
+driveNoiseCheck.checked = driveNoiseEnabledInit;
+driveNoiseVolume.value  = Math.round(driveNoiseVolumeInit * 100);
+driveNoiseVolLabel.textContent = Math.round(driveNoiseVolumeInit * 100) + '%';
+fm7.driveNoise.setEnabled(driveNoiseEnabledInit);
+fm7.driveNoise.setGain(driveNoiseVolumeInit);
 
-fddSoundCheck.addEventListener('change', () => {
-    fm7.fddSound.setEnabled(fddSoundCheck.checked);
-    localStorage.setItem('fm7_fdd_sound_enabled', fddSoundCheck.checked ? '1' : '0');
+driveNoiseCheck.addEventListener('change', () => {
+    fm7.driveNoise.setEnabled(driveNoiseCheck.checked);
+    localStorage.setItem('fm7_drive_noise_enabled', driveNoiseCheck.checked ? '1' : '0');
 });
 
-fddSoundVolume.addEventListener('input', () => {
-    const v = parseInt(fddSoundVolume.value) / 100;
-    fm7.fddSound.setGain(v);
-    fddSoundVolLabel.textContent = Math.round(v * 100) + '%';
-    localStorage.setItem('fm7_fdd_sound_volume', v.toString());
+driveNoiseVolume.addEventListener('input', () => {
+    const v = parseInt(driveNoiseVolume.value) / 100;
+    fm7.driveNoise.setGain(v);
+    driveNoiseVolLabel.textContent = Math.round(v * 100) + '%';
+    localStorage.setItem('fm7_drive_noise_volume', v.toString());
 });
 
 // --- 高速読み込みモード (既定 ON): OFF でシークの加速を無効にする ---
@@ -2291,8 +2434,7 @@ function inferKind(filename) {
 }
 
 // Layout of a formatted mini floppy disk: 2 sides, 16 sectors per track,
-// 256 bytes per sector, 40 tracks per side for 2D (FM-7 ユーザーズマニュアル
-// システム解説 第 13 章 ミニフロッピィディスクの構成); 2DD keeps the same
+// 256 bytes per sector, 40 tracks per side for 2D; 2DD keeps the same
 // layout with twice the tracks.
 const DISK_SIDES = 2;
 const DISK_SECTORS_PER_TRACK = 16;
@@ -2355,7 +2497,7 @@ for (const [filename, entry] of Object.entries(ROM_FILE_MAP)) {
 // 'user': 利用者の ROM ファイル (IndexedDB に保存) を使用。
 
 // ビルドスタンプ。
-const BUILD_STAMP = '20261103180922';
+const BUILD_STAMP = '20261122012049';
 
 const ALTROM_DIR = 'assets/altroms/';
 
@@ -2427,11 +2569,11 @@ function builtinRomEntries(machine) {
         );
     }
     if (machine === 'fm77av40ex') list.push({ file: 'extsub.rom', slot: 'extsub' });
-    // 漢字系 ROM (取得できないときは読み飛ばす): KANJI は全機種、KANJI2 は FM77AV20EX・FM77AV40・FM77AV40EX/SX、
+    // 漢字系 ROM (取得できないときは読み飛ばす): KANJI は全機種、KANJI2 は FM77AV40・FM77AV40EX/SX、
     // DICROM は FM77AV40EX/SX のみ。
     // ファイル名は assets/altroms/ に置かれた任意 ROM のファイル名と合わせること。
     list.push({ file: 'kanji.rom', slot: 'kanji', optional: true });
-    if (machine === 'fm77av20ex' || machine === 'fm77av40' || machine === 'fm77av40ex') {
+    if (machine === 'fm77av40' || machine === 'fm77av40ex') {
         list.push({ file: 'kanji2.rom', slot: 'kanji2', optional: true });
     }
     if (machine === 'fm77av40ex') {
@@ -2509,6 +2651,16 @@ function markBuiltin(el, file) {
     el.classList.remove('filled');
     el.classList.add('builtin');
     el.title = `このスロットは同梱互換 ROM（${file}）を使用しています`;
+}
+
+// 漢字 ROM カードを外しているときの KANJI.ROM のタグ表示。
+function markCardRemoved(el) {
+    if (!el) return;
+    el.textContent = 'なし';
+    el.classList.remove('loaded');
+    el.classList.remove('filled');
+    el.classList.remove('builtin');
+    el.title = '漢字 ROM カードを外しているため、漢字 ROM の無い状態で動かしています';
 }
 
 // IndexedDB に保存済みの利用者 ROM があるスロット名の集合を返す。
@@ -2605,6 +2757,9 @@ function updateRomSourceUI(ok) {
     const block = document.getElementById('userRomBlock');
     if (block) block.style.opacity = '';
     updateRomSlotSelectUI();
+    // 漢字 ROM カードを外しているときは KANJI.ROM の行を淡色にする
+    const kanjiItem = document.querySelector('select.rom-src[data-slot="kanji"]').closest('.rom-item');
+    if (kanjiItem) kanjiItem.classList.toggle('rom-item-off', kanjiCardRemoved());
 }
 
 // ROM セットを組み直す。
@@ -2631,6 +2786,10 @@ async function applyRomSet({ persist = false } = {}) {
         const entry = ROM_SLOT_MAP[slot];
         if (!entry) continue;
         const statusEl = entry.status ? entry.status() : null;
+        if (slot === 'kanji' && kanjiCardRemoved()) {
+            markCardRemoved(statusEl);
+            continue;
+        }
         if (slotSourceOf(slot) === 'user') {
             const data = await loadROM(slot);
             if (data) {
@@ -2858,7 +3017,7 @@ setupIndividualROM(romKanjiInput,    (d) => fm7.loadKanjiROM(d),   statusKanjiEl
 setupIndividualROM(romExtSubInput,   (d) => fm7.loadExtSubROM(d),  statusExtSubEl,  'extsub');
 setupIndividualROM(romDicromInput,   (d) => fm7.loadDicromROM(d),  statusDicromEl,  'dicrom');
 
-// FM77AV20EX / FM77AV40 / FM77AV40EX ROMs
+// FM77AV40 / FM77AV40EX/SX ROMs
 setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2El,  'kanji2');
 
 // Restore persisted settings on startup (older formats are migrated).
@@ -2920,19 +3079,12 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
     }
     refreshJoystickLists();
 
-    // Cursor → Ten Key
-    let ck = await loadSetting('cursorToNumpad');
-    if (ck === undefined) {
-        const legacy = localStorage.getItem('fm7_cursor_to_numpad');
-        if (legacy !== null) {
-            ck = (legacy === '1');
-            await saveSetting('cursorToNumpad', ck);
-            localStorage.removeItem('fm7_cursor_to_numpad');
-        }
-    }
+    // Arrow keys as numeric pad 8/2/4/6
+    let ck = await loadSetting(ARROW_PAD_SETTING);
+    if (ck === undefined) ck = await takeOverArrowPadSetting();
     if (ck === true) {
-        cursorToNumpadCheck.checked = true;
-        applyCursorToNumpad(true);
+        arrowPadCheck.checked = true;
+        applyArrowPad(true);
     }
 
     // Mouse connection mode (available on every machine).
@@ -2942,7 +3094,7 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
         mouseMode = (legacyOn === true) ? 'bus' : 'none';
         if (mouseMode === 'bus') await saveSetting('mouseMode', 'bus');
     }
-    const currentKind = storedMouseKind(mouseMode);
+    const currentKind = savedMouseKind(mouseMode);
     if (currentKind !== mouseMode) await saveSetting('mouseMode', currentKind);
     mouseMode = currentKind;
     mouseModeSelect.value = mouseMode;
@@ -2952,6 +3104,8 @@ setupIndividualROM(romKanji2Input,   (d) => fm7.loadKanji2ROM(d),  statusKanji2E
     // next power-on / Reset, not live.
     const fmCard = await loadSetting('fmCard');
     if (fmCard === true) fmCardCheck.checked = true;
+    // 漢字 ROM カード (FM-7 のみ)。未保存は挿している。
+    if ((await loadSetting('kanjiCard')) === false) kanjiCardCheck.checked = false;
 
     // Reconcile the joystick-port mouse options against the restored machine and card
     // state (may fall the selection back to '(None)' on FM-7 without the card).
@@ -3065,7 +3219,7 @@ async function updateRomInfo() {
               size: fm7.ex.extSubRomBytes },
             { name: 'DICROM.ROM', data: fm7.ex.dictionaryRom, loaded: fm7.romLoaded.dicrom },
         ] : []),
-        ...(['fm77av20ex', 'fm77av40', 'fm77av40ex'].includes(machineTypeSelect.value) ? [
+        ...(['fm77av20', 'fm77av20ex', 'fm77av40', 'fm77av40ex'].includes(machineTypeSelect.value) ? [
             { name: 'KANJI2.ROM', data: fm7.ex.kanji2Rom, loaded: fm7.romLoaded.kanji2 },
         ] : []),
     ];
@@ -3750,7 +3904,7 @@ document.getElementById('clearStorageBtn').addEventListener('click', async () =>
 // Clear cached disk images, file handles and the recent-file history
 // (disk and tape) — keeps the ROM cache and the Library.
 document.getElementById('clearDiskCacheBtn').addEventListener('click', async () => {
-    if (!confirm('Clear cached disk images, file handles and the recent-file history from browser storage?\n(ROMs and the Library are kept.)')) return;
+    if (!confirm('Clear cached disk images, file handles and the recent-file history from browser storage?\nDisks in the drives are ejected and unsaved changes are lost.\n(ROMs and the Library are kept.)')) return;
     try {
         const db = await openDB();
         await new Promise((resolve, reject) => {
@@ -3767,6 +3921,12 @@ document.getElementById('clearDiskCacheBtn').addEventListener('click', async () 
             fm7.fdc.ejectDisk(driveNum);
             _diskHandle[driveNum] = null;
             _diskRecentId[driveNum] = null;
+            _diskName[driveNum] = '';
+            _diskModified[driveNum] = false;
+            // The ejected drive no longer holds a Library item either.
+            _libBindCache['drive' + driveNum] = null;
+            await libBindingClear('drive' + driveNum);
+            updateDiskInfo(driveNum);
             const fileInput = driveNum === 0 ? diskFileInput0 : diskFileInput1;
             const statusEl = driveNum === 0 ? diskStatusEl0 : diskStatusEl1;
             const sel = driveNum === 0 ? diskSelectEl0 : diskSelectEl1;
@@ -3776,6 +3936,8 @@ document.getElementById('clearDiskCacheBtn').addEventListener('click', async () 
             sel.style.display = 'none';
             sel.innerHTML = '';
         }
+        await renderLibrary();
+        if (typeof updatePowerReadiness === 'function') updatePowerReadiness();
     } catch (e) {
         alert('Failed to clear disk cache: ' + e.message);
     }
@@ -4114,10 +4276,14 @@ async function libInsertDrive(libId, driveNum, { record = true } = {}) {
     const ok = fm7.loadDisk(driveNum, item.data);
     if (!ok) return false;
     _libBindCache['drive' + driveNum] = libId;
+    // The Library disk replaces a file opened from the PC: drop that file's
+    // handle and its saved entry so Power on / Reset do not read it again.
+    _diskHandle[driveNum] = null;
     _diskRecentId[driveNum] = null;
     _diskName[driveNum] = item.name;
     _diskModified[driveNum] = false;
     fm7.clearDiskDirty(driveNum);
+    await dbDelete(STORE_DISKS, `drive${driveNum}`);
     await libBindingSet('drive' + driveNum, libId);
     // Update the drive status display so it reflects the library-inserted disk.
     const el = driveNum === 0 ? diskStatusEl0 : diskStatusEl1;
@@ -4379,6 +4545,7 @@ function setEmuState(state) {
             break;
     }
     updatePowerReadiness();
+    if (dbgUiReady) dbgRefresh();
 }
 
 // 電源投入前の判定と ROM Files 欄のバッジが共通で使う、必須の ROM の一覧。
@@ -4403,6 +4570,7 @@ function getRomRequirements() {
 // 今の機種・起動モード（ラジオボタンの状態）・Drive 0 のディスクの有無。
 function getRomRequirementContext() {
     return {
+        machine: (typeof machineTypeSelect !== 'undefined' && machineTypeSelect) ? machineTypeSelect.value : '',
         isAV: !!fm7.isFM77AV,
         startupSystem: (document.querySelector('input[name="startupSystem"]:checked') || {}).value || 'basic',
         hasDisk: !!(fm7.fdc.disks[0] && fm7.fdc.disks[0].loaded),
@@ -4413,18 +4581,37 @@ function getRequiredRoms(ctx) {
     return getRomRequirements().filter(r => r.when(ctx));
 }
 
+// 必須ではないが本体に載っている ROM。バッジだけを変え、電源投入前の判定には入れない。
+// 第 1 水準の漢字 ROM は FM-77 と FM77AV 系の全機種が本体に搭載している（FM-7 では別売りのカード）。
+// 第 2 水準の漢字 ROM は FM77AV40・FM77AV40EX/SX が本体に搭載している（FM77AV20 / FM77AV20EX は日本語拡張カードを足した構成として、Folder の読み込みでだけ使える）。
+function getRomBuiltinNotes() {
+    const kanjiOnboard = ['fm77', 'fm77av', 'fm77av20', 'fm77av20ex', 'fm77av40', 'fm77av40ex'];
+    const kanji2Onboard = ['fm77av40', 'fm77av40ex'];
+    return [
+        { slot: 'kanji',  label: '本体搭載', title: 'この機種は第 1 水準の漢字 ROM を本体に搭載しています（無ければ同梱互換で補う）', when: c => kanjiOnboard.includes(c.machine) },
+        { slot: 'kanji2', label: '本体搭載', title: 'この機種は第 2 水準の漢字 ROM を本体に搭載しています（無ければ同梱互換で補う）', when: c => kanji2Onboard.includes(c.machine) },
+    ];
+}
+
 // ROM Files 欄のバッジを判定と同じ一覧に合わせる。必須でない行は「任意」。
 function updateRomBadges() {
-    const required = new Map(getRequiredRoms(getRomRequirementContext()).map(r => [r.slot, r]));
+    const ctx = getRomRequirementContext();
+    const required = new Map(getRequiredRoms(ctx).map(r => [r.slot, r]));
+    const notes = new Map(getRomBuiltinNotes().filter(n => n.when(ctx)).map(n => [n.slot, n]));
     document.querySelectorAll('.rom-item').forEach(item => {
         const badge = item.querySelector('.rom-badge');
         const src = item.querySelector('.rom-src');
         if (!badge || !src) return;
         const req = required.get(src.dataset.slot);
-        badge.textContent = req ? req.label : '任意';
+        const note = req ? null : notes.get(src.dataset.slot);
+        badge.textContent = req ? req.label : (note ? note.label : '任意');
+        // 元の説明（HTML に書いたもの）を覚えておき、本体搭載でないときはそれに戻す。
+        if (badge.dataset.title0 === undefined) badge.dataset.title0 = badge.getAttribute('title') || '';
+        badge.title = note ? note.title : badge.dataset.title0;
         badge.classList.toggle('rom-badge-req', !!req);
-        badge.classList.toggle('rom-badge-opt', !req);
-        item.setAttribute('data-req', req ? 'required' : 'optional');
+        badge.classList.toggle('rom-badge-opt', !req && !note);
+        badge.classList.toggle('rom-badge-onboard', !!note);
+        item.setAttribute('data-req', req ? 'required' : (note ? 'onboard' : 'optional'));
     });
 }
 
@@ -4475,6 +4662,7 @@ powerToggle.addEventListener('change', async () => {
         // Start: reset + run
         fm7.setFMCard(document.getElementById('fmCardCheck').checked);
         if (fmCardHint) fmCardHint.style.display = 'none';
+        dbgForget();
         fm7.reset();
         fm7.start(canvas);
         setEmuState('running');
@@ -4482,6 +4670,7 @@ powerToggle.addEventListener('change', async () => {
         // Power off: stop execution and reset all hardware state so that a
         // subsequent power-on starts from a clean slate.
         fm7.stop();
+        dbgForget();
         fm7.reset();
         if (canvas.getContext) {
             const ctx = canvas.getContext('2d');
@@ -4492,14 +4681,18 @@ powerToggle.addEventListener('change', async () => {
     }
 });
 
-// ⏸ Pause/Resume toggle
+// ⏸ Pause/Resume toggle. Pause is the debugger's Break (reason "pause"),
+// and Resume its Continue, so both stop the machine the same way.
 pauseBtn.addEventListener('click', () => {
     if (emuState === 'running') {
-        fm7.stop();
-        setEmuState('paused');
+        dbg.pause();
     } else if (emuState === 'paused') {
-        fm7.start(canvas);
-        setEmuState('running');
+        if (dbg.halted) {
+            dbg.resume();
+        } else {
+            fm7.start(canvas);
+            setEmuState('running');
+        }
     }
 });
 
@@ -4592,25 +4785,32 @@ tapeEjectBtn.addEventListener('click', async () => {
     await renderLibrary();
 });
 
-// Reset: stop → reload disks from handles → reset → immediately restart
-resetBtn.addEventListener('click', async () => {
+// Reset: stop → reload disks from handles → reset → immediately restart.
+// The Reset button forgets the debugger's breakpoints; the debugger's
+// Restart (keepBreakpoints) keeps them.
+async function restartMachine(keepBreakpoints = false) {
     fm7.stop();
     await reloadAllDisksFromHandles();
     updateMachineType();
     fm7.setFMCard(document.getElementById('fmCardCheck').checked);
     if (fmCardHint) fmCardHint.style.display = 'none';
-    fm7.reset();
+    if (keepBreakpoints) {
+        dbg.restart();
+    } else {
+        dbgForget();
+        fm7.reset();
+    }
     fm7.start(canvas);
     setEmuState('running');
-});
+}
+resetBtn.addEventListener('click', () => restartMachine(false));
 
 // =========================================================================
 // Debug: Palette Swatches
 // =========================================================================
 
 // Digital colour code: bit 0 = blue, bit 1 = red, bit 2 = green (0 black,
-// 1 blue, 2 red, 3 magenta, 4 green, 5 cyan, 6 yellow, 7 white). Source:
-// FM-7 User's Manual System Description, 7.1.5 (colour code table).
+// 1 blue, 2 red, 3 magenta, 4 green, 5 cyan, 6 yellow, 7 white).
 const PALETTE_COLORS = Array.from({ length: 8 }, (_, code) => {
     const hex = (on) => (on ? 'ff' : '00');
     return '#' + hex(code & 0x02) + hex(code & 0x04) + hex(code & 0x01);
@@ -4814,8 +5014,8 @@ updateSoundPanel();
 // FM-7 keyboard layout
 // Top 2 rows: row 1 = EL,CLS | INS,↑,DEL / row 2 = BRK | PF1-PF10 | DUP,HOM | ←,↓,→
 // Main 5 rows + numpad on RIGHT side
-// Main rows are 20 cells wide (15 main + 1 gap + 4 numpad); the top rows and
-// the bottom row are shorter
+// Main rows are 20 cells wide (15 main + 1 gap + 4 numpad); the top rows are
+// shorter. RT covers its own cell and the spacer below it.
 const K = (label, code, ...cls) => [label, code, ...cls]; // shorthand
 const _ = ['', '']; // spacer
 const FM7_KBD_LAYOUT = [
@@ -4823,17 +5023,17 @@ const FM7_KBD_LAYOUT = [
     [_,_,_,_,_,_,_,_,_,_,_,_,_,K('EL','End'),K('CLS','PageUp'),_,K('INS','Insert'),K('↑','ArrowUp'),K('DEL','Delete')],
     // --- Top row 2 ---
     [K('BRK','_BREAK_','break-key'),_,K('PF1','F1'),K('PF2','F2'),K('PF3','F3'),K('PF4','F4'),K('PF5','F5'),K('PF6','F6'),K('PF7','F7'),K('PF8','F8'),K('PF9','F9'),K('PF10','F10'),_,K('DUP','PageDown'),K('HOM','Home'),_,K('←','ArrowLeft'),K('↓','ArrowDown'),K('→','ArrowRight')],
-    // --- Main row 1: ESC~BS + numpad 789* ---
-    [K('ESC','Escape'),K('1','Digit1'),K('2','Digit2'),K('3','Digit3'),K('4','Digit4'),K('5','Digit5'),K('6','Digit6'),K('7','Digit7'),K('8','Digit8'),K('9','Digit9'),K('0','Digit0'),K('-','Minus'),K('^','Equal'),K('¥','Backslash'),K('BS','Backspace'),_,K('7','Numpad7'),K('8','Numpad8'),K('9','Numpad9'),K('*','NumpadMultiply')],
-    // --- Main row 2: TAB~[,RET + numpad 456/ ---
-    [K('TAB','Tab'),K('Q','KeyQ'),K('W','KeyW'),K('E','KeyE'),K('R','KeyR'),K('T','KeyT'),K('Y','KeyY'),K('U','KeyU'),K('I','KeyI'),K('O','KeyO'),K('P','KeyP'),K('@','BracketLeft'),K('[','BracketRight'),K('RET','Enter'),_,K('4','Numpad4'),K('5','Numpad5'),K('6','Numpad6'),K('/','NumpadDivide')],
-    // --- Main row 3: CTRL~] + numpad 123= ---
-    [K('CTR','ControlLeft','ctrl'),K('A','KeyA'),K('S','KeyS'),K('D','KeyD'),K('F','KeyF'),K('G','KeyG'),K('H','KeyH'),K('J','KeyJ'),K('K','KeyK'),K('L','KeyL'),K(';','Semicolon'),K(':','Quote'),K(']','IntlBackslash'),_,_,_,K('1','Numpad1'),K('2','Numpad2'),K('3','Numpad3'),K('=','NumpadEqual')],
-    // --- Main row 4: SHIFT~SHIFT + numpad 0.+RT ---
-    [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('"','IntlRo'),K('SHF','ShiftRight'),_,_,_,K('0','Numpad0'),K('.','NumpadDecimal'),K('+','NumpadAdd'),K('RT','NumpadEnter')],
-    // --- Main row 5: CAP/GRP/(無変換)/(変換)/SPACE/カナ (main area only, no numpad) ---
+    // --- Main row 1: ESC~BS + numpad */+- ---
+    [K('ESC','Escape'),K('1','Digit1'),K('2','Digit2'),K('3','Digit3'),K('4','Digit4'),K('5','Digit5'),K('6','Digit6'),K('7','Digit7'),K('8','Digit8'),K('9','Digit9'),K('0','Digit0'),K('-','Minus'),K('^','Equal'),K('¥','Backslash'),K('BS','Backspace'),_,K('*','NumpadMultiply'),K('/','NumpadDivide'),K('+','NumpadAdd'),K('-','NumpadSubtract')],
+    // --- Main row 2: TAB~[,RET + numpad 789= ---
+    [K('TAB','Tab'),K('Q','KeyQ'),K('W','KeyW'),K('E','KeyE'),K('R','KeyR'),K('T','KeyT'),K('Y','KeyY'),K('U','KeyU'),K('I','KeyI'),K('O','KeyO'),K('P','KeyP'),K('@','BracketLeft'),K('[','BracketRight'),K('RET','Enter'),_,K('7','Numpad7'),K('8','Numpad8'),K('9','Numpad9'),K('=','NumpadEqual')],
+    // --- Main row 3: CTRL~] + numpad 456, ---
+    [K('CTR','ControlLeft','ctrl'),K('A','KeyA'),K('S','KeyS'),K('D','KeyD'),K('F','KeyF'),K('G','KeyG'),K('H','KeyH'),K('J','KeyJ'),K('K','KeyK'),K('L','KeyL'),K(';','Semicolon'),K(':','Quote'),K(']','IntlBackslash'),_,_,_,K('4','Numpad4'),K('5','Numpad5'),K('6','Numpad6'),K(',','NumpadComma')],
+    // --- Main row 4: SHIFT~SHIFT + numpad 123 + RT (two rows tall) ---
+    [K('SHF','ShiftLeft','shift'),K('Z','KeyZ'),K('X','KeyX'),K('C','KeyC'),K('V','KeyV'),K('B','KeyB'),K('N','KeyN'),K('M','KeyM'),K(',','Comma'),K('.','Period'),K('/','Slash'),K('"','IntlRo'),K('SHF','ShiftRight'),_,_,_,K('1','Numpad1'),K('2','Numpad2'),K('3','Numpad3'),K('RT','NumpadEnter','key-tall')],
+    // --- Main row 5: CAP/GRP/(無変換)/(変換)/SPACE/カナ + numpad 0 (two cells wide) . ---
     // 無変換 / 変換 は FM77AV 以降のみ表示する
-    [K('CAP','CapsLock','led'),K('GRP','AltLeft'),K('無変換','NonConvert','av-key'),K('変換','Convert','av-key'),K('SPACE','Space','space'),K('カナ','AltRight','led')],
+    [K('CAP','CapsLock','led'),K('GRP','AltLeft'),K('無変換','NonConvert','av-key'),K('変換','Convert','av-key'),K('SPACE','Space','space'),K('カナ','AltRight','led'),_,_,_,_,_,K('0','Numpad0','key-wide'),K('.','NumpadDecimal'),_],
 ];
 
 const fm7KbdEl = document.getElementById('fm7Kbd');
@@ -4868,8 +5068,10 @@ FM7_KBD_LAYOUT.forEach((row, ri) => {
 
 // Real-time key highlight
 let _shiftDown = false;
-// ESC キートップを光らせる物理キー: 半角/全角（Backquote）の位置。Escape が BREAK に
-// 割り当たっている間は、Escape では BRK キーだけを光らせる
+// ESC キートップを光らせる物理キー: 1 の左の半角/全角（Backquote）。実機の ESC も 1 の左、
+// BREAK はその上の左端にあるので、
+// 位置の同じキーを当てている。Escape が BREAK に割り当たっている間は、Escape では
+// BRK キーだけを光らせる
 function _escKeyCap(code) {
     if (code === 'Backquote') return 'Escape';
     if (code === 'Escape' && fm7._breakKeyCodes.includes('Escape')) return null;
@@ -4945,8 +5147,8 @@ const LABEL_SHIFT = new Map([
     [';','+'], [':','*'],
     [',','<'], ['.','>'], ['/','?'], ['"','_'],
 ]);
-// Unicode label → FM-7 CG ROM code remap (JIS X 0201 replaces 0x5C backslash
-// with the yen sign). Unicode `¥` is U+00A5 but FM-7 stores it at 0x5C.
+// Unicode label → FM-7 CG ROM code remap. Unicode `¥` is U+00A5 but FM-7
+// stores it at 0x5C, in place of the backslash.
 const LABEL_FM7_CODE = new Map([
     ['¥', 0x5C],
 ]);
@@ -5043,7 +5245,8 @@ setInterval(() => {
 
 // BREAK key: the user's choice of host key, restored here.  The choice is made
 // in the key customization UI below (click BRK on the layout) and is kept
-// apart from _customMap.  Out of the box it is Escape.
+// apart from _customMap.  Out of the box it is Escape, the key in BREAK's place
+// at the upper left.
 const DEFAULT_BREAK_CODE = 'Escape';
 const savedBreakKey = localStorage.getItem('fm7_breakkey');
 if (savedBreakKey) {
@@ -5067,7 +5270,7 @@ const KEYMAP_FORMS = [
     { id: 'tkl',     label: 'テンキーレス' },
     { id: 'compact', label: 'コンパクト' },
 ];
-const _NUMPAD_CODES = ['Numpad0','Numpad1','Numpad2','Numpad3','Numpad4','Numpad5','Numpad6','Numpad7','Numpad8','Numpad9','NumpadMultiply','NumpadDivide','NumpadAdd','NumpadDecimal','NumpadEqual','NumpadEnter'];
+const _NUMPAD_CODES = ['Numpad0','Numpad1','Numpad2','Numpad3','Numpad4','Numpad5','Numpad6','Numpad7','Numpad8','Numpad9','NumpadMultiply','NumpadDivide','NumpadAdd','NumpadSubtract','NumpadDecimal','NumpadEqual','NumpadComma','NumpadEnter'];
 // JIS-only physical keys that are absent on US (English) keyboards.
 const _JIS_ONLY_CODES = ['IntlRo', 'IntlBackslash', 'IntlYen'];
 // Physical event.codes that don't exist on the selected keyboard, so the
@@ -5095,11 +5298,11 @@ let keymapLayout = localStorage.getItem(KEYMAP_LAYOUT_LS) || 'jis';
 let keymapForm = localStorage.getItem(KEYMAP_FORM_LS) || 'full';
 
 // Build the effective PC-code remap and push it to the simulator keyboard.
-// Merges per-key assignments with the Cursor→Ten Key preset (if enabled).
+// Merges per-key assignments with the arrow key setting (if enabled).
 function buildAndApplyKeymap() {
     const merged = { ...keymapUser };
-    if (typeof cursorToNumpadCheck !== 'undefined' && cursorToNumpadCheck && cursorToNumpadCheck.checked) {
-        Object.assign(merged, CURSOR_TO_NUMPAD);
+    if (typeof arrowPadCheck !== 'undefined' && arrowPadCheck && arrowPadCheck.checked) {
+        Object.assign(merged, ARROW_KEYS_AS_NUMERIC_PAD);
     }
     fm7.keyboard.setCustomMap(merged);
 }
@@ -5292,7 +5495,7 @@ function _panelKeyDown(keyEl) {
     const isShift  = code === 'ShiftLeft' || code === 'ShiftRight';
     const isGrph   = code === 'AltLeft';
     const isToggle = code === 'CapsLock' || code === 'AltRight' || code === 'KanaMode' || code === 'ControlLeft';
-    if (isShift)  { _panelShift = !_panelShift; _updatePanelShift(); return; }
+    if (isShift)  { _panelShift = !_panelShift; fm7.keyboard.setVirtualShift(code, _panelShift); _updatePanelShift(); return; }
     if (isGrph)   { fm7.keyboard.pressKey(code, false); keyEl.classList.add('active'); _refreshKbdLabels(true); return; }
     if (isToggle) { fm7.keyboard.pressKey(code, false); _updatePanelCtrl(); _refreshKbdLabels(true); return; }
     keyEl.classList.add('active');
@@ -5311,7 +5514,7 @@ function _panelKeyUp(keyEl) {
     if (isGrph) { fm7.keyboard.releaseKey(code); keyEl.classList.remove('active'); _refreshKbdLabels(true); return; }
     keyEl.classList.remove('active');
     fm7.keyboard.releaseKey(code);
-    if (_panelShift) { _panelShift = false; _updatePanelShift(); }
+    if (_panelShift) { _panelShift = false; fm7.keyboard.setVirtualShift(code, false); _updatePanelShift(); }
     _updatePanelCtrl();   // スティッキーの CTR はキーを離すと戻る
 }
 fm7KbdEl.addEventListener('pointerdown', (e) => {
@@ -5406,8 +5609,8 @@ fm7._frameCallback = () => {
         fdcTrackInfo.textContent = `T:${fd.headCylinder} S:${fd.sectorRegister} ${stateNames[fd.phase] || '??'}`;
         // Clear access latch after reading
         fm7.fdc.accessLatch = false;
-        // MMR LED: lit while MMR/TWR is enabled; green while the high-speed
-        // MMR mode is engaged on machines that have it.
+        // MMR LED: lit while the page mapping or the window is on; green
+        // while the high-speed MMR mode is engaged on machines that have it.
         const mm = fm7.memoryManagementView();
         const mmrOn = mm.mapping || mm.windowOn;
         const exHighSpeedOn = mmrOn && fm7.ex.features.modeRegister2 && fm7.ex.highSpeedBit;
@@ -5485,7 +5688,7 @@ fm7._frameCallback = () => {
     }
 
     // Border color: the area around the picture takes the color of palette
-    // number 0 (FM77AV Hardware Manual 8.3.1). Only in fullscreen, where
+    // number 0. Only in fullscreen, where
     // that area is plain; otherwise the page style keeps its own color.
     {
         const full = (document.fullscreenElement || document.webkitFullscreenElement) === screenContainer;
@@ -5499,8 +5702,7 @@ fm7._frameCallback = () => {
     // Update keyboard LEDs
     kbdLedCaps.className = 'kbd-led' + (fm7.keyboard.capsLock ? ' on' : '');
     kbdLedKana.className = 'kbd-led' + (fm7.keyboard.kanaMode ? ' on' : '');
-    // INS: the sub CPU turns the LED on and off through $D40D (FM77AV
-    // Hardware Manual 5.1.3 (1)); the Insert key alone does not light it.
+    // INS: the sub CPU turns the LED on and off through $D40D; the Insert key alone does not light it.
     kbdLedIns.className  = 'kbd-led' + (fm7.display.insLedOn ? ' on' : '');
 
     // Toolbar modifier LEDs (Shift / Ctrl / GRPH) mirror the Keyboard panel state.
@@ -5534,10 +5736,10 @@ fm7._frameCallback = () => {
 
         document.getElementById('bootRamVal').textContent = fm7._upperSpaceIsRom ? 'ROM' : 'RAM';
         const mm = fm7.memoryManagementView();
-        document.getElementById('mmrVal').textContent = mm.mapping ? 'ON' : 'OFF';
-        document.getElementById('mmrBankVal').textContent = '$' + mm.segment.toString(16);
-        document.getElementById('twrVal').textContent = mm.windowOn ? 'ON' : 'OFF';
-        document.getElementById('twrOffsetVal').textContent = '$' + mm.windowOffset.toString(16).padStart(2, '0').toUpperCase();
+        document.getElementById('memMapperVal').textContent = mm.mapping ? 'ON' : 'OFF';
+        document.getElementById('memMapperSegmentVal').textContent = '$' + mm.segment.toString(16);
+        document.getElementById('memWindowVal').textContent = mm.windowOn ? 'ON' : 'OFF';
+        document.getElementById('memWindowOffsetVal').textContent = '$' + mm.windowOffset.toString(16).padStart(2, '0').toUpperCase();
 
         const mmrMapLabel = document.getElementById('mmrMapLabel');
         const mmrMapGrid  = document.getElementById('mmrMapGrid');
@@ -5715,11 +5917,515 @@ makeDraggable(palPanel);
 makeDraggable(sndPanel);
 
 // =========================================================================
+// Debugger (CPU panel) and Memory Dump (Memory panel)
+//   The stopping, stepping and looking into the machine is the core's
+//   M7DebugSession (core/debug.js); this part only shows it and passes the
+//   clicks on. While the machine is stopped the frame loop is stopped too,
+//   so the screen is not redrawn and the sound is suspended.
+// =========================================================================
+
+const dbgEl = (id) => document.getElementById(id);
+const dbgHex = (v, digits) => (v & (digits === 2 ? 0xFF : 0xFFFF)).toString(16).toUpperCase().padStart(digits, '0');
+const DBG_THREAD_NAMES = { 1: 'Main', 2: 'Sub' };
+let dbgLastStop = null;
+// Breakpoints as the panel lists them, per thread; the M7DebugSession gets them whole each time they change.
+let dbgBreakSpecs = { 1: [], 2: [] };
+let dbgDataSpecs = [];
+const dbgWatches = [];
+const dbgLogLines = [];
+let dbgFrameCount = 0;
+
+function dbgThread() { return Number(dbgEl('dbgThread').value) === 2 ? 2 : 1; }
+
+/** A number typed in the panel: hex digits, or an expression (registers, [addr], $1F, ...). */
+function dbgParseNumber(text, thread) {
+    const t = String(text).trim();
+    if (t === '') throw new Error('enter a value');
+    if (/^[0-9a-f]+$/i.test(t)) return parseInt(t, 16);
+    return dbg.evaluate(t, thread);
+}
+
+function dbgSetStatus(text, isError = false) {
+    const el = dbgEl('dbgStatus');
+    el.textContent = text;
+    el.classList.toggle('dbg-error', isError);
+}
+
+function dbgLog(text) {
+    dbgLogLines.push(text);
+    if (dbgLogLines.length > 200) dbgLogLines.splice(0, dbgLogLines.length - 200);
+    const el = dbgEl('dbgLog');
+    el.textContent = dbgLogLines.join('\n');
+    el.scrollTop = el.scrollHeight;
+}
+
+// ---- stops and runs --------------------------------------------------------
+
+function dbgEnterBreak(e) {
+    if (!dbg.halted) return;
+    dbgLastStop = e;
+    if (e && e.thread) dbgEl('dbgThread').value = String(e.thread);
+    if (fm7._running) fm7.stop();
+    // Nothing advances while stopped: keep the sound from hanging on.
+    for (const chip of [fm7.psg, fm7.opn]) {
+        if (chip._audioCtx && chip._audioCtx.state === 'running') chip._audioCtx.suspend().catch(() => {});
+    }
+    if (emuState === 'running') setEmuState('paused');
+    dbgRefresh();
+}
+
+function dbgLeaveBreak() {
+    dbgLastStop = null;
+    if (emuState === 'stopped') return;
+    if (!fm7._running) {
+        fm7._lastFrameTime = performance.now();
+        fm7.start(canvas);
+    }
+    if (emuState !== 'running') setEmuState('running');
+    dbgRefresh();
+}
+
+dbg.onStop = (e) => queueMicrotask(() => dbgEnterBreak(e));
+dbg.onContinue = () => dbgLeaveBreak();
+dbg.onOutput = (text, thread) => dbgLog(`[${DBG_THREAD_NAMES[thread]}] ${text}`);
+
+/** Power cycle / Reset: the breakpoints and the stop go. */
+function dbgForget() {
+    dbg.reset();
+    dbgBreakSpecs = { 1: [], 2: [] };
+    dbgDataSpecs = [];
+    dbgLastStop = null;
+    dbgRefresh();
+}
+
+function dbgRunCommand(fn) {
+    try {
+        fn();
+    } catch (e) {
+        dbgSetStatus(e.message, true);
+        return;
+    }
+    if (dbg.halted) dbgRefresh();
+}
+
+dbgEl('dbgBreakBtn').addEventListener('click', () => {
+    if (emuState === 'stopped') return;
+    if (dbg.halted) dbg.resume();
+    else dbg.pause();
+});
+dbgEl('dbgStepInBtn').addEventListener('click', () => dbgRunCommand(() => dbg.stepIn(dbgThread())));
+dbgEl('dbgStepOverBtn').addEventListener('click', () => dbgRunCommand(() => dbg.stepOver(dbgThread())));
+dbgEl('dbgStepOutBtn').addEventListener('click', () => dbgRunCommand(() => dbg.stepOut(dbgThread())));
+dbgEl('dbgRunToBtn').addEventListener('click', () => dbgRunCommand(() => {
+    const thread = dbgThread();
+    dbg.runTo(dbgParseNumber(dbgEl('dbgRunToAddr').value, thread) & 0xFFFF, thread);
+}));
+dbgEl('dbgRestartBtn').addEventListener('click', () => {
+    if (emuState !== 'stopped') restartMachine(true);
+});
+dbgEl('dbgThread').addEventListener('change', () => dbgRefresh());
+
+// ---- registers and CC bits -------------------------------------------------
+
+function dbgEditRegister(el) {
+    if (!dbg.halted || el.querySelector('input')) return;
+    const thread = Number(el.dataset.thread);
+    const reg = el.dataset.reg;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'dbg-input dbg-reg-input';
+    input.spellcheck = false;
+    input.value = el.textContent.replace('$', '');
+    input.title = 'Hex value or expression; Enter to set, Esc to cancel';
+    el.textContent = '';
+    el.appendChild(input);
+    input.focus();
+    input.select();
+    let done = false;
+    const finish = (commit) => {
+        if (done) return;
+        done = true;
+        if (commit) {
+            try {
+                dbg.writeRegister(reg, dbgParseNumber(input.value, thread), thread);
+            } catch (e) {
+                dbgSetStatus(e.message, true);
+            }
+        }
+        input.remove();
+        dbgRefresh();
+    };
+    input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') finish(true);
+        else if (ev.key === 'Escape') finish(false);
+    });
+    input.addEventListener('blur', () => finish(true));
+}
+for (const el of document.querySelectorAll('.dbg-reg')) {
+    el.addEventListener('click', () => dbgEditRegister(el));
+}
+
+const dbgFlagBoxes = [];
+for (const name of ['E', 'F', 'H', 'I', 'N', 'Z', 'V', 'C']) {
+    const label = document.createElement('label');
+    label.className = 'dbg-flag';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.dataset.flag = name;
+    box.addEventListener('change', () => {
+        if (dbg.halted) dbg.writeRegister(`cc.${name}`, box.checked ? 1 : 0, dbgThread());
+        dbgRefresh();
+    });
+    label.append(box, name);
+    dbgEl('dbgFlags').appendChild(label);
+    dbgFlagBoxes.push(box);
+}
+
+// ---- breakpoints -------------------------------------------------------------
+
+function dbgApplyBreakpoints(thread) {
+    const results = dbg.setInstructionBreakpoints(thread, dbgBreakSpecs[thread]);
+    results.forEach((r, i) => { dbgBreakSpecs[thread][i].problem = r.verified ? '' : r.message; });
+    dbgRefresh();
+}
+
+function dbgToggleBreakpoint(thread, addr) {
+    const list = dbgBreakSpecs[thread];
+    const i = list.findIndex((b) => b.addr === addr);
+    if (i >= 0) list.splice(i, 1);
+    else list.push({ addr, enabled: true });
+    dbgApplyBreakpoints(thread);
+}
+
+dbgEl('dbgBpAddBtn').addEventListener('click', () => {
+    const thread = dbgThread();
+    let addr;
+    try {
+        addr = dbgParseNumber(dbgEl('dbgBpAddr').value, thread) & 0xFFFF;
+    } catch (e) {
+        dbgSetStatus(e.message, true);
+        return;
+    }
+    const list = dbgBreakSpecs[thread].filter((b) => b.addr !== addr);
+    list.push({
+        addr, enabled: true,
+        condition: dbgEl('dbgBpCond').value.trim(),
+        hitCondition: dbgEl('dbgBpHits').value.trim(),
+        logMessage: dbgEl('dbgBpLog').value,
+    });
+    dbgBreakSpecs[thread] = list;
+    for (const id of ['dbgBpAddr', 'dbgBpCond', 'dbgBpHits', 'dbgBpLog']) dbgEl(id).value = '';
+    dbgApplyBreakpoints(thread);
+});
+
+function dbgRenderBreakpoints() {
+    const box = dbgEl('dbgBpList');
+    box.replaceChildren();
+    for (const thread of [1, 2]) {
+        const hits = new Map(dbg.instructionBreakpoints(thread).map((b) => [b.addr, b.hits]));
+        dbgBreakSpecs[thread].forEach((spec) => {
+            const row = document.createElement('div');
+            row.className = 'dbg-item';
+            const on = document.createElement('input');
+            on.type = 'checkbox';
+            on.checked = spec.enabled !== false;
+            on.title = 'Enabled';
+            on.addEventListener('change', () => { spec.enabled = on.checked; dbgApplyBreakpoints(thread); });
+            const text = document.createElement('span');
+            const parts = [`${DBG_THREAD_NAMES[thread]} $${dbgHex(spec.addr, 4)}`];
+            if (spec.condition) parts.push(`if ${spec.condition}`);
+            if (spec.hitCondition) parts.push(`hits ${spec.hitCondition}`);
+            if (spec.logMessage) parts.push(`log "${spec.logMessage}"`);
+            if (hits.has(spec.addr)) parts.push(`(${hits.get(spec.addr)} hits)`);
+            text.textContent = parts.join(' ');
+            if (spec.problem) { text.classList.add('dbg-error'); text.title = spec.problem; text.textContent += ` ! ${spec.problem}`; }
+            const del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'dbg-del';
+            del.textContent = '×';
+            del.title = 'Remove the breakpoint';
+            del.addEventListener('click', () => {
+                dbgBreakSpecs[thread] = dbgBreakSpecs[thread].filter((b) => b !== spec);
+                dbgApplyBreakpoints(thread);
+            });
+            row.append(on, text, del);
+            box.appendChild(row);
+        });
+    }
+    if (!box.firstChild) box.textContent = 'No breakpoints';
+}
+
+// ---- data breakpoints ----------------------------------------------------------
+
+function dbgApplyDataBreakpoints() {
+    const results = dbg.setDataBreakpoints(dbgDataSpecs);
+    results.forEach((r, i) => { dbgDataSpecs[i].problem = r.verified ? '' : r.message; });
+    dbgRefresh();
+}
+
+dbgEl('dbgDbAddBtn').addEventListener('click', () => {
+    const thread = dbgThread();
+    let addr, length;
+    try {
+        addr = dbgParseNumber(dbgEl('dbgDbAddr').value, thread) & 0xFFFF;
+        length = parseInt(dbgEl('dbgDbLen').value, 10) || 1;
+    } catch (e) {
+        dbgSetStatus(e.message, true);
+        return;
+    }
+    dbgDataSpecs.push({ thread, addr, length, access: dbgEl('dbgDbAccess').value, enabled: true });
+    dbgEl('dbgDbAddr').value = '';
+    dbgApplyDataBreakpoints();
+});
+
+function dbgRenderDataBreakpoints() {
+    const box = dbgEl('dbgDbList');
+    box.replaceChildren();
+    const hits = dbg.dataBreakpoints;
+    dbgDataSpecs.forEach((spec, i) => {
+        const row = document.createElement('div');
+        row.className = 'dbg-item';
+        const on = document.createElement('input');
+        on.type = 'checkbox';
+        on.checked = spec.enabled !== false;
+        on.title = 'Enabled';
+        on.addEventListener('change', () => { spec.enabled = on.checked; dbgApplyDataBreakpoints(); });
+        const text = document.createElement('span');
+        const live = hits[i];
+        const access = { read: 'read', write: 'write', readWrite: 'read/write' }[spec.access];
+        text.textContent = `${DBG_THREAD_NAMES[spec.thread]} $${dbgHex(spec.addr, 4)}` +
+            `${spec.length > 1 ? `-$${dbgHex(spec.addr + spec.length - 1, 4)}` : ''} ${access}` +
+            `${live ? ` (${live.hits} hits)` : ''}`;
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'dbg-del';
+        del.textContent = '×';
+        del.title = 'Remove the data breakpoint';
+        del.addEventListener('click', () => {
+            dbgDataSpecs = dbgDataSpecs.filter((d) => d !== spec);
+            dbgApplyDataBreakpoints();
+        });
+        row.append(on, text, del);
+        box.appendChild(row);
+    });
+    if (!box.firstChild) box.textContent = 'No data breakpoints';
+}
+
+// ---- exceptions ------------------------------------------------------------------
+
+for (const f of EXCEPTION_FILTERS) {
+    const label = document.createElement('label');
+    label.className = 'dbg-flag';
+    label.title = f.description;
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.value = f.filter;
+    box.addEventListener('change', () => {
+        const ids = [...dbgEl('dbgExceptions').querySelectorAll('input:checked')].map((b) => b.value);
+        dbg.setExceptionFilters(ids);
+    });
+    label.append(box, f.label);
+    dbgEl('dbgExceptions').appendChild(label);
+}
+
+// ---- watch -----------------------------------------------------------------------
+
+dbgEl('dbgWatchAddBtn').addEventListener('click', () => {
+    const expr = dbgEl('dbgWatchExpr').value.trim();
+    if (!expr) return;
+    dbgWatches.push(expr);
+    dbgEl('dbgWatchExpr').value = '';
+    dbgRefresh();
+});
+
+function dbgWatchText(text, expr, thread) {
+    try {
+        const v = dbg.evaluate(expr, thread);
+        text.textContent = `${expr} = $${dbgHex(v, (v & 0xFFFF) > 0xFF ? 4 : 2)} (${v})`;
+        text.classList.remove('dbg-error');
+    } catch (e) {
+        text.textContent = `${expr} = ${e.message}`;
+        text.classList.add('dbg-error');
+    }
+}
+
+/** The watch list; with valuesOnly, only the values change (the rows and their buttons stay). */
+function dbgRenderWatches(valuesOnly = false) {
+    const box = dbgEl('dbgWatchList');
+    const thread = dbgThread();
+    if (valuesOnly) {
+        const spans = box.querySelectorAll('.dbg-item > span');
+        if (spans.length === dbgWatches.length) {
+            spans.forEach((span, i) => dbgWatchText(span, dbgWatches[i], thread));
+            return;
+        }
+    }
+    box.replaceChildren();
+    dbgWatches.forEach((expr, i) => {
+        const row = document.createElement('div');
+        row.className = 'dbg-item';
+        const text = document.createElement('span');
+        dbgWatchText(text, expr, thread);
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'dbg-del';
+        del.textContent = '×';
+        del.title = 'Remove from the watch list';
+        del.addEventListener('click', () => { dbgWatches.splice(i, 1); dbgRefresh(); });
+        row.append(text, del);
+        box.appendChild(row);
+    });
+    if (!box.firstChild) box.textContent = 'No expressions';
+}
+
+// ---- code and call stack -------------------------------------------------------------
+
+function dbgRenderCode() {
+    const thread = dbgThread();
+    const pc = (thread === 2 ? fm7.subCPU : fm7.mainCPU).pc;
+    const marks = new Set(dbgBreakSpecs[thread].map((b) => b.addr));
+    const box = dbgEl('dbgCode');
+    box.replaceChildren();
+    for (const ins of dbg.listInstructions(pc, 9, { thread, before: 4 })) {
+        const line = document.createElement('div');
+        line.className = 'dbg-line' + (ins.addr === pc ? ' dbg-cur' : '') + (marks.has(ins.addr) ? ' dbg-bp' : '');
+        line.dataset.addr = String(ins.addr);
+        const bytes = ins.bytes.map((b) => dbgHex(b, 2)).join(' ');
+        line.textContent = `${marks.has(ins.addr) ? '●' : ' '}${ins.addr === pc ? '>' : ' '}${dbgHex(ins.addr, 4)}  ${bytes.padEnd(12)} ${ins.text}`;
+        box.appendChild(line);
+    }
+}
+dbgEl('dbgCode').addEventListener('click', (e) => {
+    const line = e.target.closest('.dbg-line');
+    if (line) dbgToggleBreakpoint(dbgThread(), Number(line.dataset.addr));
+});
+
+function dbgRenderStack() {
+    const box = dbgEl('dbgStack');
+    box.replaceChildren();
+    if (!dbg.callTracking) { box.textContent = 'Recorded while this panel is open'; return; }
+    for (const f of dbg.callFrames(dbgThread())) {
+        const row = document.createElement('div');
+        row.className = 'dbg-item';
+        row.textContent = `#${f.id} $${dbgHex(f.pc, 4)}  ${f.entry >= 0 ? `in $${dbgHex(f.entry, 4)} (${f.kind})` : '(outermost)'}`;
+        box.appendChild(row);
+    }
+}
+
+// ---- the whole panel -----------------------------------------------------------------
+
+function dbgRefresh() {
+    const halted = dbg.halted;
+    const powered = emuState !== 'stopped';
+    dbgEl('dbgBreakBtn').textContent = halted ? 'Continue' : 'Break';
+    dbgEl('dbgBreakBtn').disabled = !powered;
+    for (const id of ['dbgStepInBtn', 'dbgStepOverBtn', 'dbgStepOutBtn', 'dbgRunToBtn']) dbgEl(id).disabled = !halted;
+    dbgEl('dbgRestartBtn').disabled = !powered;
+    dbgEl('memWriteBtn').disabled = !halted;
+    debugPanel.classList.toggle('dbg-halted', halted);
+    dbgSetStatus(!powered ? 'Power off' : halted ? (dbgLastStop ? dbgLastStop.description : 'Stopped') : 'Running');
+    const cc = (dbgThread() === 2 ? fm7.subCPU : fm7.mainCPU).cc;
+    dbgFlagBoxes.forEach((box, i) => { box.checked = (cc & (0x80 >> i)) !== 0; box.disabled = !halted; });
+    // While running the frame loop updates the register values; while stopped it does not run.
+    if (halted && fm7._frameCallback) fm7._frameCallback();
+    dbgRenderCode();
+    dbgRenderStack();
+    dbgRenderBreakpoints();
+    dbgRenderDataBreakpoints();
+    dbgRenderWatches();
+    memRefresh();
+}
+
+// The call stack is recorded only while the CPU panel is open (it costs a check per instruction).
+new MutationObserver(() => {
+    dbg.setCallTracking(debugPanel.classList.contains('open'));
+    if (debugPanel.classList.contains('open')) dbgRefresh();
+}).observe(debugPanel, { attributes: true, attributeFilter: ['class'] });
+
+// Keys typed into the panels are not keys of the machine.
+for (const panel of [debugPanel, memPanel]) {
+    for (const type of ['keydown', 'keyup']) {
+        panel.addEventListener(type, (e) => {
+            if (e.target.closest('input, select, textarea')) e.stopPropagation();
+        });
+    }
+}
+
+// ---- memory dump ---------------------------------------------------------------------
+
+let memBase = 0;
+
+function memThread() { return Number(dbgEl('memThread').value) === 2 ? 2 : 1; }
+
+function memRefresh() {
+    if (!memPanel.classList.contains('open')) return;
+    const thread = memThread();
+    const bytes = dbg.readMemory(memBase, 128, thread);
+    const lines = [];
+    for (let row = 0; row < 16; row++) {
+        const part = bytes.subarray(row * 8, row * 8 + 8);
+        const hexText = [...part].map((b) => dbgHex(b, 2)).join(' ');
+        const ascii = [...part].map((b) => (b >= 0x20 && b < 0x7F ? String.fromCharCode(b) : '.')).join('');
+        lines.push(`${dbgHex(memBase + row * 8, 4)}: ${hexText}  ${ascii}`);
+    }
+    dbgEl('memDump').textContent = lines.join('\n');
+}
+
+function memGo() {
+    try {
+        memBase = dbgParseNumber(dbgEl('memAddr').value, memThread()) & 0xFFF8;
+    } catch (e) {
+        dbgEl('memDump').textContent = e.message;
+        return;
+    }
+    dbgEl('memAddr').value = dbgHex(memBase, 4);
+    memRefresh();
+}
+dbgEl('memGoBtn').addEventListener('click', memGo);
+dbgEl('memAddr').addEventListener('keydown', (e) => { if (e.key === 'Enter') memGo(); });
+dbgEl('memPrevBtn').addEventListener('click', () => { memBase = (memBase - 128) & 0xFFFF; dbgEl('memAddr').value = dbgHex(memBase, 4); memRefresh(); });
+dbgEl('memNextBtn').addEventListener('click', () => { memBase = (memBase + 128) & 0xFFFF; dbgEl('memAddr').value = dbgHex(memBase, 4); memRefresh(); });
+dbgEl('memThread').addEventListener('change', memRefresh);
+dbgEl('memWriteBtn').addEventListener('click', () => {
+    if (!dbg.halted) return;
+    const thread = memThread();
+    try {
+        const addr = dbgParseNumber(dbgEl('memWriteAddr').value, thread) & 0xFFFF;
+        const text = dbgEl('memWriteBytes').value.trim();
+        if (!/^([0-9a-f]{1,2}\s*)+$/i.test(text)) throw new Error('bytes must be hex, e.g. 12 34 AB');
+        const bytes = text.split(/\s+/).map((b) => parseInt(b, 16));
+        dbg.writeMemory(addr, bytes, thread);
+    } catch (e) {
+        dbgEl('memDump').textContent = e.message;
+        return;
+    }
+    dbgRefresh();
+});
+new MutationObserver(() => memRefresh()).observe(memPanel, { attributes: true, attributeFilter: ['class'] });
+
+// While running, the open panels follow the machine a few times a second.
+{
+    const baseFrameCallback = fm7._frameCallback;
+    fm7._frameCallback = () => {
+        baseFrameCallback();
+        if (++dbgFrameCount % 10 !== 0) return;
+        if (debugPanel.classList.contains('open') && !dbg.halted) {
+            dbgRenderCode();
+            dbgRenderStack();
+            dbgRenderWatches(true);
+        }
+        memRefresh();
+    };
+}
+dbgUiReady = true;
+dbgRefresh();
+
+// =========================================================================
 // State Dump (CPU / VRAM / I/O / Palette / ROM checksums / memory near PC)
 // =========================================================================
 
 function _crc32(bytes) {
-    // Simple CRC-32 (IEEE 802.3). Cached polynomial table.
+    // CRC-32. The table is built on first use and kept.
     if (!_crc32._table) {
         const t = new Uint32Array(256);
         for (let n = 0; n < 256; n++) {
@@ -5749,7 +6455,7 @@ function generateStateDump() {
     const lines = [];
     const ts = new Date().toISOString();
     lines.push(`=== WebM7 State Dump ${ts} ===`);
-    lines.push(`Machine: ${fm7.isFM77AV ? 'fm77av' : 'fm7'} (type=${fm7._model})`);
+    lines.push(`Machine: ${fm7._model}`);
     lines.push('');
 
     // --- ROM checksums ---
@@ -5788,7 +6494,7 @@ function generateStateDump() {
     lines.push('[Sub CPU (MC6809)]');
     lines.push(`  PC=$${h4(sPC)} SP=$${h4(sc.s||0)} USP=$${h4(sc.u||0)} X=$${h4(sc.x||0)} Y=$${h4(sc.y||0)}`);
     lines.push(`  A=$${h2(sc.a||0)} B=$${h2(sc.b||0)} DP=$${h2(sc.dp||0)} CC=$${h2(sc.cc||0)}  req=${cpuRequests(sc)}`);
-    lines.push(`  Halted=${fm7._subStoppedByHalt} Busy=${fm7._busyToMain} Attn=${fm7._attentionLatch} NMImask=${fm7._nmiMaskSub} BREAK=${fm7._breakKey}`);
+    lines.push(`  Halted=${fm7._subStoppedByHalt} Busy=${fm7._busyToMain} Attn=${fm7._attentionLatch} NMImask=${fm7._subNmiBlocked} BREAK=${fm7._breakKey}`);
     lines.push(`  Sub monitor: ${fm7._activeSubMonitor}`);
     lines.push(`  Code @PC-16: ${subHex(sPC - 16, 16)}`);
     lines.push(`  Code @PC   : ${subHex(sPC, 32)}`);
@@ -6855,11 +7561,11 @@ function hwSetBootMode(v) {
         const savedSkins = await loadSetting('uiSkins');
         if (savedSkins && typeof savedSkins === 'object') {
             _uiSkins = savedSkins;
-            // 古い形式の保存値を現在のスキン名に読み替える
+            // 保存値のスキン名を現在の名前にそろえる
             for (const [k, v] of Object.entries(_uiSkins)) {
                 if (v === 'av40ex') _uiSkins[k] = 'avex';
                 else if (v === 'av40sx') _uiSkins[k] = 'avsx';
-                // FM-7 に FM-77 のスキンが保存されていれば消す。
+                // FM-7 で選べないスキンの保存値は捨てる。
                 else if (k === 'fm7' && v === 'fm77') delete _uiSkins[k];
             }
         }

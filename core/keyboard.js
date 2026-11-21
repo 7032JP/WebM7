@@ -55,17 +55,7 @@ const FM7_KEY_BREAK   = 0x80;
 // Key caps: one record per FM-7 key, built from the layout
 // =====================================================================
 //
-// Sources of the values in this section:
-//   scan codes      BIOS manual appendix 2, the scan code (make code) of
-//                   each key; FM-Techknow 5-1-7 (key code system $02)
-//   ASCII codes     FM-7 system specification 1.9.5, character code table
-//   kana codes      BIOS manual appendix 2, kana mode (JIS X 0201 codes)
-//   GRAPH codes     BIOS manual appendix 2 (1) (4), graph mode
-//   EL / CLS / DUP  FM-7 system specification 1.9.5 ($05 / $0C / $11) and
-//                   the 2 x 2 key group of BIOS manual appendix 2
-//
-// The FM-7 key matrix numbers the keys row by row, left to right, from $01
-// (FM77AV BIOS manual, appendix 2 (3) "scan code (MAKE/BREAK CODE)").
+// The FM-7 key matrix numbers the keys row by row, left to right, from $01.
 // The rows below list
 // the host keys (KeyboardEvent.code) in that order; each run of keys takes
 // consecutive scan codes from its first one. `null` in a `graph` array
@@ -73,20 +63,16 @@ const FM7_KEY_BREAK   = 0x80;
 //
 // Alongside each row are the characters printed on the key caps, in the
 // same order (a space = nothing on that layer):
-//   plain / shifted  ASCII characters (FM-7 character code table)
-//   kana / kana+sh   half-width katakana (JIS X 0201)
-//   graph            GRAPH mode codes: FM77AV BIOS manual, appendix 2
-//                    (1) "9-bit code (FM-7 compatible mode)" (4) "graph
-//                    mode" figure. Each `graph` array holds that
-//                    figure's codes for the row's keys in the same left to
-//                    right order; RETURN, drawn at the right end of the
-//                    figure's second row, opens the third array because its
-//                    scan code $1D follows that row's last key ($1C).
+//   plain / shifted  ASCII characters
+//   kana / kana+sh   half-width katakana
+//   graph            GRAPH mode codes. Each `graph` array holds the codes
+//                    for the row's keys in the same left to right order;
+//                    RETURN opens the third array because its scan code
+//                    $1D follows the last key of the row before ($1C).
 //
 // Host keys are named after a Japanese keyboard: BracketLeft is the @ key
 // right of P, BracketRight the [ key, IntlBackslash the ] key next to
-// RETURN, IntlYen the ¥ key and IntlRo the key right of / (" and _; BIOS
-// manual appendix 2, normal mode).
+// RETURN, IntlYen the ¥ key and IntlRo the key right of / (" and _).
 
 /** Main typewriter block, one entry per matrix row. */
 const MAIN_ROWS = [
@@ -136,11 +122,8 @@ const MAIN_ROWS = [
 ];
 
 /**
- * Numeric keypad, from $36. The keypad = ($3D) and , ($41) keep their
- * positions but are not mapped to host keys for the plain and scan code
- * layers. GRAPH: the ten-key part of the BIOS manual appendix 2 (1) (4) figure,
- * read row by row, left to right, the same order as `keys`; `NO_CODE`
- * marks the keys the figure prints as giving no code.
+ * Numeric keypad, from $36. GRAPH: the codes row by row, left to right,
+ * the same order as `keys`; `NO_CODE` marks the keys that give no code.
  */
 const NO_CODE = -1;
 const KEYPAD = {
@@ -150,17 +133,15 @@ const KEYPAD = {
             'Numpad4', 'Numpad5', 'Numpad6', 'NumpadComma',
             'Numpad1', 'Numpad2', 'Numpad3', 'NumpadEnter',
             'Numpad0', 'NumpadDecimal'],
-    unmapped: new Set(['NumpadEqual', 'NumpadComma']),
-    plain: '*/+-789 456 123\r0.',
+    plain: '*/+-789=456,123\r0.',
     graph: [0x98, 0x91, 0x99, 0xEE, 0xE1, 0xE2, 0xE3, 0xEF,
             0x93, 0x8F, 0x92, NO_CODE, 0x9A, 0x90, 0x9B, 0x0D, NO_CODE, NO_CODE],
 };
 
 /**
- * Editing and cursor keys, from $48. ASCII codes from the FM-7 control
- * code table (EL = CTRL + E, CLS = CTRL + L, DUP = CTRL + Q, HOME = $0B,
+ * Editing and cursor keys, from $48. ASCII codes (EL = CTRL + E, CLS = CTRL + L, DUP = CTRL + Q, HOME = $0B,
  * INS = $12, DEL = $7F, cursor $1C-$1F). GRAPH: INS and DEL keep their
- * codes; the cursor keys with SHIFT give the upper codes of the appendix.
+ * codes; the cursor keys with SHIFT give the upper codes.
  */
 const EDIT_KEYS = {
     firstScan: 0x48,
@@ -187,30 +168,36 @@ const SHIFT_KEYS = {
 /** Scan code of the BREAK key. */
 const SCAN_BREAK_KEY = 0x5C;
 
+/**
+ * Scan code of the kana key, the right end of the bottom row.
+ */
+const SCAN_KANA_KEY = 0x5A;
+
 /** PF1-PF10: scan codes from $5D; in ASCII mode the 9-bit codes $101-$10A. */
 const PF_FIRST_SCAN = 0x5D;
 const PF_ASCII_BASE = 0x100;
 
 /** Host keys that stand for another key (the same key cap on the FM-7). */
 const HOST_ALIASES = new Map([
-    ['Backquote', 'Escape'],        // key left of 1 on a Japanese keyboard
+    ['Backquote', 'Escape'],        // left of 1 on a Japanese keyboard, where ESC is
     ['Backslash', 'IntlYen'],       // \ key of a US keyboard
     ['ControlRight', 'ControlLeft'],
+    ['AltRight', 'KanaMode'],       // the kana key on keyboards without one
 ]);
 
-/** ASCII code of a key cap character ('¥' is $5C in the FM-7 code table). */
+/** ASCII code of a key cap character ('¥' is $5C). */
 function asciiOf(ch) {
     return ch === '¥' ? 0x5C : ch.charCodeAt(0);
 }
 
-/** JIS X 0201 code of a half-width katakana character. */
+/** 8-bit code of a half-width katakana character. */
 function kanaCodeOf(ch) {
     return 0xA1 + (ch.codePointAt(0) - 0xFF61);
 }
 
 /**
  * CTRL with a key cap character: the lower-case letters and @ [ ¥ ] ^ _
- * (code table $40-$5F) give the control code that keeps their low five
+ * ($40-$5F) give the control code that keeps their low five
  * bits.
  */
 function controlCodeOf(ascii) {
@@ -264,10 +251,8 @@ cap('Slash').ctrl = 0x5F;
 
 KEYPAD.keys.forEach((code, i) => {
     const rec = cap(code);
-    if (!KEYPAD.unmapped.has(code)) {
-        rec.scan = KEYPAD.firstScan + i;
-        rec.ascii = asciiOf(KEYPAD.plain[i]);
-    }
+    rec.scan = KEYPAD.firstScan + i;
+    rec.ascii = asciiOf(KEYPAD.plain[i]);
     rec.graph = KEYPAD.graph[i] === NO_CODE ? FM7_KEY_NONE : KEYPAD.graph[i];
 });
 
@@ -280,6 +265,7 @@ EDIT_KEYS.keys.forEach((code, i) => {
 });
 
 SHIFT_KEYS.keys.forEach((code, i) => { cap(code).modifierScan = SHIFT_KEYS.firstScan + i; });
+cap('KanaMode').modifierScan = SCAN_KANA_KEY;
 // The space bar parts are ordinary keys: SPACE in ASCII mode.
 for (const code of ['NonConvert', 'Convert']) {
     const rec = cap(code);
@@ -294,6 +280,11 @@ for (let n = 1; n <= 10; n++) {
 
 for (const [alias, target] of HOST_ALIASES) KEYCAPS.set(alias, KEYCAPS.get(target));
 
+// CTRL: only the keys with a code in control mode give one.
+for (const rec of KEYCAPS.values()) {
+    if (rec.ctrl === undefined && rec.ascii !== undefined) rec.ctrl = FM7_KEY_NONE;
+}
+
 /** One layer of the key caps as a Map (host key → code). */
 function layer(field, { skip = null } = {}) {
     const m = new Map();
@@ -305,21 +296,21 @@ function layer(field, { skip = null } = {}) {
 
 /** ASCII-style codes (FM-7 mode), including the 9-bit PF key codes. */
 const CODE_TO_FM7_ASCII = layer('ascii');
-/** Scan codes (key matrix positions; BIOS manual appendix 2) of the ordinary keys. */
+/** Scan codes (key matrix positions) of the ordinary keys. */
 const CODE_TO_FM7_SCAN = layer('scan');
 /** SHIFT layer (ASCII mode only; scan codes do not change with SHIFT). */
 const SHIFTED_OVERRIDE = layer('shift');
 /** CTRL layer (ASCII mode only). */
-const CTRL_OVERRIDE = layer('ctrl');
-/** Scan codes of CTRL, SHIFT, CAP and GRAPH. */
+const CTRL_OVERRIDE = layer('ctrl', { skip: FM7_KEY_NONE });
+/** Scan codes of CTRL, SHIFT, CAP, GRAPH and kana. */
 const MODIFIER_SCAN = layer('modifierScan');
 /** CTRL + / in scan code mode: the scan code of the key right of / (" _). */
 const CTRL_SLASH_SCAN = KEYCAPS.get('IntlRo').scan;
-/** Kana layers (JIS X 0201; BIOS manual appendix 2, kana mode). */
+/** Kana layers. */
 const KANA_OVERRIDE = layer('kana');
 const KANA_SHIFT_OVERRIDE = layer('kanaShift');
 /**
- * GRAPH layer (BIOS manual appendix 2 (1) (4)); keys not in it give their
+ * GRAPH layer; keys not in it give their
  * usual codes, except the keypad keys marked NO_CODE, which give nothing in
  * GRAPH mode.
  */
@@ -329,7 +320,7 @@ const GRAPH_MODE_SHIFT_CODES = layer('graphShift');
 // -----------------------------------------------------------------------------
 // WebM7 greeting
 // -----------------------------------------------------------------------------
-// Typed into the key data one character at a time, as JIS X 0201 8-bit codes
+// Typed into the key data one character at a time, as 8-bit codes
 // (a voiced sound mark is a character of its own, $DE).
 const GREETING_TEXT =
     'WebM7ﾃﾞｱｿﾝﾃﾞｸﾚﾃｱﾘｶﾞﾄｳ｡FM-7ﾉﾀﾉｼｲｾｶｲｦｺﾞﾕｯｸﾘﾄﾞｳｿﾞ!!';
@@ -348,15 +339,54 @@ const GREETING_CHORD_KEYS = new Set(
 // -----------------------------------------------------------------------------
 /**
  * The FM-7 standard repeat: the first repeat 0.7 s after the press, then
- * one every 0.07 s (FM-7 system specification 1.9.4; FM-Techknow 5-1-7,
- * "standard setting"). Held in milliseconds.
+ * one every 0.07 s. Held in milliseconds.
  */
 const STANDARD_REPEAT = Object.freeze({ delayMs: 700, periodMs: 70 });
-/** Unit of the repeat times given by KEYBOARD CONTROL sub command $05 (FM-Techknow 5-1-7). */
+/** Unit of the repeat times given by KEYBOARD CONTROL sub command $05. */
 const REPEAT_UNIT_MS = 10;
+/** Room in the scan code outbox; a code beyond it pushes out the oldest. */
+const OUTBOX_SLOTS = 16;
+
+/**
+ * Scan code mode: a ring of codes on their way to the key data, oldest
+ * first. When every slot is taken, a new code overwrites the oldest one.
+ */
+class ScanCodeOutbox {
+    constructor(slots) {
+        this._ring = new Uint16Array(slots);
+        this._head = 0;
+        this.count = 0;
+    }
+
+    put(code) {
+        const slots = this._ring.length;
+        if (this.count === slots) {
+            this._head = (this._head + 1) % slots;
+            this.count--;
+        }
+        this._ring[(this._head + this.count) % slots] = code;
+        this.count++;
+    }
+
+    take() {
+        const code = this._ring[this._head];
+        this._head = (this._head + 1) % this._ring.length;
+        this.count--;
+        return code;
+    }
+
+    clear() {
+        this._head = 0;
+        this.count = 0;
+    }
+}
 /** Keys that never repeat (shift and lock keys). */
 const NEVER_REPEAT = new Set(['ControlLeft', 'ControlRight', 'ShiftLeft', 'ShiftRight',
     'AltLeft', 'AltRight', 'CapsLock', 'KanaMode', 'Insert']);
+/** Host keys of the kana key. */
+const KANA_KEYS = new Set(['AltRight', 'KanaMode']);
+/** Host keys of the keys that lock on a press and send no code in ASCII mode. */
+const LOCK_KEYS = new Set(['CapsLock', ...KANA_KEYS]);
 /** Physical keys whose modifier state is tracked here. */
 const TRACKED_MODIFIERS = new Set(['ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight']);
 
@@ -366,8 +396,7 @@ const TRACKED_MODIFIERS = new Set(['ShiftLeft', 'ShiftRight', 'ControlLeft', 'Co
  * first field the key has gives the code; a key without it falls through
  * to the next. The plain code is always last.
  * Order of the modes: control, graphic, kana, then alphanumeric; when
- * several are selected the highest one applies (FM-7 User's Manual
- * System Specification 1.9.2, keyboard modes).
+ * several are selected the highest one applies.
  */
 const FIELDS_BY_HELD_STATE = Array.from({ length: 16 }, (_, state) => {
     const shifted = (state & 1) !== 0;
@@ -397,13 +426,19 @@ export class Keyboard {
         // --- Encoder output ---
         /**
          * The 9-bit key data both CPUs read ($FD00 bit 7 / $FD01, $D400 /
-         * $D401). It holds the last code sent (FM-Techknow 5-1-5); the
-         * type-ahead buffer is software in the sub CPU (5-1-1, 5-1-2), so a
-         * new code replaces one not yet read.
+         * $D401). It holds the last code sent; the
+         * type-ahead buffer is software in the sub CPU. In
+         * the 9-bit modes a new code replaces one not yet read.
          */
         this._keyData = 0x000;
         /** Key strobe: a code waits to be read; drives the key interrupt. */
         this._strobe = false;
+        /**
+         * Scan code mode: every code passes through here on its way to the
+         * key data. A released key leaves no other trace, so codes are not
+         * replaced; after a read the next one goes out on the encoder tick.
+         */
+        this._outbox = new ScanCodeOutbox(OUTBOX_SLOTS);
         /** $FD02 bit 0: false = sub CPU FIRQ (reset), true = main CPU IRQ. */
         this._toMainCPU = false;
         /** Called when a key interrupt is raised towards the main CPU. */
@@ -457,6 +492,10 @@ export class Keyboard {
          * sticky; releaseKey() clears it.
          */
         this._ctrlSticky = false;
+        /** The make code of the virtual CTRL went out; its break code is due. */
+        this._stickyCtrlSent = false;
+        /** The virtual SHF whose make code went out, or null. */
+        this._virtualShift = null;
     }
 
     /** True while CTRL is held (physical key or sticky virtual key). */
@@ -490,18 +529,19 @@ export class Keyboard {
             return;
         }
 
-        // Scan code mode: CTRL / SHIFT / CAP / GRAPH send their own make code.
+        // Scan code mode: CTRL / SHIFT / CAP / GRAPH / kana send their own make code.
         if (this._useScanCodes && MODIFIER_SCAN.has(code)) {
             if (event.preventDefault) event.preventDefault();
             if (this._heldKeys.has(code)) return;   // host key repeat
             if (code === 'CapsLock') this.capsLock = !this.capsLock;
+            else if (KANA_KEYS.has(code)) this.kanaMode = !this.kanaMode;
             else if (code === 'AltLeft') this.graphMode = true;
             this._heldKeys.add(code);
             this._emit(MODIFIER_SCAN.get(code));
             return;
         }
 
-        if (this._heldKeys.has(code)) {             // host key repeat
+        if (this._heldKeys.has(code) || (event.repeat && LOCK_KEYS.has(code))) {   // host key repeat
             if (event.preventDefault) event.preventDefault();
             return;
         }
@@ -511,7 +551,7 @@ export class Keyboard {
             this.capsLock = !this.capsLock;
         } else if (code === 'Insert') {
             this.insMode = !this.insMode;
-        } else if (code === 'AltRight' || code === 'KanaMode') {
+        } else if (KANA_KEYS.has(code)) {
             this.kanaMode = !this.kanaMode;
         } else if (code === 'AltLeft') {
             this.graphMode = true;
@@ -616,7 +656,7 @@ export class Keyboard {
             this.capsLock = !this.capsLock;
         } else if (code === 'Insert') {
             this.insMode = !this.insMode;
-        } else if (code === 'AltRight' || code === 'KanaMode') {
+        } else if (KANA_KEYS.has(code)) {
             this.kanaMode = !this.kanaMode;
         } else if (code === 'AltLeft') {
             this.graphMode = true;
@@ -626,18 +666,21 @@ export class Keyboard {
             return;
         } else if (code === 'ControlLeft' || code === 'ControlRight') {
             // Sticky CTRL: toggled by the virtual key, released after the
-            // next key (see releaseKey). No key code is emitted.
+            // next key (see releaseKey). In scan code mode it reads as held
+            // from its make code to its break code.
             this._ctrlSticky = !this._ctrlSticky;
+            if (this._ctrlSticky) this._stickyCtrlMake();
+            else this._stickyCtrlBreak();
             return;
         }
 
-        // The virtual CAP key is a toggle with no release event: in scan code
-        // mode it sends its make code now and its break code through the
-        // auto-type queue, which waits until the make code has been read.
-        if (code === 'CapsLock') {
+        // The virtual CAP and kana keys are toggles with no release event: in
+        // scan code mode they send the make code and then the break code, which
+        // waits in the outbox until the make code has been read.
+        if (code === 'CapsLock' || KANA_KEYS.has(code)) {
             if (this._useScanCodes) {
                 this._emit(MODIFIER_SCAN.get(code));
-                if (this._enableBreakCodes) this._autoQueue.unshift({ code: MODIFIER_SCAN.get(code) | FM7_KEY_BREAK, gap: 0 });
+                if (this._enableBreakCodes) this._emit(MODIFIER_SCAN.get(code) | FM7_KEY_BREAK);
             }
             return;
         }
@@ -669,6 +712,42 @@ export class Keyboard {
             const keyCode = this._mapKey(code, false, ctrl);
             if (keyCode !== FM7_KEY_NONE) this._emit((keyCode & 0x7F) | FM7_KEY_BREAK);
         }
+        if (code !== 'AltLeft') this._stickyCtrlBreak();
+    }
+
+    /** Scan code mode: the make code of the virtual CTRL. */
+    _stickyCtrlMake() {
+        if (!this._useScanCodes) return;
+        this._emit(MODIFIER_SCAN.get('ControlLeft'));
+        this._stickyCtrlSent = true;
+    }
+
+    /** The break code of the virtual CTRL. */
+    _stickyCtrlBreak() {
+        if (!this._stickyCtrlSent) return;
+        this._stickyCtrlSent = false;
+        if (this._enableBreakCodes) {
+            this._emit(MODIFIER_SCAN.get('ControlLeft') | FM7_KEY_BREAK);
+        }
+    }
+
+    /**
+     * The sticky SHF of a virtual keyboard. In scan code mode it reads as
+     * held from its make code to its break code.
+     *
+     * @param {string}  code - 'ShiftLeft' or 'ShiftRight'
+     * @param {boolean} held - true when SHF was set, false when it ended
+     */
+    setVirtualShift(code, held) {
+        if (held) {
+            if (!this._useScanCodes) return;
+            this._virtualShift = code;
+            this._emit(MODIFIER_SCAN.get(code));
+        } else if (this._virtualShift) {
+            const make = MODIFIER_SCAN.get(this._virtualShift);
+            this._virtualShift = null;
+            if (this._enableBreakCodes) this._emit(make | FM7_KEY_BREAK);
+        }
     }
 
     /**
@@ -692,11 +771,12 @@ export class Keyboard {
     // ------------------------------------------------------------------
 
     /**
-     * Advance the encoder's own timing: the auto repeat and the
-     * greeting.
+     * Advance the encoder's own timing: the codes held back in scan code
+     * mode, the auto repeat and the greeting.
      * @param {number} us - emulated microseconds since the last call
      */
     advanceTime(us) {
+        this._sendFromOutbox();
         const r = this._repeating;
         if (r && this._repeatOn && !this._useScanCodes) {
             r.waitUs -= us;
@@ -722,8 +802,7 @@ export class Keyboard {
     }
 
     /**
-     * Repeat timing from KEYBOARD CONTROL sub command $05 (FM-Techknow
-     * 5-1-7): each time is the value x 10 ms; $00 for either selects the
+     * Repeat timing from KEYBOARD CONTROL sub command $05: each time is the value x 10 ms; $00 for either selects the
      * standard 0.7 s / 0.07 s.
      */
     setRepeatTiming(start, every) {
@@ -735,9 +814,9 @@ export class Keyboard {
     }
 
     /**
-     * KEYBOARD CONTROL sub command $04, FM-Techknow 5-1-7: PARAM
-     * upper byte $00 = do auto repeat, $01 = do not. The section lists no other
-     * value, so any other value changes nothing.
+     * KEYBOARD CONTROL sub command $04: PARAM
+     * upper byte $00 = do auto repeat, $01 = do not. Any other value
+     * changes nothing.
      */
     selectRepeat(param) {
         if (param === 0x00) this._repeatOn = true;
@@ -749,8 +828,7 @@ export class Keyboard {
 
     /**
      * Start repeating a key just pressed, unless it is one that never
-     * repeats. The PF keys (bit 8 set in the 9-bit code) do not repeat
-     * (FM-7 User's Manual, system specification 1.9.4).
+     * repeats. The PF keys (bit 8 set in the 9-bit code) do not repeat.
      */
     _armRepeat(code, keyCode) {
         if (NEVER_REPEAT.has(code) || (keyCode & 0x100) || this._useScanCodes) {
@@ -761,8 +839,7 @@ export class Keyboard {
     }
 
     /**
-     * CTRL + SHIFT + a digit key (FM-7 system specification 1.9.4;
-     * FM-Techknow 5-1-6): 0 stops and 1 resumes the auto repeat. With
+     * CTRL + SHIFT + a digit key: 0 stops and 1 resumes the auto repeat. With
      * GRAPH also held, 7 types the greeting. Returns true when the key was taken by the encoder.
      */
     _encoderChord(code) {
@@ -854,10 +931,10 @@ export class Keyboard {
             this._autoWaitUs = 0;
         }
         if (this._autoQueue.length === 0 || !canRelease) return;
-        // The key data register keeps one code (FM-Techknow 5-1-5) and a read
-        // drops the key interrupt (HW manual 8.2.1), so hold the next code
+        // The key data register keeps one code and a read
+        // drops the key interrupt, so hold the next code
         // until the one before it has been taken.
-        if (this._strobe) return;
+        if (this._strobe || this._outbox.count > 0) return;
         const next = this._autoQueue.shift();
         this._emit(next.code);
         this._autoWaitUs = next.gap;
@@ -899,6 +976,11 @@ export class Keyboard {
         return this._strobe && !this._toMainCPU;
     }
 
+    /** Forget the codes not yet sent (reset, change of code mode). */
+    dropPendingCodes() {
+        this._outbox.clear();
+    }
+
     /** True when a key waits to be read. */
     hasKey() {
         return this._strobe;
@@ -938,10 +1020,16 @@ export class Keyboard {
     /**
      * Reset the key input state (the auto-type queue is kept). The key
      * interrupt goes to the sub CPU ($FD02 = $00 at power on).
+     * A key still held down keeps its code in the key data, without the
+     * strobe, so the program started by the reset can see which key is held.
      */
     reset() {
+        const held = [...this._heldKeys];
+        const shifted = this._heldModifiers.has('ShiftLeft') || this._heldModifiers.has('ShiftRight');
+        const ctrl = this._heldModifiers.has('ControlLeft') || this._heldModifiers.has('ControlRight');
         this._keyData = 0x000;
         this._strobe = false;
+        this.dropPendingCodes();
         this._toMainCPU = false;
         this._heldKeys.clear();
         this._heldModifiers.clear();
@@ -950,10 +1038,22 @@ export class Keyboard {
         this.insMode = false;
         this.graphMode = false;
         this._ctrlSticky = false;
+        this._stickyCtrlSent = false;
+        this._virtualShift = null;
         this._repeatOn = true;
         this._repeatTimes = STANDARD_REPEAT;
         this._repeating = null;
         this._greeting = null;
+        this._keyData = this._codeOfKeyHeldAtReset(held, shifted, ctrl);
+    }
+
+    /** Code of the last pressed key in `held` (modes already reset), or 0. */
+    _codeOfKeyHeldAtReset(held, shifted, ctrl) {
+        for (let i = held.length - 1; i >= 0; i--) {
+            const keyCode = this._mapKey(held[i], shifted, ctrl);
+            if (keyCode !== FM7_KEY_NONE) return keyCode & (this._useScanCodes ? 0x7F : 0x1FF);
+        }
+        return 0x000;
     }
 
     // ------------------------------------------------------------------
@@ -1000,8 +1100,28 @@ export class Keyboard {
         return (this.capsLock && lower) ? ascii - 0x20 : ascii;
     }
 
-    /** The encoder sends a code: it goes into the key data and raises the key strobe. */
+    /**
+     * The encoder sends a code. In the 9-bit modes the key data takes it at
+     * once, over a code not yet read. In scan code mode it joins the outbox,
+     * and goes on to the key data straight away only when it is alone there.
+     */
     _emit(keyCode) {
+        if (!this._useScanCodes) {
+            this._latch(keyCode);
+            return;
+        }
+        this._outbox.put(keyCode);
+        if (this._outbox.count === 1) this._sendFromOutbox();
+    }
+
+    /** The oldest code in the outbox moves on once the key data has been read. */
+    _sendFromOutbox() {
+        if (this._outbox.count === 0 || this._strobe) return;
+        this._latch(this._outbox.take());
+    }
+
+    /** A code reaches the key data. */
+    _latch(keyCode) {
         this._keyData = keyCode;
         this._strobe = true;
         if (this._toMainCPU && this.onMainInterrupt) this.onMainInterrupt();

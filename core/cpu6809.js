@@ -5,8 +5,7 @@
 // 6809 instruction set simulation with per-instruction cycle counts
 // =============================================================================
 
-// Condition Code Register bit masks. Source: MC6809 data sheet, the
-// condition code register section (bit assignment of CC).
+// Condition Code Register bit masks.
 const CC_C = 0x01; // Carry
 const CC_V = 0x02; // Overflow
 const CC_Z = 0x04; // Zero
@@ -16,16 +15,14 @@ const CC_H = 0x20; // Half-carry
 const CC_F = 0x40; // FIRQ mask
 const CC_E = 0x80; // Entire flag
 
-// EXG / TFR postbyte register codes. Source: MC6809 data sheet, the
-// transfer/exchange post byte table. Codes with bit 3 set are 8-bit
+// EXG / TFR postbyte register codes. Codes with bit 3 set are 8-bit
 // registers; null = code not assigned.
 const TRANSFER_REGISTERS = [
     'd', 'x', 'y', 'u', 's', 'pc', null, null,
     'a', 'b', 'cc', 'dp', null, null, null, null,
 ];
 
-// PSH / PUL postbyte. Source: MC6809 datasheet, the push/pull post byte
-// figure and the stacking order. Bit, register, size in bytes, in the order a pull
+// PSH / PUL postbyte. Bit, register, size in bytes, in the order a pull
 // takes them from the stack (a push stores them in the reverse order).
 // Bit 6 names the other stack pointer (U for the S stack, S for the U stack).
 const STACK_SLOTS = [
@@ -49,8 +46,7 @@ for (let mask = 0; mask < 256; mask++) {
     STACK_SLOT_LISTS.push(Uint8Array.from(list));
 }
 
-// Interrupt vectors. Source: MC6809 data sheet, the memory map for
-// interrupt vectors table.
+// Interrupt vectors.
 const VEC_NMI  = 0xFFFC;
 const VEC_FIRQ = 0xFFF6;
 const VEC_IRQ  = 0xFFF8;
@@ -59,15 +55,12 @@ const VEC_SWI2 = 0xFFF4;
 const VEC_SWI3 = 0xFFF2;
 const VEC_RST  = 0xFFFE;
 
-// Where the processor is in the data sheet flowchart (Figure 15) between
-// instructions: running, in the SYNC loop, or in the CWAI loop.
+// Where the processor is between instructions: running, in the SYNC loop, or in the CWAI loop.
 export const RUNNING   = 0;
-export const IN_SYNC   = 1;   // SYNC: waiting for any interrupt line
-export const IN_CWAI   = 2;   // CWAI: registers stacked, waiting for an interrupt
+export const SYNC_LOOP = 1;   // SYNC: waiting for any interrupt line
+export const CWAI_LOOP = 2;   // CWAI: registers stacked, waiting for an interrupt
 
-// Base cycle counts. Source: MC6809 datasheet, the instruction set tables
-// (the "~" cycle columns for each addressing mode, and the long branch and
-// prefixed-opcode entries). They exclude the cycles that depend on the operand: the
+// Base cycle counts. They exclude the cycles that depend on the operand: the
 // indexed postbyte, a taken long branch and the registers that PSH / PUL /
 // RTI move; the executing code adds those. 0 = no such instruction.
 export const BASE_CYCLES = (() => {
@@ -140,12 +133,6 @@ export const BASE_CYCLES = (() => {
     return { page1, page2, page3 };
 })();
 
-// Which second bytes have an instruction on the prefixed pages: exactly
-// those with a cycle count there.  The prefix is dropped for the others
-// and the second byte runs as its page 1 instruction.
-const PAGE2_DEFINED = Uint8Array.from(BASE_CYCLES.page2, (n) => (n > 0 ? 1 : 0));
-const PAGE3_DEFINED = Uint8Array.from(BASE_CYCLES.page3, (n) => (n > 0 ? 1 : 0));
-
 export class CPU6809 {
     constructor() {
         // Registers
@@ -164,7 +151,7 @@ export class CPU6809 {
         this.firqRequest = false;  // FIRQ requested, not yet taken
         this.irqRequest = false;   // IRQ requested, not yet taken
         this.nmiArmed = false;     // set when LDS, LEAS or TFR / EXG writes S after reset
-        this.waitState = RUNNING;  // RUNNING, IN_SYNC or IN_CWAI
+        this.waitState = RUNNING;  // RUNNING, SYNC_LOOP or CWAI_LOOP
 
         this.instrCycles = 0;      // cycles of the instruction just executed
         this.elapsedCycles = 0;    // cycles since reset
@@ -220,7 +207,7 @@ export class CPU6809 {
     irq() { this.irqRequest = true; }
 
     /**
-     * One pass of the MC6809 flowchart (data sheet Figure 15): an interrupt
+     * One pass of the processor: an interrupt
      * entry, one bus cycle of the SYNC or CWAI loop, or one instruction.
      * Returns the cycles it took.
      */
@@ -231,8 +218,8 @@ export class CPU6809 {
         // before the instruction (the checks below would all fall through).
         if (this.nmiRequest || this.firqRequest || this.irqRequest || this.waitState !== RUNNING) {
             // SYNC loop: any asserted interrupt line, masked or not, leaves the
-            // loop (Figure 15, SYNC; "SYNC Acknowledge").
-            if (this.waitState === IN_SYNC && (this.nmiRequest || this.firqRequest || this.irqRequest)) {
+            // loop.
+            if (this.waitState === SYNC_LOOP && (this.nmiRequest || this.firqRequest || this.irqRequest)) {
                 this.waitState = RUNNING;
             }
             const entryCycles = this._serviceInterrupt();
@@ -243,20 +230,31 @@ export class CPU6809 {
 
         this.instrCycles = 0;
         const opcode = this.fetchByte();
-        if (opcode === 0x10 || opcode === 0x11) {
-            // $10 / $11 prefix: the next byte picks from page 2 / 3.  A
-            // byte with no entry there keeps the prefix consumed but is
-            // run as the page 1 instruction with its page 1 cycles.
-            const second = this.fetchByte();
-            const defined = (opcode === 0x10) ? PAGE2_DEFINED : PAGE3_DEFINED;
-            if (!defined[second]) this._execPage1(second);
-            else if (opcode === 0x10) this._execPage2(second);
-            else this._execPage3(second);
-        } else {
-            this._execPage1(opcode);
-        }
+        if (opcode === 0x10) this._execDecoded(AFTER_PREFIX_10);
+        else if (opcode === 0x11) this._execDecoded(AFTER_PREFIX_11);
+        else this._execPage1(opcode);
         this.elapsedCycles += this.instrCycles;
         return this.instrCycles;
+    }
+
+    /**
+     * True when the next exec() runs an instruction: it takes no interrupt
+     * and does not stay in the SYNC or CWAI loop. (SYNC ends on any request
+     * line, masked or not; when none of them is taken the instruction follows.)
+     */
+    nextPassExecutes() {
+        if (this.interruptToAccept() !== 0) return false;
+        if (this.waitState === RUNNING) return true;
+        if (this.waitState === SYNC_LOOP) return this.nmiRequest || this.firqRequest || this.irqRequest;
+        return false;
+    }
+
+    /** Vector of the request the next pass takes ($FFFC NMI, $FFF6 FIRQ, $FFF8 IRQ), or 0 for none. */
+    interruptToAccept() {
+        if (this.nmiArmed && this.nmiRequest) return VEC_NMI;
+        if (this.firqRequest && (this.cc & CC_F) === 0) return VEC_FIRQ;
+        if (this.irqRequest && (this.cc & CC_I) === 0) return VEC_IRQ;
+        return 0;
     }
 
     _spend(cycles) {
@@ -435,29 +433,29 @@ export class CPU6809 {
     // =========================================================================
 
     /**
-     * Interrupt check of Figure 15: NMI (only once armed by a load of S),
+     * Interrupt check: NMI (only once armed by a load of S),
      * then FIRQ with F clear, then IRQ with I clear. The accepted request is
      * cleared, the state is stacked (FIRQ: PC and CC with E = 0; NMI and IRQ:
      * every register with E = 1; nothing more after CWAI) and the vector is
-     * fetched. Returns the cycles of the entry (data sheet Figures 9 and 10,
-     * and the CWAI case), or 0 when nothing is accepted.
+     * fetched. Returns the cycles of the entry, or 0 when nothing is accepted.
      */
     _serviceInterrupt() {
-        let vector, fastEntry, setMask;
-        if (this.nmiArmed && this.nmiRequest) {
+        const vector = this.interruptToAccept();
+        let fastEntry, setMask;
+        if (vector === VEC_NMI) {
             this.nmiRequest = false;
-            vector = VEC_NMI; fastEntry = false; setMask = CC_I | CC_F;
-        } else if (this.firqRequest && (this.cc & CC_F) === 0) {
+            fastEntry = false; setMask = CC_I | CC_F;
+        } else if (vector === VEC_FIRQ) {
             this.firqRequest = false;
-            vector = VEC_FIRQ; fastEntry = true; setMask = CC_I | CC_F;
-        } else if (this.irqRequest && (this.cc & CC_I) === 0) {
+            fastEntry = true; setMask = CC_I | CC_F;
+        } else if (vector === VEC_IRQ) {
             this.irqRequest = false;
-            vector = VEC_IRQ; fastEntry = false; setMask = CC_I;
+            fastEntry = false; setMask = CC_I;
         } else {
             return 0;
         }
         let cycles;
-        if (this.waitState === IN_CWAI) {
+        if (this.waitState === CWAI_LOOP) {
             this.cc |= CC_E;                  // already stacked by CWAI
             cycles = 7;
         } else if (fastEntry) {
@@ -489,8 +487,7 @@ export class CPU6809 {
         return this.fetchWord();
     }
 
-    // Indexed addressing with postbyte. The extra cycles of each mode are
-    // the "+~" column of the indexed addressing table (MC6809 data sheet).
+    // Indexed addressing with postbyte.
     addrIndexed() {
         const postbyte = this.fetchByte();
         let addr = 0;
@@ -852,21 +849,23 @@ export class CPU6809 {
         return 0;
     }
 
-    // DAA (MC6809 datasheet): after a BCD addition, add $06 when H is set
+    // DAA: after a BCD addition, add $06 when H is set
     // or the low digit is above 9, and $60 when C is set or A is above $99.
     // C becomes 1 on a carry out and otherwise keeps its value; N and Z
-    // follow the result; H is unchanged; V (undefined in the datasheet) is cleared.
+    // follow the result; H is unchanged; V is cleared.
     decimalAdjustA() {
-        const before = this.a;
-        let adjust = 0;
-        if ((this.cc & CC_H) || (before & 0x0F) > 0x09) adjust |= 0x06;
-        if ((this.cc & CC_C) || before > 0x99) adjust |= 0x60;
-        const sum = before + adjust;
-        this.a = sum & 0xFF;
-        this.cc &= ~(CC_N | CC_Z | CC_V);
-        if (sum > 0xFF) this.cc |= CC_C;
-        if (this.a & 0x80) this.cc |= CC_N;
-        if (this.a === 0) this.cc |= CC_Z;
+        const low = this.a & 0x0F;
+        const high = this.a >> 4;
+        const fixLow = (this.cc & CC_H) !== 0 || low > 9;
+        const fixHigh = (this.cc & CC_C) !== 0 || high > 9 || (high > 8 && low > 9);
+        const result = (this.a + (fixLow ? 0x06 : 0) + (fixHigh ? 0x60 : 0)) & 0xFF;
+        // The high digit is corrected exactly when the BCD sum went past 99.
+        let flags = this.cc & ~(CC_N | CC_Z | CC_V | CC_C);
+        if (fixHigh) flags |= CC_C;
+        if (result >= 0x80) flags |= CC_N;
+        if (result === 0) flags |= CC_Z;
+        this.a = result;
+        this.cc = flags;
     }
 
     // MUL - A * B -> D (unsigned)
@@ -956,8 +955,7 @@ export class CPU6809 {
 
     /**
      * Write the register an EXG / TFR code names (unassigned codes ignore it).
-     * The datasheet leaves moves between an 8-bit and a 16-bit register
-     * undefined. Here the number itself moves: an 8-bit value lands in a
+     * Moves between an 8-bit and a 16-bit register: the number itself moves: an 8-bit value lands in a
      * 16-bit register with a zero high byte, and an 8-bit register keeps
      * the low byte of a 16-bit value.
      */
@@ -987,21 +985,13 @@ export class CPU6809 {
     }
 
     // =========================================================================
-    // Page 2 instruction dispatch ($10xx); `opcode` is in PAGE2_DEFINED
+    // The byte after a $10 / $11 prefix, decoded by AFTER_PREFIX_10 / _11
     // =========================================================================
 
-    _execPage2(opcode) {
-        this.instrCycles = BASE_CYCLES.page2[opcode];
-        PAGE2_OPS[opcode](this);
-    }
-
-    // =========================================================================
-    // Page 3 instruction dispatch ($11xx); `opcode` is in PAGE3_DEFINED
-    // =========================================================================
-
-    _execPage3(opcode) {
-        this.instrCycles = BASE_CYCLES.page3[opcode];
-        PAGE3_OPS[opcode](this);
+    _execDecoded(decoder) {
+        const code = this.fetchByte();
+        this.instrCycles = decoder.cycles[code];
+        decoder.ops[code](this);
     }
 }
 
@@ -1083,7 +1073,7 @@ PAGE1_OPS[0x0F] = (cpu) => {
 // NOP
 PAGE1_OPS[0x12] = () => {};
 // SYNC
-PAGE1_OPS[0x13] = (cpu) => { cpu.waitState = IN_SYNC; };
+PAGE1_OPS[0x13] = (cpu) => { cpu.waitState = SYNC_LOOP; };
 // LBRA (long branch always)
 PAGE1_OPS[0x16] = (cpu) => {
     const offset = cpu.sign16(cpu.fetchWord());
@@ -1226,7 +1216,7 @@ PAGE1_OPS[0x3C] = (cpu) => {
     cpu.cc &= imm;
     cpu.cc |= CC_E;
     cpu._saveRegisters('s', 0xFF);
-    cpu.waitState = IN_CWAI;
+    cpu.waitState = CWAI_LOOP;
 };
 // MUL
 PAGE1_OPS[0x3D] = (cpu) => { cpu.opMUL(); };
@@ -1429,7 +1419,7 @@ PAGE1_OPS[0x84] = (cpu) => { cpu.a = cpu.opAND8(cpu.a, cpu.fetchByte()); };
 PAGE1_OPS[0x85] = (cpu) => { cpu.opBIT8(cpu.a, cpu.fetchByte()); };
 // LDA imm
 PAGE1_OPS[0x86] = (cpu) => { cpu.a = cpu.opLD8(cpu.fetchByte()); };
-// 0x87: STA imm - illegal
+// 0x87: no instruction
 // EORA imm
 PAGE1_OPS[0x88] = (cpu) => { cpu.a = cpu.opEOR8(cpu.a, cpu.fetchByte()); };
 // ADCA imm
@@ -1448,7 +1438,7 @@ PAGE1_OPS[0x8D] = (cpu) => {
 };
 // LDX imm
 PAGE1_OPS[0x8E] = (cpu) => { cpu.x = cpu.opLD16(cpu.fetchWord()); };
-// 0x8F: STX imm - illegal
+// 0x8F: no instruction
 
 // -----------------------------------------------------------------
 // $90-$9F: Direct addressing
@@ -1587,7 +1577,7 @@ PAGE1_OPS[0xC4] = (cpu) => { cpu.b = cpu.opAND8(cpu.b, cpu.fetchByte()); };
 PAGE1_OPS[0xC5] = (cpu) => { cpu.opBIT8(cpu.b, cpu.fetchByte()); };
 // LDB imm
 PAGE1_OPS[0xC6] = (cpu) => { cpu.b = cpu.opLD8(cpu.fetchByte()); };
-// 0xC7: STB imm - illegal
+// 0xC7: no instruction
 // EORB imm
 PAGE1_OPS[0xC8] = (cpu) => { cpu.b = cpu.opEOR8(cpu.b, cpu.fetchByte()); };
 // ADCB imm
@@ -1601,7 +1591,7 @@ PAGE1_OPS[0xCC] = (cpu) => { cpu.d = cpu.opLD16(cpu.fetchWord()); };
 // 0xCD: illegal
 // LDU imm
 PAGE1_OPS[0xCE] = (cpu) => { cpu.u = cpu.opLD16(cpu.fetchWord()); };
-// 0xCF: STU imm - illegal
+// 0xCF: no instruction
 
 // -----------------------------------------------------------------
 // $D0-$DF: Direct addressing
@@ -1719,11 +1709,9 @@ for (let op = 0; op < 256; op++) {
 }
 
 // =============================================================================
-// Page 2 ($10xx) and page 3 ($11xx) instructions: one function per opcode,
-// called as PAGE2_OPS[opcode](cpu) / PAGE3_OPS[opcode](cpu) after
-// _execPage2 / _execPage3 has set the base cycle count. Only the opcodes in
-// PAGE2_DEFINED / PAGE3_DEFINED reach them (exec() runs any other byte as
-// the page 1 instruction); the rest of each table does nothing.
+// Page 2 ($10xx) and page 3 ($11xx) instructions: one function per opcode.
+// AFTER_PREFIX_10 / AFTER_PREFIX_11 at the end of this file take the entries
+// that have a cycle count; the rest of each table is not used.
 // =============================================================================
 
 const PAGE_NOTHING = () => {};
@@ -1816,3 +1804,18 @@ PAGE3_OPS[0x8C] = (cpu) => { cpu.opCMP16(cpu.s, cpu.fetchWord()); };            
 PAGE3_OPS[0x9C] = (cpu) => { const a = cpu.addrDirect(); cpu.opCMP16(cpu.s, cpu.read16(a)); };       // CMPS dir
 PAGE3_OPS[0xAC] = (cpu) => { const a = cpu.addrIndexed(); cpu.opCMP16(cpu.s, cpu.read16(a)); };      // CMPS idx
 PAGE3_OPS[0xBC] = (cpu) => { const a = cpu.addrExtended(); cpu.opCMP16(cpu.s, cpu.read16(a)); };     // CMPS ext
+
+// =============================================================================
+// Decoding of the byte after a prefix. A byte that is no page 2 or page 3 code
+// decodes as its page 1 instruction, with the page 1 cycles (a choice of this
+// project).
+// =============================================================================
+
+function decoderFor(cycles, ops) {
+    return {
+        cycles: cycles.map((n, code) => (n > 0 ? n : BASE_CYCLES.page1[code])),
+        ops: ops.map((op, code) => (cycles[code] > 0 ? op : PAGE1_OPS[code])),
+    };
+}
+const AFTER_PREFIX_10 = decoderFor(BASE_CYCLES.page2, PAGE2_OPS);
+const AFTER_PREFIX_11 = decoderFor(BASE_CYCLES.page3, PAGE3_OPS);

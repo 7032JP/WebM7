@@ -89,7 +89,16 @@
 }
 
 /* Special widths — scale proportionally */
-.skb-key.enter-wide { width: calc(var(--skb-key) * 2 + var(--skb-gap)); }
+.skb-key.enter-wide,
+.skb-key.key-wide { width: calc(var(--skb-key) * 2 + var(--skb-gap)); }
+/* Two rows tall: the negative margin keeps the row height, and the z-index
+   puts the lower half above the spacer of the next row so it can be pressed. */
+.skb-key.key-tall {
+    height: calc(var(--skb-key) * 2 + var(--skb-gap));
+    margin-bottom: calc((var(--skb-key) + var(--skb-gap)) * -1);
+    position: relative;
+    z-index: 1;
+}
 .skb-key.space {
     /* 8 keys + 7 gaps */
     width: calc(var(--skb-key) * 8 + var(--skb-gap) * 7);

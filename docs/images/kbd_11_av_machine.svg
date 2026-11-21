@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 506" width="950" height="506">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 522" width="950" height="522">
   <title>FM77AV の実機のキー配置</title>
   <defs>
     <marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0,0 L8,4 L0,8 z" fill="#57606a"/>
     </marker>
   </defs>
-  <rect x="0" y="0" width="950" height="506" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
+  <rect x="0" y="0" width="950" height="522" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
   <text x="475" y="32" font-family="sans-serif" font-size="18" fill="#1f2328" text-anchor="middle" font-weight="bold">FM77AV の実機のキー配置</text>
   <text x="475" y="54" font-family="sans-serif" font-size="12" fill="#57606a" text-anchor="middle">FM77AV BIOS 解説書 付録2（キー配列とキーコード）による</text>
   <rect x="16" y="68" width="918" height="338" rx="8" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1"/>
@@ -232,7 +232,7 @@
   <text x="497" y="371" font-family="sans-serif" font-size="10" fill="#57606a" text-anchor="middle">右 $35</text>
   <text x="497" y="386" font-family="sans-serif" font-size="13" fill="#1f2328" text-anchor="middle" font-weight="bold">SPACE</text>
   <rect x="598" y="356" width="62" height="40" rx="4" fill="#fbefff" stroke="#8250df" stroke-width="1.2"/>
-  <text x="629" y="380.68" font-family="sans-serif" font-size="13" fill="#4c2889" text-anchor="middle" font-weight="bold">カナ</text>
+  <text x="629" y="380.68" font-family="sans-serif" font-size="13" fill="#4c2889" text-anchor="middle" font-weight="bold">かな</text>
   <rect x="26" y="420" width="18" height="13" rx="3" fill="#ffebe9" stroke="#cf222e" stroke-width="1"/>
   <text x="49" y="430" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">BREAK</text>
   <rect x="98" y="420" width="18" height="13" rx="3" fill="#dafbe1" stroke="#1a7f37" stroke-width="1"/>
@@ -242,11 +242,12 @@
   <rect x="310.2" y="420" width="18" height="13" rx="3" fill="#ffffff" stroke="#8c959f" stroke-width="1"/>
   <text x="333.2" y="430" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">文字キーなど</text>
   <rect x="415.2" y="420" width="18" height="13" rx="3" fill="#fbefff" stroke="#8250df" stroke-width="1"/>
-  <text x="438.2" y="430" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">修飾・モード (SHIFT / CTRL / CAP / GRAPH / カナ)</text>
+  <text x="438.2" y="430" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">修飾・モード (SHIFT / CTRL / CAP / GRAPH / かな)</text>
   <rect x="753.3999999999999" y="420" width="18" height="13" rx="3" fill="#fff1e5" stroke="#bc4c00" stroke-width="1"/>
   <text x="776.3999999999999" y="430" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">テンキー</text>
   <rect x="26" y="440" width="18" height="13" rx="3" fill="#fff8c5" stroke="#9a6700" stroke-width="1"/>
   <text x="49" y="450" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">FM77AV 以降のみ</text>
-  <text x="26" y="474" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ 記号キーの上の小さな文字は SHIFT を押したときの文字、SPACE の上の小さな文字は左・中・右の位置とスキャンコードです（カナの刻印は省いています）。キーの大きさは目安です。</text>
-  <text x="26" y="490" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ 最下段の 3 つの SPACE は、ASCII 方式ではどれも空白、スキャンコード方式では左から $57・$58・$35 を送ります。</text>
+  <text x="26" y="474" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ 記号キーの上の小さな文字は SHIFT を押したときの文字、SPACE の上の小さな文字は左・中・右の位置とスキャンコードです。</text>
+  <text x="26" y="490" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ カナの刻印は省いています。キーの大きさは目安です。</text>
+  <text x="26" y="506" font-family="sans-serif" font-size="11" fill="#57606a" text-anchor="start">※ 最下段の 3 つの SPACE は、ASCII 方式ではどれも空白、スキャンコード方式では左から $57・$58・$35 を送ります。</text>
 </svg>

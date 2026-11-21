@@ -6,7 +6,7 @@
 //   サブパス公開でも独自ドメインのルート公開でも同じく動く。
 //   オフライン起動に必要な資源をキャッシュし、取得できないときはキャッシュで応答する。
 // =============================================================================
-const CACHE = 'webm7-20261103180922';
+const CACHE = 'webm7-20261122012049';
 
 // 同じオリジンに複数の WebM7 が置かれても衝突しないよう、配置先ごとにキャッシュを管理する。
 const CACHE_PREFIX = 'webm7-';
@@ -38,6 +38,10 @@ const SHELL = [
   './core/cgrom_glyph.js',
   './core/display.js',
   './core/softkbd.js',
+  './core/debug.js',
+  './core/debug_expr.js',
+  './core/disasm6809.js',
+  './core/isa_tables.generated.js',
   // ブラウザ結合 (FM7Browser / Canvas / Web Audio 出力段)
   './core/fm7_browser.js',
   './core/guide_balloons.js',

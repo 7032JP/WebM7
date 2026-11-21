@@ -25,7 +25,7 @@
   <text x="56" y="199" font-family="monospace" font-size="12" fill="#1f2328">tape_demo.t77</text>
 
   <!-- cmt row -->
-  <circle cx="58" cy="233" r="6" fill="#d0d7de" stroke="#8c959f"/>
+  <circle cx="58" cy="233" r="6" fill="#884422" stroke="#996633"/>
   <text x="72" y="237" font-family="sans-serif" font-size="11" fill="#57606a">CMT</text>
   <rect x="110" y="218" width="80" height="30" rx="6" fill="#ffffff" stroke="#8c959f"/>
   <text x="150" y="238" font-family="sans-serif" font-size="12" fill="#1f2328" text-anchor="middle">REW</text>
@@ -74,7 +74,7 @@
   <text x="502" y="189" font-family="sans-serif" font-size="13" fill="#1f2328">セット中のファイル名を表示</text>
   <circle cx="482" cy="222" r="10" fill="#1a7f37"/>
   <text x="482" y="226" font-family="sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
-  <text x="502" y="227" font-family="sans-serif" font-size="13" fill="#1f2328">CMT LED — モーター ON で点灯</text>
+  <text x="502" y="227" font-family="sans-serif" font-size="13" fill="#1f2328">CMT LED — モーター ON で明るく点灯、テープのセット中は暗く点灯</text>
   <circle cx="482" cy="260" r="10" fill="#1a7f37"/>
   <text x="482" y="264" font-family="sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">5</text>
   <text x="502" y="265" font-family="sans-serif" font-size="13" fill="#1f2328">REW — 巻き戻し（位置を 0 へ）</text>
