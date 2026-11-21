@@ -2357,7 +2357,10 @@ export class FDC {
         this.commandReg = 0;
         this.state = FDC_STATE.IDLE;
         this.commandType = 0;
-        this.irqFlag = false;
+        // A reset raises INTRQ. It stays until the status register is read
+        // or a new command is written; it reaches the main CPU only while
+        // $FD02 bit 4 is 1 (the reset clears that bit).
+        this.irqFlag = true;
         this.drqFlag = false;
         this._forceIntCond = 0;
         this._forceIntReady = false;
