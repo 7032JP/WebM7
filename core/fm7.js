@@ -2235,7 +2235,8 @@ export class FM7 {
         if (this.keyboard.mainInterrupt) mainIrq = true;
 
         // FDC: INTRQ becomes a main CPU IRQ only while $FD02 bit 4 is 1 (0,
-        // masked, after a reset).  Reading $FD18 clears irqFlag and the request.
+        // masked, after a reset; the reset itself raises INTRQ).  Reading
+        // $FD18 clears irqFlag and the request.
         if (this._fdcIrqActive()) mainIrq = true;
 
         // OPN Timer IRQ: routed through $FD03 bit3 "extended interrupt".
